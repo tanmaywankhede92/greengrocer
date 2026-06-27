@@ -8,11 +8,15 @@ class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
   factory ApiClient() => _instance;
 
-  late final Dio _dio;
+  late Dio _dio;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   VoidCallback? _onUnauthorized;
 
   ApiClient._internal() {
+    _initDio();
+  }
+
+  void _initDio() {
     _dio = Dio(BaseOptions(
       baseUrl: ApiConfig.baseUrl,
       connectTimeout: ApiConfig.connectTimeout,
@@ -40,6 +44,11 @@ class ApiClient {
         handler.next(error);
       },
     ));
+  }
+
+  void setEnvironment(Environment env) {
+    ApiConfig.current = env;
+    _initDio();
   }
 
   void setOnUnauthorized(VoidCallback callback) => _onUnauthorized = callback;
