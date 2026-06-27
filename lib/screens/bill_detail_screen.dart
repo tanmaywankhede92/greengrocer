@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:printing/printing.dart';
 import '../config/theme.dart';
 import '../core/utils.dart';
 import '../core/enums.dart';
 import '../providers/bill_provider.dart';
+import '../providers/settings_provider.dart';
 import '../widgets/loading_widget.dart';
+import '../widgets/breadcrumb.dart';
+import '../widgets/bill_item_row.dart';
+import '../widgets/bill_pdf.dart';
 
 class BillDetailScreen extends ConsumerWidget {
   final String id;
@@ -23,8 +29,45 @@ class BillDetailScreen extends ConsumerWidget {
 
         return Scaffold(
           appBar: AppBar(
+            leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/bills')),
             title: Text(bill.billNumber),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.print, color: AppTheme.primaryGreenLight),
+                tooltip: 'Reprint',
+                onPressed: () async {
+                  try {
+                    final settings = await ref.read(settingsProvider.future);
+                    final lineItems = items.map((i) => LineItem(
+                      productId: i.productId,
+                      productName: i.productName,
+                      unit: i.unit,
+                      quantity: i.quantity,
+                      appliedRate: i.appliedRate,
+                    )).toList();
+                    final pdf = await buildBillPdf(
+                      settings: settings,
+                      billNumber: bill.billNumber,
+                      customerName: bill.customer?.name ?? '',
+                      customerMobile: bill.customer?.mobile ?? '',
+                      customerAddress: bill.customer?.address,
+                      subtotal: bill.subtotal,
+                      total: bill.total,
+                      previousDue: 0,
+                      paidNow: bill.paidNow,
+                      newDue: bill.newDue,
+                      deliveryBoyName: bill.deliveryBoyName,
+                      items: lineItems,
+                      billDate: bill.billDate,
+                      paymentMode: bill.paymentType,
+                      isReprint: true,
+                    );
+                    await Printing.layoutPdf(onLayout: (_) => pdf);
+                  } catch (e) {
+                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
+                  }
+                },
+              ),
               if (isActive)
                 TextButton.icon(
                   icon: const Icon(Icons.cancel_outlined, color: AppTheme.error),
@@ -60,6 +103,7 @@ class BillDetailScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Bills', route: '/bills'), Crumb('Bill Detail')]),
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(20),
@@ -123,7 +167,7 @@ class BillDetailScreen extends ConsumerWidget {
                       children: [
                         _row('Subtotal', bill.subtotal),
                         const SizedBox(height: 8),
-                        _row('Discount', -bill.discount),
+                        _summaryRow('Delivery Boy', bill.deliveryBoyName.isNotEmpty ? bill.deliveryBoyName : '-'),
                         const Divider(height: 20),
                         _row('Total', bill.total, bold: true),
                         const SizedBox(height: 8),
@@ -139,6 +183,16 @@ class BillDetailScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _summaryRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(color: AppTheme.textSecondary)),
+        Text(value, style: const TextStyle(color: AppTheme.textPrimary)),
+      ],
     );
   }
 

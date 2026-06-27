@@ -41,7 +41,7 @@ const billItemSchema = new mongoose.Schema({
   },
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
-billItemSchema.index({ billId: 1 });
+
 billItemSchema.index({ productId: 1 });
 
 module.exports = mongoose.model('BillItem', billItemSchema);

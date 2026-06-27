@@ -7,6 +7,7 @@ import '../core/params.dart';
 import '../providers/customer_provider.dart';
 import '../providers/ledger_provider.dart';
 import '../widgets/loading_widget.dart';
+import '../widgets/breadcrumb.dart';
 
 class CustomerDetailScreen extends ConsumerWidget {
   final String id;
@@ -23,6 +24,7 @@ class CustomerDetailScreen extends ConsumerWidget {
       data: (customer) {
         return Scaffold(
           appBar: AppBar(
+            leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/customers')),
             title: Text(customer.name),
             actions: [
               TextButton(
@@ -40,6 +42,7 @@ class CustomerDetailScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Customers', route: '/customers'), Crumb('Customer Detail')]),
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(20),

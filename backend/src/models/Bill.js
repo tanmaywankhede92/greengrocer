@@ -20,9 +20,10 @@ const billSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
-  discount: {
-    type: Number,
-    default: 0,
+  deliveryBoyName: {
+    type: String,
+    default: '',
+    maxlength: 100,
   },
   total: {
     type: Number,
@@ -61,7 +62,7 @@ const billSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-billSchema.index({ billNumber: 1 }, { unique: true });
+
 billSchema.index({ customerId: 1, createdAt: -1 });
 billSchema.index({ billDate: 1 });
 billSchema.index({ status: 1 });

@@ -5,11 +5,12 @@ import '../config/theme.dart';
 import '../core/utils.dart';
 import '../models/customer.dart';
 import '../core/enums.dart';
-import '../providers/bill_provider.dart';
 import '../providers/rate_provider.dart';
+import '../widgets/breadcrumb.dart';
 import '../widgets/customer_select.dart';
 import '../widgets/bill_item_row.dart';
 import '../widgets/payment_mode_select.dart';
+import 'bill_preview_screen.dart';
 
 class NewBillScreen extends ConsumerStatefulWidget {
   const NewBillScreen({super.key});
@@ -20,23 +21,21 @@ class NewBillScreen extends ConsumerStatefulWidget {
 class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   Customer? _selectedCustomer;
   final List<LineItem> _items = [];
-  double _discount = 0;
   double _paymentAmount = 0;
   PaymentMode _paymentMode = PaymentMode.cash;
   Map<String, double> _defaultRates = {};
-  bool _isSubmitting = false;
-  final _discountCtrl = TextEditingController();
+  final _deliveryBoyCtrl = TextEditingController();
   final _paymentCtrl = TextEditingController();
 
   @override
   void dispose() {
-    _discountCtrl.dispose();
+    _deliveryBoyCtrl.dispose();
     _paymentCtrl.dispose();
     super.dispose();
   }
 
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.amount);
-  double get _total => _subtotal - _discount;
+  double get _total => _subtotal;
   double get _newDue => (_selectedCustomer?.currentDue ?? 0) + _total - _paymentAmount;
 
   void _addItem() {
@@ -57,45 +56,33 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     } catch (_) {}
   }
 
-  Future<void> _submit() async {
+  void _goToPreview() {
     if (_selectedCustomer == null) return;
     if (_items.isEmpty || _items.any((i) => i.productName.isEmpty || i.quantity <= 0)) return;
 
-    setState(() => _isSubmitting = true);
-    try {
-      final billService = ref.read(billServiceProvider);
-      final data = {
-        'customerId': _selectedCustomer!.id,
-        'billDate': AppUtils.formatDateApi(DateTime.now()),
-        'items': _items.map((i) => i.toJson()).toList(),
-        'discount': _discount,
-        'notes': '',
-        'paymentAmount': _paymentAmount,
-        'paymentMode': _paymentMode.value,
-      };
-      await billService.create(data);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bill generated successfully'), backgroundColor: AppTheme.success));
-        context.go('/bills');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
-      }
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
-    }
+    Navigator.push(context, MaterialPageRoute(builder: (_) => BillPreviewScreen(
+      customer: _selectedCustomer!,
+      items: List.from(_items),
+      deliveryBoyName: _deliveryBoyCtrl.text.trim(),
+      paymentAmount: _paymentAmount,
+      paymentMode: _paymentMode,
+    )));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('New Bill')),
+      appBar: AppBar(
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/bills')),
+        title: const Text('New Bill'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Bills', route: '/bills'), Crumb('New Bill')]),
+            const SizedBox(height: 16),
             CustomerSelect(
               onSelected: (c) {
                 setState(() => _selectedCustomer = c);
@@ -137,14 +124,12 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Expanded(child: Text('Discount', style: TextStyle(color: AppTheme.textSecondary))),
+                        const Expanded(child: Text('Delivery Boy', style: TextStyle(color: AppTheme.textSecondary))),
                         SizedBox(
-                          width: 120,
+                          width: 200,
                           child: TextField(
-                            controller: _discountCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-                            onChanged: (v) => setState(() => _discount = double.tryParse(v) ?? 0),
+                            controller: _deliveryBoyCtrl,
+                            decoration: const InputDecoration(isDense: true, hintText: 'Enter delivery boy name', contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                           ),
                         ),
                       ],
@@ -194,10 +179,8 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _submit,
-                child: _isSubmitting
-                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Generate Bill', style: TextStyle(fontSize: 16)),
+                onPressed: _goToPreview,
+                child: const Text('Preview & Print', style: TextStyle(fontSize: 16)),
               ),
             ),
           ],

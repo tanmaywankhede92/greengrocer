@@ -2,11 +2,16 @@ const Bill = require('../models/Bill');
 const BillItem = require('../models/BillItem');
 const Customer = require('../models/Customer');
 
-const findBills = async (filters, page, limit, skip, sort) => {
+const findBills = async (filters, { page, limit, skip, sort }) => {
   const query = {};
 
   if (filters.search) {
-    query.billNumber = { $regex: filters.search, $options: 'i' };
+    const matchingCustomers = await Customer.find({ name: { $regex: filters.search, $options: 'i' }, isDeleted: false }).select('_id').lean();
+    const customerIds = matchingCustomers.map((c) => c._id);
+    query.$or = [
+      { billNumber: { $regex: filters.search, $options: 'i' } },
+      ...(customerIds.length > 0 ? [{ customerId: { $in: customerIds } }] : []),
+    ];
   }
   if (filters.status && filters.status !== 'all') {
     query.status = filters.status;
@@ -34,7 +39,7 @@ const findBills = async (filters, page, limit, skip, sort) => {
     customer: b.customerId || null,
     billDate: b.billDate,
     subtotal: b.subtotal,
-    discount: b.discount,
+    deliveryBoyName: b.deliveryBoyName || '',
     total: b.total,
     paidNow: b.paidNow,
     newDue: b.newDue,
@@ -58,6 +63,7 @@ const findById = async (id) => {
       ...bill,
       id: bill._id,
       customer: bill.customerId || null,
+      deliveryBoyName: bill.deliveryBoyName || '',
     },
     items: items.map((i) => ({ ...i, id: i._id })),
   };

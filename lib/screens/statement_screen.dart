@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../config/theme.dart';
 import '../core/utils.dart';
 import '../core/params.dart';
 import '../providers/customer_provider.dart';
 import '../providers/statement_provider.dart';
+import '../widgets/breadcrumb.dart';
 import '../widgets/loading_widget.dart';
 
 class StatementScreen extends ConsumerStatefulWidget {
@@ -25,13 +27,17 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
     final statementAsync = ref.watch(statementProvider(params));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Customer Statement')),
+      appBar: AppBar(
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/customers/${widget.customerId}')),
+        title: const Text('Customer Statement'),
+      ),
       body: customerAsync.when(
         loading: () => const LoadingWidget(),
         error: (e, _) => Center(child: Text('$e')),
         data: (customer) {
           return Column(
             children: [
+              const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Customers', route: '/customers'), Crumb('Statement')]),
               Card(
                 margin: const EdgeInsets.all(16),
                 child: Padding(

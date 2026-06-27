@@ -9,7 +9,7 @@ class Bill extends Equatable {
   final Customer? customer;
   final DateTime billDate;
   final double subtotal;
-  final double discount;
+  final String deliveryBoyName;
   final double total;
   final double paidNow;
   final double newDue;
@@ -25,7 +25,7 @@ class Bill extends Equatable {
     this.customer,
     required this.billDate,
     this.subtotal = 0,
-    this.discount = 0,
+    this.deliveryBoyName = '',
     this.total = 0,
     this.paidNow = 0,
     this.newDue = 0,
@@ -46,7 +46,7 @@ class Bill extends Equatable {
         : (json['customerId'] is Map ? Customer.fromJson(json['customerId']) : null),
     billDate: DateTime.parse(json['billDate'] ?? DateTime.now().toIso8601String()),
     subtotal: (json['subtotal'] ?? 0).toDouble(),
-    discount: (json['discount'] ?? 0).toDouble(),
+    deliveryBoyName: json['deliveryBoyName'] ?? '',
     total: (json['total'] ?? 0).toDouble(),
     paidNow: (json['paidNow'] ?? 0).toDouble(),
     newDue: (json['newDue'] ?? 0).toDouble(),

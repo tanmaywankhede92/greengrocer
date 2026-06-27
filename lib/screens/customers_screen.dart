@@ -7,6 +7,7 @@ import '../core/params.dart';
 import '../providers/customer_provider.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/breadcrumb.dart';
 
 class CustomersScreen extends ConsumerStatefulWidget {
   const CustomersScreen({super.key});
@@ -28,14 +29,22 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
     final customersAsync = ref.watch(customerListProvider(params));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Customers'),
-        actions: [
-          IconButton(icon: const Icon(Icons.add), onPressed: () => _showCustomerForm(context, null)),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Customers')),
       body: Column(
         children: [
+          const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Customers')]),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.person_add, size: 18),
+                label: const Text('Add Customer'),
+                onPressed: () => _showCustomerForm(context, null),
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+              ),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(

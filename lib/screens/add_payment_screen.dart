@@ -6,6 +6,7 @@ import '../core/utils.dart';
 import '../models/customer.dart';
 import '../core/enums.dart';
 import '../providers/payment_provider.dart';
+import '../widgets/breadcrumb.dart';
 import '../widgets/customer_select.dart';
 import '../widgets/payment_mode_select.dart';
 
@@ -60,12 +61,17 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Record Payment')),
+      appBar: AppBar(
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/payments')),
+        title: const Text('Record Payment'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Payments', route: '/payments'), Crumb('Record Payment')]),
+            const SizedBox(height: 16),
             CustomerSelect(onSelected: (c) => setState(() => _selectedCustomer = c)),
             const SizedBox(height: 24),
             Card(

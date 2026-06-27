@@ -8,6 +8,7 @@ import '../core/params.dart';
 import '../providers/bill_provider.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/breadcrumb.dart';
 
 class BillsScreen extends ConsumerStatefulWidget {
   const BillsScreen({super.key});
@@ -20,10 +21,26 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
   String? _statusFilter;
   DateTime? _fromDate;
   DateTime? _toDate;
+  String? _periodFilter;
   int _page = 1;
 
   @override
   void dispose() { _searchCtrl.dispose(); super.dispose(); }
+
+  void _setPeriod(String period) {
+    final now = DateTime.now();
+    setState(() {
+      _periodFilter = period;
+      _page = 1;
+      if (period == 'today') {
+        _fromDate = DateTime(now.year, now.month, now.day);
+        _toDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+      } else if (period == 'all') {
+        _fromDate = null;
+        _toDate = null;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,37 +55,78 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
     final billsAsync = ref.watch(billListProvider(params));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bills'),
-        actions: [
-          IconButton(icon: const Icon(Icons.add), onPressed: () => context.go('/bills/new')),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Bills')),
       body: Column(
         children: [
+          const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Bills')]),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Bill'),
+                onPressed: () => context.go('/bills/new'),
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: TextField(
+              controller: _searchCtrl,
+              decoration: const InputDecoration(hintText: 'Search by bill no. or customer name...', prefixIcon: Icon(Icons.search), isDense: true),
+              onChanged: (_) => setState(() => _page = 1),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Row(
+              children: [
+                _filterChip('Today', _periodFilter == 'today', () => _setPeriod('today')),
+                const SizedBox(width: 8),
+                _filterChip('All', _periodFilter == 'all' || _periodFilter == null, () => _setPeriod('all')),
+                const Spacer(),
+                _filterChip('Active', _statusFilter == 'active', () => setState(() { _statusFilter = _statusFilter == 'active' ? null : 'active'; _page = 1; })),
+                const SizedBox(width: 8),
+                _filterChip('Cancelled', _statusFilter == 'cancelled', () => setState(() { _statusFilter = _statusFilter == 'cancelled' ? null : 'cancelled'; _page = 1; })),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _searchCtrl,
-                    decoration: const InputDecoration(hintText: 'Search bill number...', prefixIcon: Icon(Icons.search), isDense: true),
-                    onChanged: (_) => setState(() => _page = 1),
+                  child: InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(context: context, initialDate: _fromDate ?? DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime.now());
+                      if (picked != null) setState(() { _fromDate = picked; _periodFilter = null; _page = 1; });
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(labelText: 'From', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                      child: Text(_fromDate != null ? AppUtils.formatDate(_fromDate!) : 'From date', style: TextStyle(color: _fromDate != null ? AppTheme.textPrimary : AppTheme.textSecondary, fontSize: 13)),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                DropdownButton<String>(
-                  value: _statusFilter,
-                  hint: const Text('Status', style: TextStyle(color: AppTheme.textSecondary)),
-                  dropdownColor: AppTheme.surfaceCard,
-                  items: [
-                    DropdownMenuItem(value: null, child: Text('All', style: TextStyle(color: AppTheme.textPrimary))),
-                    DropdownMenuItem(value: 'active', child: Text('Active', style: TextStyle(color: AppTheme.success))),
-                    DropdownMenuItem(value: 'cancelled', child: Text('Cancelled', style: TextStyle(color: AppTheme.error))),
-                  ],
-                  onChanged: (v) => setState(() { _statusFilter = v; _page = 1; }),
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(context: context, initialDate: _toDate ?? DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime.now());
+                      if (picked != null) setState(() { _toDate = picked; _periodFilter = null; _page = 1; });
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(labelText: 'To', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                      child: Text(_toDate != null ? AppUtils.formatDate(_toDate!) : 'To date', style: TextStyle(color: _toDate != null ? AppTheme.textPrimary : AppTheme.textSecondary, fontSize: 13)),
+                    ),
+                  ),
                 ),
+                if (_fromDate != null || _toDate != null)
+                  IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () => setState(() { _fromDate = null; _toDate = null; _periodFilter = null; _page = 1; }),
+                  ),
               ],
             ),
           ),
@@ -112,6 +170,21 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _filterChip(String label, bool selected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.primaryGreen.withAlpha(40) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: selected ? AppTheme.primaryGreenLight : Colors.grey.shade600, width: 1),
+        ),
+        child: Text(label, style: TextStyle(color: selected ? AppTheme.primaryGreenLight : AppTheme.textSecondary, fontSize: 13, fontWeight: selected ? FontWeight.w600 : FontWeight.normal)),
       ),
     );
   }

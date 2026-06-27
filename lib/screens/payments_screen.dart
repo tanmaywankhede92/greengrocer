@@ -7,6 +7,7 @@ import '../core/params.dart';
 import '../providers/payment_provider.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/breadcrumb.dart';
 
 class PaymentsScreen extends ConsumerStatefulWidget {
   const PaymentsScreen({super.key});
@@ -23,13 +24,23 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     final paymentsAsync = ref.watch(paymentListProvider(params));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Payments'),
-        actions: [
-          IconButton(icon: const Icon(Icons.add), onPressed: () => context.go('/payments/new')),
-        ],
-      ),
-      body: paymentsAsync.when(
+      appBar: AppBar(title: const Text('Payments')),
+      body: Column(
+        children: [
+          const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Payments')]),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Record Payment'),
+                onPressed: () => context.go('/payments/new'),
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+              ),
+            ),
+          ),
+          Expanded(child: paymentsAsync.when(
         loading: () => const LoadingWidget(),
         error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.error))),
         data: (result) {
@@ -64,6 +75,9 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
             },
           );
         },
+      ),
+          ),
+        ],
       ),
     );
   }

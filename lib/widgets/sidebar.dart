@@ -39,10 +39,10 @@ class Sidebar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               children: [
                 _MenuItem(icon: Icons.dashboard, label: 'Dashboard', route: '/dashboard'),
+                _MenuItem(icon: Icons.receipt_long, label: 'Bills', route: '/bills'),
                 _MenuItem(icon: Icons.people, label: 'Customers', route: '/customers'),
                 _MenuItem(icon: Icons.inventory, label: 'Products', route: '/products'),
                 _MenuItem(icon: Icons.trending_up, label: 'Daily Rates', route: '/rates'),
-                _MenuItem(icon: Icons.receipt_long, label: 'Bills', route: '/bills'),
                 _MenuItem(icon: Icons.payments, label: 'Payments', route: '/payments'),
                 const SizedBox(height: 16),
                 const Divider(),

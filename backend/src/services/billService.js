@@ -1,4 +1,3 @@
-const mongoose = require('mongoose');
 const billRepository = require('../repositories/billRepository');
 const billItemRepository = require('../repositories/billItemRepository');
 const ledgerRepository = require('../repositories/ledgerRepository');
@@ -21,7 +20,7 @@ const getBill = async (id) => {
   return result;
 };
 
-const createBill = async ({ customerId, billDate, items, discount, notes, paymentAmount, paymentMode }, userId) => {
+const createBill = async ({ customerId, billDate, items, deliveryBoyName, notes, paymentAmount, paymentMode }, userId) => {
   const customer = await customerRepository.findById(customerId);
   if (!customer) {
     const error = new Error('Customer not found');
@@ -33,7 +32,7 @@ const createBill = async ({ customerId, billDate, items, discount, notes, paymen
   items.forEach((item) => {
     subtotal += item.quantity * item.appliedRate;
   });
-  const total = Math.max(subtotal - (discount || 0), 0);
+  const total = subtotal;
 
   const settings = await settingsRepository.findSettings();
   const prefix = settings?.invoicePrefix || 'RE';
@@ -44,28 +43,23 @@ const createBill = async ({ customerId, billDate, items, discount, notes, paymen
   const newDue = previousDue + total - paid;
   const paymentType = paid >= total && paid > 0 ? 'cash' : paid > 0 ? 'partial' : 'credit';
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
+  let bill;
   try {
-    const [bill] = await Bill.create(
-      [{
-        billNumber,
-        customerId,
-        billDate: new Date(billDate),
-        subtotal,
-        discount: discount || 0,
-        total,
-        previousDue,
-        paidNow: paid,
-        newDue,
-        paymentType,
-        notes: notes || '',
-        status: 'active',
-        createdBy: userId,
-      }],
-      { session },
-    );
+    bill = await Bill.create({
+      billNumber,
+      customerId,
+      billDate: new Date(billDate),
+      subtotal,
+      deliveryBoyName: deliveryBoyName || '',
+      total,
+      previousDue,
+      paidNow: paid,
+      newDue,
+      paymentType,
+      notes: notes || '',
+      status: 'active',
+      createdBy: userId,
+    });
 
     const billItemsData = items.map((item) => ({
       billId: bill._id,
@@ -78,60 +72,52 @@ const createBill = async ({ customerId, billDate, items, discount, notes, paymen
       amount: item.quantity * item.appliedRate,
     }));
 
-    await BillItem.create(billItemsData, { session });
+    await BillItem.create(billItemsData);
 
-    await LedgerEntry.create(
-      [{
-        customerId,
-        entryType: 'bill',
-        entryDate: new Date(billDate),
-        description: `Bill ${billNumber}`,
-        debit: total,
-        credit: 0,
-        referenceId: bill._id,
-        createdBy: userId,
-      }],
-      { session },
-    );
+    await LedgerEntry.create({
+      customerId,
+      entryType: 'bill',
+      entryDate: new Date(billDate),
+      description: `Bill ${billNumber}`,
+      debit: total,
+      credit: 0,
+      referenceId: bill._id,
+      createdBy: userId,
+    });
 
     if (paid > 0) {
       const receiptNumber = await generateReceiptNumber();
-      await Payment.create(
-        [{
-          receiptNumber,
-          customerId,
-          amount: paid,
-          mode: paymentMode || 'cash',
-          paymentDate: new Date(billDate),
-          billId: bill._id,
-          notes: `Paid with bill ${billNumber}`,
-          createdBy: userId,
-        }],
-        { session },
-      );
+      await Payment.create({
+        receiptNumber,
+        customerId,
+        amount: paid,
+        mode: paymentMode || 'cash',
+        paymentDate: new Date(billDate),
+        billId: bill._id,
+        notes: `Paid with bill ${billNumber}`,
+        createdBy: userId,
+      });
 
-      await LedgerEntry.create(
-        [{
-          customerId,
-          entryType: 'payment',
-          entryDate: new Date(billDate),
-          description: `Payment ${receiptNumber}`,
-          debit: 0,
-          credit: paid,
-          referenceId: bill._id,
-          createdBy: userId,
-        }],
-        { session },
-      );
+      await LedgerEntry.create({
+        customerId,
+        entryType: 'payment',
+        entryDate: new Date(billDate),
+        description: `Payment ${receiptNumber}`,
+        debit: 0,
+        credit: paid,
+        referenceId: bill._id,
+        createdBy: userId,
+      });
     }
 
-    await session.commitTransaction();
     return { id: bill._id };
   } catch (error) {
-    await session.abortTransaction();
+    if (bill) {
+      await Bill.findByIdAndDelete(bill._id);
+      await BillItem.deleteMany({ billId: bill._id });
+      await LedgerEntry.deleteMany({ referenceId: bill._id });
+    }
     throw error;
-  } finally {
-    session.endSession();
   }
 };
 
@@ -150,54 +136,40 @@ const cancelBill = async (billId, userId) => {
   }
 
   const { bill } = result;
-  const session = await mongoose.startSession();
-  session.startTransaction();
 
   try {
-    await Bill.findByIdAndUpdate(billId, { status: 'cancelled' }, { session });
+    await Bill.findByIdAndUpdate(billId, { status: 'cancelled' });
 
-    await LedgerEntry.create(
-      [{
-        customerId: bill.customerId,
-        entryType: 'adjustment',
-        entryDate: new Date(),
-        description: `Cancelled bill ${bill.billNumber}`,
-        debit: 0,
-        credit: bill.total,
-        referenceId: bill._id,
-        createdBy: userId,
-      }],
-      { session },
-    );
+    await LedgerEntry.create({
+      customerId: bill.customerId,
+      entryType: 'adjustment',
+      entryDate: new Date(),
+      description: `Cancelled bill ${bill.billNumber}`,
+      debit: 0,
+      credit: bill.total,
+      referenceId: bill._id,
+      createdBy: userId,
+    });
 
     if (bill.paidNow > 0) {
       await Payment.findOneAndUpdate(
         { billId, isCancelled: false },
         { isCancelled: true },
-        { session },
       );
 
-      await LedgerEntry.create(
-        [{
-          customerId: bill.customerId,
-          entryType: 'adjustment',
-          entryDate: new Date(),
-          description: `Reversed payment for cancelled bill ${bill.billNumber}`,
-          debit: bill.paidNow,
-          credit: 0,
-          referenceId: bill._id,
-          createdBy: userId,
-        }],
-        { session },
-      );
+      await LedgerEntry.create({
+        customerId: bill.customerId,
+        entryType: 'adjustment',
+        entryDate: new Date(),
+        description: `Reversed payment for cancelled bill ${bill.billNumber}`,
+        debit: bill.paidNow,
+        credit: 0,
+        referenceId: bill._id,
+        createdBy: userId,
+      });
     }
-
-    await session.commitTransaction();
   } catch (error) {
-    await session.abortTransaction();
     throw error;
-  } finally {
-    session.endSession();
   }
 };
 
