@@ -82,14 +82,17 @@ jobs:
           name: greengrocer-release-ipa
           path: build/ios/ipa/Runner.ipa
 
-      # 5. (Optional) Upload to TestFlight
+      # 5. (Optional) Upload to TestFlight (skips if API key not configured)
       - name: Upload to TestFlight
-        if: ${{ secrets.APP_STORE_CONNECT_API_KEY != '' }}
         env:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
+          if [ -z "$APP_STORE_CONNECT_API_KEY" ]; then
+            echo "Skipping TestFlight upload — no API key configured"
+            exit 0
+          fi
           echo "$APP_STORE_CONNECT_API_KEY" > /tmp/api_key.p8
           xcrun altool --upload-app \
             --type ios \
