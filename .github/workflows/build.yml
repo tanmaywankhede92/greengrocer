@@ -1,0 +1,47 @@
+name: Build APK + iOS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.4"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build apk --release --no-pub
+      - uses: actions/upload-artifact@v4
+        with:
+          name: greengrocer-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  ios:
+    name: Build iOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.4"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: pod install
+        working-directory: ios
+      - run: flutter build ios --release --no-codesign --no-pub
+      - uses: actions/upload-artifact@v4
+        with:
+          name: greengrocer-ios-app
+          path: build/ios/iphoneos/Runner.app
