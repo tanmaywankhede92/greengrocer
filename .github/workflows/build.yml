@@ -1,4 +1,4 @@
-name: Build APK + iOS
+name: Build APK + iOS IPA
 
 on:
   push:
@@ -28,20 +28,71 @@ jobs:
           path: build/app/outputs/flutter-apk/app-release.apk
 
   ios:
-    name: Build iOS
+    name: Build iOS IPA (signed)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.44.4"
           channel: stable
           cache: true
+
       - run: flutter pub get
+
       - run: pod install
         working-directory: ios
-      - run: flutter build ios --release --no-codesign --no-pub
+
+      # 1. Create temporary keychain and import signing certificate
+      - name: Import Apple Distribution Certificate
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          # Create temp keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+
+          # Decode and import cert
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > cert.p12
+          security import cert.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+
+      # 2. Install provisioning profile
+      - name: Install Provisioning Profile
+        env:
+          APPLE_PROVISION_PROFILE_BASE64: ${{ secrets.APPLE_PROVISION_PROFILE_BASE64 }}
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$APPLE_PROVISION_PROFILE_BASE64" | base64 --decode > profile.mobileprovision
+          cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      # 3. Build signed IPA
+      - name: Build IPA
+        env:
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: flutter build ipa --release --export-options-plist ios/ExportOptions.plist --no-pub
+
+      # 4. Upload IPA
       - uses: actions/upload-artifact@v4
         with:
-          name: greengrocer-ios-app
-          path: build/ios/iphoneos/Runner.app
+          name: greengrocer-release-ipa
+          path: build/ios/ipa/Runner.ipa
+
+      # 5. (Optional) Upload to TestFlight
+      - name: Upload to TestFlight
+        if: ${{ secrets.APP_STORE_CONNECT_API_KEY != '' }}
+        env:
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          echo "$APP_STORE_CONNECT_API_KEY" > /tmp/api_key.p8
+          xcrun altool --upload-app \
+            --type ios \
+            --file build/ios/ipa/Runner.ipa \
+            --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
