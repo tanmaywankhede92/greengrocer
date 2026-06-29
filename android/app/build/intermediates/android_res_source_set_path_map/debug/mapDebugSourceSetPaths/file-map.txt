@@ -1,0 +1,50 @@
+com.greengrocer.greengrocer.app-lifecycle-runtime-2.7.0-0 C:\Users\Asus\.gradle\caches\9.1.0\transforms\08b90a37aeb901f40047779734392dfb\workspace\transformed\lifecycle-runtime-2.7.0\res
+com.greengrocer.greengrocer.app-profileinstaller-1.3.1-1 C:\Users\Asus\.gradle\caches\9.1.0\transforms\1215fe33ffb12aa931882370adbb0c84\workspace\transformed\profileinstaller-1.3.1\res
+com.greengrocer.greengrocer.app-savedstate-1.2.1-2 C:\Users\Asus\.gradle\caches\9.1.0\transforms\12c1aa52fb259f0d05717f57212233d6\workspace\transformed\savedstate-1.2.1\res
+com.greengrocer.greengrocer.app-fragment-ktx-1.7.1-3 C:\Users\Asus\.gradle\caches\9.1.0\transforms\155ced25cae847725d2b4b29746b43e8\workspace\transformed\fragment-ktx-1.7.1\res
+com.greengrocer.greengrocer.app-preference-1.2.1-4 C:\Users\Asus\.gradle\caches\9.1.0\transforms\1e0444ac49a3f4dc133c9ba904f1c1d6\workspace\transformed\preference-1.2.1\res
+com.greengrocer.greengrocer.app-lifecycle-viewmodel-2.7.0-5 C:\Users\Asus\.gradle\caches\9.1.0\transforms\1fbd8996795efd4f534ebb2fcea919c3\workspace\transformed\lifecycle-viewmodel-2.7.0\res
+com.greengrocer.greengrocer.app-lifecycle-viewmodel-savedstate-2.7.0-6 C:\Users\Asus\.gradle\caches\9.1.0\transforms\2059872e73de282f84dd0e19fdd52f16\workspace\transformed\lifecycle-viewmodel-savedstate-2.7.0\res
+com.greengrocer.greengrocer.app-fragment-1.7.1-7 C:\Users\Asus\.gradle\caches\9.1.0\transforms\239b4fc20314868607db35a296f7fcb2\workspace\transformed\fragment-1.7.1\res
+com.greengrocer.greengrocer.app-core-runtime-2.2.0-8 C:\Users\Asus\.gradle\caches\9.1.0\transforms\2dab877885e55446461b58a85fd747bb\workspace\transformed\core-runtime-2.2.0\res
+com.greengrocer.greengrocer.app-datastore-preferences-core-release-9 C:\Users\Asus\.gradle\caches\9.1.0\transforms\3228493966be6c5789e0f3dd0a370aa1\workspace\transformed\datastore-preferences-core-release\res
+com.greengrocer.greengrocer.app-annotation-experimental-1.4.0-10 C:\Users\Asus\.gradle\caches\9.1.0\transforms\338c185d3a1fe40bb6bf855ed1545749\workspace\transformed\annotation-experimental-1.4.0\res
+com.greengrocer.greengrocer.app-activity-ktx-1.8.1-11 C:\Users\Asus\.gradle\caches\9.1.0\transforms\48682dfc537a55b8e5a42081c2235f19\workspace\transformed\activity-ktx-1.8.1\res
+com.greengrocer.greengrocer.app-coordinatorlayout-1.0.0-12 C:\Users\Asus\.gradle\caches\9.1.0\transforms\4d376bdf9973b1eb5fdce056f3c296fd\workspace\transformed\coordinatorlayout-1.0.0\res
+com.greengrocer.greengrocer.app-datastore-release-13 C:\Users\Asus\.gradle\caches\9.1.0\transforms\50ee1b6e9c5f97a2960dca54216e8e6c\workspace\transformed\datastore-release\res
+com.greengrocer.greengrocer.app-lifecycle-livedata-2.7.0-14 C:\Users\Asus\.gradle\caches\9.1.0\transforms\5acd76d98f155a15449509e12db4b8d3\workspace\transformed\lifecycle-livedata-2.7.0\res
+com.greengrocer.greengrocer.app-savedstate-ktx-1.2.1-15 C:\Users\Asus\.gradle\caches\9.1.0\transforms\5b0719821034436515e4c7bc398076d6\workspace\transformed\savedstate-ktx-1.2.1\res
+com.greengrocer.greengrocer.app-slidingpanelayout-1.2.0-16 C:\Users\Asus\.gradle\caches\9.1.0\transforms\5bf7ead4fbe8fb641c4b72cc4014bd8c\workspace\transformed\slidingpanelayout-1.2.0\res
+com.greengrocer.greengrocer.app-tracing-1.2.0-17 C:\Users\Asus\.gradle\caches\9.1.0\transforms\68030dd01c31411f8f50e9b9297f7aec\workspace\transformed\tracing-1.2.0\res
+com.greengrocer.greengrocer.app-appcompat-1.1.0-18 C:\Users\Asus\.gradle\caches\9.1.0\transforms\6cb6c84ceb9c0eaff22af5554495369f\workspace\transformed\appcompat-1.1.0\res
+com.greengrocer.greengrocer.app-lifecycle-runtime-ktx-2.7.0-19 C:\Users\Asus\.gradle\caches\9.1.0\transforms\714b8a733801a50ae2ad7c5b5892576c\workspace\transformed\lifecycle-runtime-ktx-2.7.0\res
+com.greengrocer.greengrocer.app-datastore-preferences-release-20 C:\Users\Asus\.gradle\caches\9.1.0\transforms\72b8c0227ff418fd306b9f9695c7fcef\workspace\transformed\datastore-preferences-release\res
+com.greengrocer.greengrocer.app-exifinterface-1.4.1-21 C:\Users\Asus\.gradle\caches\9.1.0\transforms\73f08357a8df04ee04eaeaaf95eb6f48\workspace\transformed\exifinterface-1.4.1\res
+com.greengrocer.greengrocer.app-recyclerview-1.0.0-22 C:\Users\Asus\.gradle\caches\9.1.0\transforms\76e0c0ba0154ab485ea64adadf498691\workspace\transformed\recyclerview-1.0.0\res
+com.greengrocer.greengrocer.app-window-1.2.0-23 C:\Users\Asus\.gradle\caches\9.1.0\transforms\772ae9e08c8a01c4bf6e4385ed927f0a\workspace\transformed\window-1.2.0\res
+com.greengrocer.greengrocer.app-core-1.0.0-24 C:\Users\Asus\.gradle\caches\9.1.0\transforms\7866ad656b8189fa4a84fe8a04a399dd\workspace\transformed\core-1.0.0\res
+com.greengrocer.greengrocer.app-core-ktx-1.13.1-25 C:\Users\Asus\.gradle\caches\9.1.0\transforms\9266b0a46348a1576176274269646fec\workspace\transformed\core-ktx-1.13.1\res
+com.greengrocer.greengrocer.app-appcompat-resources-1.1.0-26 C:\Users\Asus\.gradle\caches\9.1.0\transforms\9b65827ab5e3a2b5f1545bdab88e5d3a\workspace\transformed\appcompat-resources-1.1.0\res
+com.greengrocer.greengrocer.app-startup-runtime-1.1.1-27 C:\Users\Asus\.gradle\caches\9.1.0\transforms\9ea7d8fcff13474dcf581dc9b6e962cc\workspace\transformed\startup-runtime-1.1.1\res
+com.greengrocer.greengrocer.app-lifecycle-process-2.7.0-28 C:\Users\Asus\.gradle\caches\9.1.0\transforms\a63116536f793b245865c367eccef46a\workspace\transformed\lifecycle-process-2.7.0\res
+com.greengrocer.greengrocer.app-lifecycle-viewmodel-ktx-2.7.0-29 C:\Users\Asus\.gradle\caches\9.1.0\transforms\aa81bdc3c975c368107ee93dd8fe964d\workspace\transformed\lifecycle-viewmodel-ktx-2.7.0\res
+com.greengrocer.greengrocer.app-transition-1.4.1-30 C:\Users\Asus\.gradle\caches\9.1.0\transforms\c249d652cce609864131e15948584b5d\workspace\transformed\transition-1.4.1\res
+com.greengrocer.greengrocer.app-lifecycle-livedata-core-2.7.0-31 C:\Users\Asus\.gradle\caches\9.1.0\transforms\c601ee7f6d06a40af0efec426cee93e1\workspace\transformed\lifecycle-livedata-core-2.7.0\res
+com.greengrocer.greengrocer.app-lifecycle-livedata-core-ktx-2.7.0-32 C:\Users\Asus\.gradle\caches\9.1.0\transforms\d930fcd42eb8144af65489d4d968d54c\workspace\transformed\lifecycle-livedata-core-ktx-2.7.0\res
+com.greengrocer.greengrocer.app-window-java-1.2.0-33 C:\Users\Asus\.gradle\caches\9.1.0\transforms\e1ac4a364ecbe55c7454773bee379d50\workspace\transformed\window-java-1.2.0\res
+com.greengrocer.greengrocer.app-activity-1.8.1-34 C:\Users\Asus\.gradle\caches\9.1.0\transforms\e2dc683cc8aad0e7fe2eb8e2f207accb\workspace\transformed\activity-1.8.1\res
+com.greengrocer.greengrocer.app-security-crypto-1.1.0-alpha06-35 C:\Users\Asus\.gradle\caches\9.1.0\transforms\e9c7cfb8f4e5fca5cfd725b07c489870\workspace\transformed\security-crypto-1.1.0-alpha06\res
+com.greengrocer.greengrocer.app-core-1.13.1-36 C:\Users\Asus\.gradle\caches\9.1.0\transforms\eec5478395011c5fa8c69b227f51003d\workspace\transformed\core-1.13.1\res
+com.greengrocer.greengrocer.app-datastore-core-release-37 C:\Users\Asus\.gradle\caches\9.1.0\transforms\fe00edd5cced676aaee19828337b8bba\workspace\transformed\datastore-core-release\res
+com.greengrocer.greengrocer.app-debug-38 C:\Users\Asus\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_secure_storage-9.2.4\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.greengrocer.greengrocer.app-debug-39 C:\Users\Asus\AppData\Local\Pub\Cache\hosted\pub.dev\jni-1.0.0\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.greengrocer.greengrocer.app-debug-40 C:\Users\Asus\AppData\Local\Pub\Cache\hosted\pub.dev\jni_flutter-1.0.1\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.greengrocer.greengrocer.app-debug-41 C:\Users\Asus\AppData\Local\Pub\Cache\hosted\pub.dev\printing-5.15.0\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.greengrocer.greengrocer.app-debug-42 C:\Users\Asus\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_android-2.4.26\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.greengrocer.greengrocer.app-pngs-43 T:\P Project\greengrocer\android\app\build\generated\res\pngs\debug
+com.greengrocer.greengrocer.app-updated_navigation_xml-44 T:\P Project\greengrocer\android\app\build\generated\updated_navigation_xml\debug
+com.greengrocer.greengrocer.app-packageDebugResources-45 T:\P Project\greengrocer\android\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.greengrocer.greengrocer.app-packageDebugResources-46 T:\P Project\greengrocer\android\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.greengrocer.greengrocer.app-debug-47 T:\P Project\greengrocer\android\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.greengrocer.greengrocer.app-debug-48 T:\P Project\greengrocer\android\app\src\debug\res
+com.greengrocer.greengrocer.app-main-49 T:\P Project\greengrocer\android\app\src\main\res
