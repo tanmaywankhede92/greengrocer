@@ -1,10 +1,10 @@
 const Joi = require('joi');
-const { PRODUCT_UNITS, PAYMENT_MODES } = require('../constants/enums');
+const { PAYMENT_MODES } = require('../constants/enums');
 
 const itemSchema = Joi.object({
   productId: Joi.string().allow(null, '').optional(),
   productName: Joi.string().trim().min(1).max(80).required(),
-  unit: Joi.string().valid(...PRODUCT_UNITS).required(),
+  unit: Joi.string().trim().max(30).required(),
   quantity: Joi.number().positive().required()
     .messages({ 'number.positive': 'Quantity must be greater than 0' }),
   defaultRate: Joi.number().min(0).default(0),

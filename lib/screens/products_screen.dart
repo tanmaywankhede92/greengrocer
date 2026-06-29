@@ -83,9 +83,17 @@ class ProductsScreen extends ConsumerWidget {
     );
   }
 
+  static const _commonUnits = ['kg','pcs','bundle','box','dozen','quintal','bag','crate'];
+
   void _showProductForm(BuildContext context, WidgetRef ref, dynamic product) {
     final nameCtrl = TextEditingController(text: product?.name ?? '');
+    final customUnitCtrl = TextEditingController();
     String unit = product?.unit.value ?? 'kg';
+    bool isCustom = !_commonUnits.contains(unit);
+    if (isCustom) {
+      customUnitCtrl.text = unit;
+      unit = '';
+    }
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -97,20 +105,34 @@ class ProductsScreen extends ConsumerWidget {
               TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name *')),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                initialValue: unit,
-                decoration: const InputDecoration(labelText: 'Unit'),
+                initialValue: isCustom ? 'custom' : unit,
+                decoration: const InputDecoration(labelText: 'Quantity Type'),
                 dropdownColor: AppTheme.surfaceCard,
-                items: ['kg','pcs','bundle','box','dozen','quintal','bag','crate'].map((u) => DropdownMenuItem(value: u, child: Text(u, style: const TextStyle(color: AppTheme.textPrimary)))).toList(),
-                onChanged: (v) => setDialogState(() => unit = v ?? 'kg'),
+                items: [..._commonUnits.map((u) => DropdownMenuItem(value: u, child: Text(u, style: const TextStyle(color: AppTheme.textPrimary)))), const DropdownMenuItem(value: 'custom', child: Text('Custom...', style: TextStyle(color: AppTheme.primaryGreenLight, fontStyle: FontStyle.italic)))],
+                onChanged: (v) => setDialogState(() {
+                  if (v == 'custom') {
+                    isCustom = true;
+                    unit = '';
+                  } else {
+                    isCustom = false;
+                    unit = v ?? 'kg';
+                  }
+                }),
               ),
+              if (isCustom) ...[
+                const SizedBox(height: 12),
+                TextField(controller: customUnitCtrl, decoration: const InputDecoration(labelText: 'Custom Unit', hintText: 'e.g. tin, potli, gaddi')),
+              ],
             ],
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             ElevatedButton(onPressed: () async {
               if (nameCtrl.text.isEmpty) return;
+              final finalUnit = isCustom ? customUnitCtrl.text.trim() : unit;
+              if (finalUnit.isEmpty) return;
               try {
-                final data = {'name': nameCtrl.text, 'unit': unit};
+                final data = {'name': nameCtrl.text, 'unit': finalUnit};
                 if (product == null) {
                   await ref.read(productServiceProvider).create(data);
                 } else {

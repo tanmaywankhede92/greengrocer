@@ -1,6 +1,4 @@
 const mongoose = require('mongoose');
-const { PRODUCT_UNITS } = require('../constants/enums');
-
 const productSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -10,7 +8,6 @@ const productSchema = new mongoose.Schema({
   },
   unit: {
     type: String,
-    enum: PRODUCT_UNITS,
     default: 'kg',
   },
   isActive: {

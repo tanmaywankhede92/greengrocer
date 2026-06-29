@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../config/theme.dart';
 import '../core/constants.dart';
+import '../providers/auth_provider.dart';
 
-class Sidebar extends StatelessWidget {
+class Sidebar extends ConsumerWidget {
   const Sidebar({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       width: AppConstants.sidebarWidth,
       color: AppTheme.surfaceNav,
@@ -51,6 +53,8 @@ class Sidebar extends StatelessWidget {
               ],
             ),
           ),
+          const Divider(height: 1),
+          _LogoutButton(),
         ],
       ),
     );
@@ -67,7 +71,7 @@ class _MenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isActive = GoRouterState.of(context).matchedLocation == route ||
-        GoRouterState.of(context).matchedLocation.startsWith(route);
+        GoRouterState.of(context).matchedLocation.startsWith(route + (route == '/' ? '' : '/'));
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(
@@ -89,6 +93,31 @@ class _MenuItem extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LogoutButton extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return InkWell(
+      onTap: () async {
+        await ref.read(authProvider.notifier).logout();
+        if (context.mounted) context.go('/login');
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: Row(
+          children: [
+            const Icon(Icons.logout, color: AppTheme.textSecondary, size: 20),
+            const SizedBox(width: 14),
+            Text('Logout', style: TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: 14,
+            )),
+          ],
         ),
       ),
     );

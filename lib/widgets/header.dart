@@ -1,22 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../config/theme.dart';
 import '../providers/auth_provider.dart';
 import '../core/utils.dart';
+import '../core/constants.dart';
 
 class Header extends ConsumerWidget {
-  const Header({super.key});
+  final VoidCallback? onMenuTap;
+
+  const Header({super.key, this.onMenuTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
+    final isDesktop = MediaQuery.of(context).size.width >= AppConstants.desktopBreakpoint;
+
     return Container(
       height: 64,
       color: AppTheme.surfaceCard,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
+          if (!isDesktop)
+            InkWell(
+              onTap: onMenuTap,
+              child: const Padding(
+                padding: EdgeInsets.all(8),
+                child: Icon(Icons.menu, color: AppTheme.textSecondary),
+              ),
+            ),
+          if (!isDesktop) const SizedBox(width: 8),
           Expanded(
             child: Text(
               DateTime.now().day.toString().padLeft(2, '0') + ' ' +
@@ -37,21 +50,6 @@ class Header extends ConsumerWidget {
             const SizedBox(width: 10),
             Text(authState.user!.fullName, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
             const SizedBox(width: 16),
-            Container(height: 24, width: 1, color: Colors.grey.shade700),
-            const SizedBox(width: 16),
-            InkWell(
-              onTap: () async {
-                await ref.read(authProvider.notifier).logout();
-                if (context.mounted) context.go('/login');
-              },
-              child: const Row(
-                children: [
-                  Icon(Icons.logout, color: AppTheme.textSecondary, size: 20),
-                  SizedBox(width: 6),
-                  Text('Logout', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
-                ],
-              ),
-            ),
           ],
         ],
       ),

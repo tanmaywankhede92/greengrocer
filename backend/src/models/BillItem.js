@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { PRODUCT_UNITS } = require('../constants/enums');
 
 const billItemSchema = new mongoose.Schema({
   billId: {
@@ -19,7 +18,6 @@ const billItemSchema = new mongoose.Schema({
   },
   unit: {
     type: String,
-    enum: PRODUCT_UNITS,
     required: true,
   },
   quantity: {
