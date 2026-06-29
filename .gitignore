@@ -43,3 +43,22 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+
+# Generated Flutter files
+.flutter-plugins
+.packages
+
+# Android generated folders
+android/.gradle/
+android/.kotlin/
+android/build/
+android/app/build/
+
+# Flutter build
+build/
+
+# Crash logs
+hs_err_pid*
+replay_pid*
