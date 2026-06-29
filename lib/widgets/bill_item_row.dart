@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/theme.dart';
 import '../core/utils.dart';
 import '../models/product.dart';
+import '../core/constants.dart';
 import 'product_select.dart';
 
 class LineItem {
@@ -84,70 +85,141 @@ class _BillItemRowState extends State<BillItemRow> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 3,
-            child: ProductSelect(
-              onSelected: (Product p) {
-                widget.item.productId = p.id;
-                widget.item.productName = p.name;
-                widget.item.unit = p.unit.value;
-                final defaultRate = widget.defaultRates[p.id] ?? 0;
-                widget.item.defaultRate = defaultRate;
-                widget.item.appliedRate = defaultRate;
-                _rateCtrl.text = defaultRate.toStringAsFixed(0);
-                widget.onChanged();
-                setState(() {});
-              },
+    final isWide = MediaQuery.of(context).size.width >= AppConstants.tabletBreakpoint;
+
+    if (isWide) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 3,
+              child: ProductSelect(
+                onSelected: (Product p) {
+                  widget.item.productId = p.id;
+                  widget.item.productName = p.name;
+                  widget.item.unit = p.unit.value;
+                  final defaultRate = widget.defaultRates[p.id] ?? 0;
+                  widget.item.defaultRate = defaultRate;
+                  widget.item.appliedRate = defaultRate;
+                  _rateCtrl.text = defaultRate.toStringAsFixed(0);
+                  widget.onChanged();
+                  setState(() {});
+                },
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 70,
-            child: TextField(
-              controller: _qtyCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Qty'),
-              onChanged: (v) {
-                widget.item.quantity = double.tryParse(v) ?? 0;
-                widget.onChanged();
-              },
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 70,
+              child: TextField(
+                controller: _qtyCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Qty'),
+                onChanged: (v) {
+                  widget.item.quantity = double.tryParse(v) ?? 0;
+                  widget.onChanged();
+                },
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 80,
-            child: TextField(
-              controller: _rateCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Rate'),
-              onChanged: (v) {
-                widget.item.appliedRate = double.tryParse(v) ?? 0;
-                widget.onChanged();
-              },
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 80,
+              child: TextField(
+                controller: _rateCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Rate'),
+                onChanged: (v) {
+                  widget.item.appliedRate = double.tryParse(v) ?? 0;
+                  widget.onChanged();
+                },
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 90,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Text(AppUtils.formatCurrency(widget.item.amount),
-                  style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 90,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Text(AppUtils.formatCurrency(widget.item.amount),
+                    style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+              ),
             ),
-          ),
-          const SizedBox(width: 4),
-          IconButton(
-            icon: const Icon(Icons.close, color: AppTheme.error, size: 18),
-            onPressed: widget.onRemove,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
-        ],
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.close, color: AppTheme.error, size: 18),
+              onPressed: widget.onRemove,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: ProductSelect(
+                    onSelected: (Product p) {
+                      widget.item.productId = p.id;
+                      widget.item.productName = p.name;
+                      widget.item.unit = p.unit.value;
+                      final defaultRate = widget.defaultRates[p.id] ?? 0;
+                      widget.item.defaultRate = defaultRate;
+                      widget.item.appliedRate = defaultRate;
+                      _rateCtrl.text = defaultRate.toStringAsFixed(0);
+                      widget.onChanged();
+                      setState(() {});
+                    },
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: AppTheme.error, size: 18),
+                  onPressed: widget.onRemove,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _qtyCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Qty', isDense: true),
+                    onChanged: (v) {
+                      widget.item.quantity = double.tryParse(v) ?? 0;
+                      widget.onChanged();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _rateCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Rate', isDense: true),
+                    onChanged: (v) {
+                      widget.item.appliedRate = double.tryParse(v) ?? 0;
+                      widget.onChanged();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(AppUtils.formatCurrency(widget.item.amount),
+                    style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
