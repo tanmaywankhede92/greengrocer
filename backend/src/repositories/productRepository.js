@@ -4,7 +4,10 @@ const findProducts = async ({ activeOnly = false, search = '' }) => {
   const filter = { isDeleted: false };
   if (activeOnly) filter.isActive = true;
   if (search) {
-    filter.name = { $regex: search, $options: 'i' };
+    filter.$or = [
+      { name: { $regex: search, $options: 'i' } },
+      { nameHindi: { $regex: search, $options: 'i' } },
+    ];
   }
   return Product.find(filter).sort({ name: 1 }).lean();
 };

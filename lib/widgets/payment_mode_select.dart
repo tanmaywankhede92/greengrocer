@@ -12,11 +12,10 @@ class PaymentModeSelect extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<PaymentMode>(
       initialValue: value,
-      decoration: const InputDecoration(labelText: 'Payment Mode'),
-      dropdownColor: AppTheme.surfaceCard,
+      decoration: const InputDecoration(labelText: 'Payment Mode', prefixIcon: Icon(Icons.payments, size: 18)),
       items: PaymentMode.values.map((mode) => DropdownMenuItem(
         value: mode,
-        child: Text(mode.displayName, style: const TextStyle(color: AppTheme.textPrimary)),
+        child: Text(mode.displayName, style: TextStyle(color: AppTheme.textPrimary)),
       )).toList(),
       onChanged: onChanged,
     );

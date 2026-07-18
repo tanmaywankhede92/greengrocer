@@ -25,7 +25,7 @@ class Layout extends StatelessWidget {
                       const Header(),
                       Expanded(
                         child: Container(
-                          color: AppTheme.surfaceDark,
+                          color: AppTheme.background,
                           child: child,
                         ),
                       ),
@@ -38,7 +38,7 @@ class Layout extends StatelessWidget {
         }
 
         return Scaffold(
-          drawer: const Drawer(
+          drawer: Drawer(
             child: Sidebar(),
           ),
           body: Builder(
@@ -49,7 +49,7 @@ class Layout extends StatelessWidget {
                 ),
                 Expanded(
                   child: Container(
-                    color: AppTheme.surfaceDark,
+                    color: AppTheme.background,
                     child: child,
                   ),
                 ),

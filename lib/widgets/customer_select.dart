@@ -100,13 +100,14 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Customer', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+        Text('Customer', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
         const SizedBox(height: 6),
         TextField(
           controller: _controller,
           onChanged: _onSearchChanged,
           decoration: InputDecoration(
             hintText: 'Search customer by name or mobile...',
+            prefixIcon: const Icon(Icons.search, size: 20),
             suffixIcon: _selected != null
                 ? IconButton(
                     icon: const Icon(Icons.clear, size: 18),
@@ -115,16 +116,17 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
                       setState(() { _selected = null; _results = []; _showDropdown = false; });
                     },
                   )
-                : const Icon(Icons.search, size: 20),
+                : null,
           ),
         ),
         if (_showDropdown)
           Container(
             margin: const EdgeInsets.only(top: 4),
             decoration: BoxDecoration(
-              color: AppTheme.surfaceCard,
+              color: AppTheme.surface,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade700),
+              border: Border.all(color: AppTheme.border),
+              boxShadow: [BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 8, offset: const Offset(0, 4))],
             ),
             constraints: const BoxConstraints(maxHeight: 240),
             child: _results.isNotEmpty
@@ -135,9 +137,9 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
                       final c = _results[index];
                       return ListTile(
                         dense: true,
-                        title: Text(c.name, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
+                        title: Text(c.name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
                         subtitle: Text('${c.mobile}  •  Due: ${AppUtils.formatCurrency(c.currentDue)}',
-                            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                         onTap: () {
                           setState(() {
                             _selected = c;
@@ -151,17 +153,24 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
                   )
                 : ListTile(
                     dense: true,
-                    leading: const Icon(Icons.person_add, color: AppTheme.primaryGreenLight),
-                    title: const Text('Add new customer', style: TextStyle(color: AppTheme.primaryGreenLight, fontSize: 14)),
-                    subtitle: Text('"${_controller.text}"', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                    leading: Icon(Icons.person_add, color: AppTheme.primaryRed),
+                    title: Text('Add new customer', style: TextStyle(color: AppTheme.primaryRed, fontSize: 14)),
+                    subtitle: Text('"${_controller.text}"', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                     onTap: () => _showAddCustomerDialog(),
                   ),
           ),
-        if (_selected != null)
+        if (_selected != null && _selected!.currentDue > 0)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Text('Previous Due: ${AppUtils.formatCurrency(_selected!.currentDue)}',
-                style: const TextStyle(color: AppTheme.warning, fontSize: 14, fontWeight: FontWeight.w600)),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.warning.withAlpha(15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text('Previous Due: ${AppUtils.formatCurrency(_selected!.currentDue)}',
+                  style: TextStyle(color: AppTheme.warning, fontSize: 13, fontWeight: FontWeight.w600)),
+            ),
           ),
       ],
     );

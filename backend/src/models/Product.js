@@ -6,6 +6,12 @@ const productSchema = new mongoose.Schema({
     trim: true,
     maxlength: 80,
   },
+  nameHindi: {
+    type: String,
+    trim: true,
+    default: '',
+    maxlength: 80,
+  },
   unit: {
     type: String,
     default: 'kg',

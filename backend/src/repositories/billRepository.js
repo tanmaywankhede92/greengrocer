@@ -40,6 +40,7 @@ const findBills = async (filters, { page, limit, skip, sort }) => {
     billDate: b.billDate,
     subtotal: b.subtotal,
     deliveryBoyName: b.deliveryBoyName || '',
+    deliveryBoyPhone: b.deliveryBoyPhone || '',
     total: b.total,
     paidNow: b.paidNow,
     newDue: b.newDue,
@@ -64,6 +65,7 @@ const findById = async (id) => {
       id: bill._id,
       customer: bill.customerId || null,
       deliveryBoyName: bill.deliveryBoyName || '',
+      deliveryBoyPhone: bill.deliveryBoyPhone || '',
     },
     items: items.map((i) => ({ ...i, id: i._id })),
   };

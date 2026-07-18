@@ -79,13 +79,13 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    TextField(controller: _amountCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount *')),
+                    TextField(controller: _amountCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount *', prefixIcon: Icon(Icons.currency_rupee, size: 18))),
                     const SizedBox(height: 16),
                     PaymentModeSelect(value: _mode, onChanged: (v) => setState(() => _mode = v ?? PaymentMode.cash)),
                     const SizedBox(height: 16),
-                    TextField(controller: _refCtrl, decoration: const InputDecoration(labelText: 'Reference (optional)')),
+                    TextField(controller: _refCtrl, decoration: const InputDecoration(labelText: 'Reference (optional)', prefixIcon: Icon(Icons.receipt, size: 18))),
                     const SizedBox(height: 16),
-                    TextField(controller: _notesCtrl, decoration: const InputDecoration(labelText: 'Notes (optional)'), maxLines: 2),
+                    TextField(controller: _notesCtrl, decoration: const InputDecoration(labelText: 'Notes (optional)', prefixIcon: Icon(Icons.notes, size: 18)), maxLines: 2),
                   ],
                 ),
               ),
@@ -96,7 +96,7 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
               child: ElevatedButton(
                 onPressed: _isSubmitting ? null : _submit,
                 child: _isSubmitting
-                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
                     : const Text('Record Payment', style: TextStyle(fontSize: 16)),
               ),
             ),

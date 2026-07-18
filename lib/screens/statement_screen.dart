@@ -45,8 +45,8 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(customer.name, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
-                      Text(customer.mobile, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                      Text(customer.name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(customer.mobile, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
                       const SizedBox(height: 12),
                       Row(
                         children: [
@@ -58,7 +58,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                               },
                               child: InputDecorator(
                                 decoration: const InputDecoration(labelText: 'From', isDense: true),
-                                child: Text(AppUtils.formatDate(_from), style: const TextStyle(color: AppTheme.textPrimary)),
+                                child: Text(AppUtils.formatDate(_from), style: TextStyle(color: AppTheme.textPrimary)),
                               ),
                             ),
                           ),
@@ -71,7 +71,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                               },
                               child: InputDecorator(
                                 decoration: const InputDecoration(labelText: 'To', isDense: true),
-                                child: Text(AppUtils.formatDate(_to), style: const TextStyle(color: AppTheme.textPrimary)),
+                                child: Text(AppUtils.formatDate(_to), style: TextStyle(color: AppTheme.textPrimary)),
                               ),
                             ),
                           ),
@@ -117,6 +117,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                             itemBuilder: (context, index) {
                               final r = rows[index] as Map<String, dynamic>;
                               return Card(
+                                margin: const EdgeInsets.only(bottom: 4),
                                 child: Padding(
                                   padding: const EdgeInsets.all(12),
                                   child: Row(
@@ -125,14 +126,14 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text(r['description'] ?? '', style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
-                                            Text(AppUtils.formatDate(DateTime.parse(r['date'])), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                                            Text(r['description'] ?? '', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
+                                            Text(AppUtils.formatDate(DateTime.parse(r['date'])), style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
                                           ],
                                         ),
                                       ),
-                                      SizedBox(width: 80, child: Text((r['debit'] ?? 0) > 0 ? AppUtils.formatCurrency((r['debit'] as num).toDouble()) : '', style: const TextStyle(color: AppTheme.error), textAlign: TextAlign.right)),
-                                      SizedBox(width: 80, child: Text((r['credit'] ?? 0) > 0 ? AppUtils.formatCurrency((r['credit'] as num).toDouble()) : '', style: const TextStyle(color: AppTheme.success), textAlign: TextAlign.right)),
-                                      SizedBox(width: 80, child: Text(AppUtils.formatCurrency((r['balance'] as num).toDouble()), style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
+                                      SizedBox(width: 80, child: Text((r['debit'] ?? 0) > 0 ? AppUtils.formatCurrency((r['debit'] as num).toDouble()) : '', style: TextStyle(color: AppTheme.error), textAlign: TextAlign.right)),
+                                      SizedBox(width: 80, child: Text((r['credit'] ?? 0) > 0 ? AppUtils.formatCurrency((r['credit'] as num).toDouble()) : '', style: TextStyle(color: AppTheme.success), textAlign: TextAlign.right)),
+                                      SizedBox(width: 80, child: Text(AppUtils.formatCurrency((r['balance'] as num).toDouble()), style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
                                     ],
                                   ),
                                 ),
@@ -155,7 +156,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
   Widget _stat(String label, double amount, [Color? color]) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+        Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
         const SizedBox(height: 4),
         Text(AppUtils.formatCurrency(amount), style: TextStyle(color: color ?? AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
       ],

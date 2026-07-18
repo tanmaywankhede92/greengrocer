@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
 import '../core/utils.dart';
-import '../models/product.dart';
 import '../core/constants.dart';
-import 'product_select.dart';
 
 class LineItem {
   String? productId;
   String productName;
+  String productNameHindi;
   String unit;
   double quantity;
   double defaultRate;
@@ -16,6 +15,7 @@ class LineItem {
   LineItem({
     this.productId,
     this.productName = '',
+    this.productNameHindi = '',
     this.unit = 'kg',
     this.quantity = 1,
     this.defaultRate = 0,
@@ -27,6 +27,7 @@ class LineItem {
   Map<String, dynamic> toJson() => {
     if (productId != null) 'productId': productId,
     'productName': productName,
+    'productNameHindi': productNameHindi,
     'unit': unit,
     'quantity': quantity,
     'defaultRate': defaultRate,
@@ -88,75 +89,84 @@ class _BillItemRowState extends State<BillItemRow> {
     final isWide = MediaQuery.of(context).size.width >= AppConstants.tabletBreakpoint;
 
     if (isWide) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 3,
-              child: ProductSelect(
-                onSelected: (Product p) {
-                  widget.item.productId = p.id;
-                  widget.item.productName = p.name;
-                  widget.item.unit = p.unit.value;
-                  final defaultRate = widget.defaultRates[p.id] ?? 0;
-                  widget.item.defaultRate = defaultRate;
-                  widget.item.appliedRate = defaultRate;
-                  _rateCtrl.text = defaultRate.toStringAsFixed(0);
-                  widget.onChanged();
-                  setState(() {});
-                },
+      return Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 24, height: 24,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryRed.withAlpha(15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Center(child: Text('${widget.index + 1}', style: TextStyle(color: AppTheme.primaryRed, fontSize: 11, fontWeight: FontWeight.w600))),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(widget.item.productName, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500, fontSize: 14)),
+                          if (widget.item.productNameHindi.isNotEmpty)
+                            Text(widget.item.productNameHindi, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                          Text(widget.item.unit, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 70,
-              child: TextField(
-                controller: _qtyCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Qty'),
-                onChanged: (v) {
-                  widget.item.quantity = double.tryParse(v) ?? 0;
-                  widget.onChanged();
-                },
+              SizedBox(
+                width: 70,
+                child: TextField(
+                  controller: _qtyCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Qty', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
+                  onChanged: (v) {
+                    widget.item.quantity = double.tryParse(v) ?? 0;
+                    widget.onChanged();
+                  },
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 80,
-              child: TextField(
-                controller: _rateCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Rate'),
-                onChanged: (v) {
-                  widget.item.appliedRate = double.tryParse(v) ?? 0;
-                  widget.onChanged();
-                },
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 80,
+                child: TextField(
+                  controller: _rateCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Rate', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
+                  onChanged: (v) {
+                    widget.item.appliedRate = double.tryParse(v) ?? 0;
+                    widget.onChanged();
+                  },
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 90,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 16),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 90,
                 child: Text(AppUtils.formatCurrency(widget.item.amount),
-                    style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                    style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
               ),
-            ),
-            const SizedBox(width: 4),
-            IconButton(
-              icon: const Icon(Icons.close, color: AppTheme.error, size: 18),
-              onPressed: widget.onRemove,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            ),
-          ],
+              IconButton(
+                icon: Icon(Icons.close, color: AppTheme.error, size: 18),
+                onPressed: widget.onRemove,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return Card(
+      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -165,22 +175,18 @@ class _BillItemRowState extends State<BillItemRow> {
             Row(
               children: [
                 Expanded(
-                  child: ProductSelect(
-                    onSelected: (Product p) {
-                      widget.item.productId = p.id;
-                      widget.item.productName = p.name;
-                      widget.item.unit = p.unit.value;
-                      final defaultRate = widget.defaultRates[p.id] ?? 0;
-                      widget.item.defaultRate = defaultRate;
-                      widget.item.appliedRate = defaultRate;
-                      _rateCtrl.text = defaultRate.toStringAsFixed(0);
-                      widget.onChanged();
-                      setState(() {});
-                    },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.item.productName, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
+                      if (widget.item.productNameHindi.isNotEmpty)
+                        Text(widget.item.productNameHindi, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                      Text(widget.item.unit, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                    ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: AppTheme.error, size: 18),
+                  icon: Icon(Icons.close, color: AppTheme.error, size: 18),
                   onPressed: widget.onRemove,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -194,7 +200,7 @@ class _BillItemRowState extends State<BillItemRow> {
                   child: TextField(
                     controller: _qtyCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Qty', isDense: true),
+                    decoration: const InputDecoration(labelText: 'Qty', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
                     onChanged: (v) {
                       widget.item.quantity = double.tryParse(v) ?? 0;
                       widget.onChanged();
@@ -206,7 +212,7 @@ class _BillItemRowState extends State<BillItemRow> {
                   child: TextField(
                     controller: _rateCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Rate', isDense: true),
+                    decoration: const InputDecoration(labelText: 'Rate', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
                     onChanged: (v) {
                       widget.item.appliedRate = double.tryParse(v) ?? 0;
                       widget.onChanged();
@@ -215,7 +221,7 @@ class _BillItemRowState extends State<BillItemRow> {
                 ),
                 const SizedBox(width: 12),
                 Text(AppUtils.formatCurrency(widget.item.amount),
-                    style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
+                    style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
               ],
             ),
           ],

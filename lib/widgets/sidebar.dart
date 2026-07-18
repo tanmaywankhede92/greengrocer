@@ -12,30 +12,37 @@ class Sidebar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       width: AppConstants.sidebarWidth,
-      color: AppTheme.surfaceNav,
+      color: AppTheme.surface,
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(20),
-            child: Column(
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppTheme.border.withAlpha(100))),
+            ),
+            child: Row(
               children: [
                 Container(
-                  width: 50, height: 50,
+                  width: 42, height: 42,
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen,
-                    borderRadius: BorderRadius.circular(12),
+                    color: AppTheme.primaryRed,
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.store, color: Colors.white, size: 28),
+                  child: const Icon(Icons.store, color: Colors.white, size: 24),
                 ),
-                const SizedBox(height: 8),
-                Text('Greengrocer', style: TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: 18, fontWeight: FontWeight.bold,
-                )),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Rathod', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text('Enterprises', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-          const Divider(),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -47,14 +54,21 @@ class Sidebar extends ConsumerWidget {
                 _MenuItem(icon: Icons.trending_up, label: 'Daily Rates', route: '/rates'),
                 _MenuItem(icon: Icons.payments, label: 'Payments', route: '/payments'),
                 const SizedBox(height: 16),
-                const Divider(),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Divider(color: AppTheme.border.withAlpha(100)),
+                ),
                 const SizedBox(height: 16),
                 _MenuItem(icon: Icons.settings, label: 'Settings', route: '/settings'),
               ],
             ),
           ),
-          const Divider(height: 1),
-          _LogoutButton(),
+          Container(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: AppTheme.border.withAlpha(100))),
+            ),
+            child: _LogoutButton(),
+          ),
         ],
       ),
     );
@@ -75,19 +89,19 @@ class _MenuItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(
-        color: isActive ? AppTheme.primaryGreen.withAlpha(40) : Colors.transparent,
+        color: isActive ? AppTheme.primaryRed.withAlpha(15) : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: () => context.go(route),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Row(
               children: [
-                Icon(icon, color: isActive ? AppTheme.primaryGreenLight : AppTheme.textSecondary, size: 22),
+                Icon(icon, color: isActive ? AppTheme.primaryRed : AppTheme.textSecondary, size: 22),
                 const SizedBox(width: 14),
                 Text(label, style: TextStyle(
-                  color: isActive ? AppTheme.primaryGreenLight : AppTheme.textSecondary,
+                  color: isActive ? AppTheme.primaryRed : AppTheme.textSecondary,
                   fontSize: 14, fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                 )),
               ],
@@ -111,12 +125,9 @@ class _LogoutButton extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Row(
           children: [
-            const Icon(Icons.logout, color: AppTheme.textSecondary, size: 20),
+            Icon(Icons.logout, color: AppTheme.textSecondary, size: 20),
             const SizedBox(width: 14),
-            Text('Logout', style: TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: 14,
-            )),
+            Text('Logout', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
           ],
         ),
       ),

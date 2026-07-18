@@ -16,6 +16,10 @@ const billItemSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  productNameHindi: {
+    type: String,
+    default: '',
+  },
   unit: {
     type: String,
     required: true,

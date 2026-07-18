@@ -74,7 +74,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBar(title: const Text('Settings')),
       body: settingsAsync.when(
         loading: () => const LoadingWidget(),
-        error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.error))),
+        error: (e, _) => Center(child: Text('Error: $e', style: TextStyle(color: AppTheme.error))),
         data: (_) {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -83,7 +83,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Environment', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
+                  Text('Environment', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 12),
                   Card(
                     child: Padding(
@@ -94,9 +94,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('API Server', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                                Text('API Server', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
                                 const SizedBox(height: 4),
-                                Text(ApiConfig.baseUrl, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                                Text(ApiConfig.baseUrl, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                               ],
                             ),
                           ),
@@ -123,23 +123,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text('Business Information', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
+                  Text('Business Information', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 16),
-                  TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Business Name *')),
+                  TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Business Name *', prefixIcon: Icon(Icons.business, size: 18))),
                   const SizedBox(height: 16),
-                  TextField(controller: _taglineCtrl, decoration: const InputDecoration(labelText: 'Tagline')),
+                  TextField(controller: _taglineCtrl, decoration: const InputDecoration(labelText: 'Tagline', prefixIcon: Icon(Icons.tag, size: 18))),
                   const SizedBox(height: 16),
-                  TextField(controller: _addrCtrl, decoration: const InputDecoration(labelText: 'Address'), maxLines: 2),
+                  TextField(controller: _addrCtrl, decoration: const InputDecoration(labelText: 'Address', prefixIcon: Icon(Icons.location_on, size: 18)), maxLines: 2),
                   const SizedBox(height: 16),
-                  TextField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'Phone'), keyboardType: TextInputType.phone),
+                  TextField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'Phone', prefixIcon: Icon(Icons.phone, size: 18)), keyboardType: TextInputType.phone),
                   const SizedBox(height: 16),
-                  TextField(controller: _gstCtrl, decoration: const InputDecoration(labelText: 'GST Number')),
+                  TextField(controller: _gstCtrl, decoration: const InputDecoration(labelText: 'GST Number', prefixIcon: Icon(Icons.numbers, size: 18))),
                   const SizedBox(height: 24),
-                  const Text('Invoice Settings', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
+                  Text('Invoice Settings', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 16),
-                  TextField(controller: _prefixCtrl, decoration: const InputDecoration(labelText: 'Invoice Prefix', hintText: 'RE')),
+                  TextField(controller: _prefixCtrl, decoration: const InputDecoration(labelText: 'Invoice Prefix', hintText: 'RE', prefixIcon: Icon(Icons.tag, size: 18))),
                   const SizedBox(height: 16),
-                  TextField(controller: _footerCtrl, decoration: const InputDecoration(labelText: 'Footer Note'), maxLines: 2),
+                  TextField(controller: _footerCtrl, decoration: const InputDecoration(labelText: 'Footer Note', prefixIcon: Icon(Icons.notes, size: 18)), maxLines: 2),
                   const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity, height: 52,

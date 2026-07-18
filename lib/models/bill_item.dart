@@ -5,6 +5,7 @@ class BillItem extends Equatable {
   final String billId;
   final String? productId;
   final String productName;
+  final String productNameHindi;
   final String unit;
   final double quantity;
   final double defaultRate;
@@ -16,6 +17,7 @@ class BillItem extends Equatable {
     required this.billId,
     this.productId,
     required this.productName,
+    this.productNameHindi = '',
     required this.unit,
     required this.quantity,
     this.defaultRate = 0,
@@ -28,6 +30,7 @@ class BillItem extends Equatable {
     billId: json['billId'] ?? '',
     productId: json['productId'],
     productName: json['productName'] ?? '',
+    productNameHindi: json['productNameHindi'] ?? '',
     unit: json['unit'] ?? 'kg',
     quantity: (json['quantity'] ?? 0).toDouble(),
     defaultRate: (json['defaultRate'] ?? 0).toDouble(),
@@ -38,6 +41,7 @@ class BillItem extends Equatable {
   Map<String, dynamic> toJson() => {
     if (productId != null) 'productId': productId,
     'productName': productName,
+    'productNameHindi': productNameHindi,
     'unit': unit,
     'quantity': quantity,
     'defaultRate': defaultRate,
@@ -45,5 +49,5 @@ class BillItem extends Equatable {
   };
 
   @override
-  List<Object?> get props => [id, productName, quantity, appliedRate, amount];
+  List<Object?> get props => [id, productName, productNameHindi, quantity, appliedRate, amount];
 }

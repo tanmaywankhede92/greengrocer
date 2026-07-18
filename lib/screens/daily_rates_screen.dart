@@ -41,9 +41,7 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
     final ratesAsync = ref.watch(rateByDateProvider(_selectedDate));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Daily Rates'),
-      ),
+      appBar: AppBar(title: const Text('Daily Rates')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -59,7 +57,7 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
                       onPressed: () => setState(() { _selectedDate = _selectedDate.subtract(const Duration(days: 1)); _loadRates(); }),
                     ),
                     const SizedBox(width: 12),
-                    Text(AppUtils.formatDate(_selectedDate), style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                    Text(AppUtils.formatDate(_selectedDate), style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
                     const SizedBox(width: 12),
                     IconButton(
                       icon: const Icon(Icons.chevron_right),
@@ -109,10 +107,15 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
                                 children: [
                                   Expanded(
                                     flex: 2,
-                                    child: Text(p.name, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(p.nameHindi.isNotEmpty ? '${p.name} (${p.nameHindi})' : p.name, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
+                                      ],
+                                    ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(p.unit.value, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                                  Text(p.unit.value, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                                   const SizedBox(width: 8),
                                   SizedBox(
                                     width: 100,
@@ -120,7 +123,7 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
                                       controller: ctrl,
                                       keyboardType: TextInputType.number,
                                       decoration: InputDecoration(
-                                        hintText: existingRate != null ? '${existingRate.rate.toStringAsFixed(0)}' : 'Rate',
+                                        hintText: existingRate != null ? existingRate.rate.toStringAsFixed(0) : 'Rate',
                                         isDense: true,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                       ),

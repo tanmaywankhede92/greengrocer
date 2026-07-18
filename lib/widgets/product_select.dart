@@ -32,7 +32,8 @@ class _ProductSelectState extends ConsumerState<ProductSelect> {
       optionsBuilder: (textEditingValue) {
         if (textEditingValue.text.isEmpty) return [];
         return _products.where((p) =>
-            p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+            p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) ||
+            p.nameHindi.toLowerCase().contains(textEditingValue.text.toLowerCase()));
       },
       displayStringForOption: (p) => p.name,
       fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
@@ -40,8 +41,10 @@ class _ProductSelectState extends ConsumerState<ProductSelect> {
           controller: controller,
           focusNode: focusNode,
           decoration: const InputDecoration(
-            hintText: 'Product...',
-            suffixIcon: Icon(Icons.search, size: 18),
+            hintText: 'Search product...',
+            prefixIcon: Icon(Icons.search, size: 18),
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           ),
           onEditingComplete: onSubmitted,
         );
@@ -51,11 +54,12 @@ class _ProductSelectState extends ConsumerState<ProductSelect> {
           alignment: Alignment.topLeft,
           child: Container(
             width: 320,
-            constraints: const BoxConstraints(maxHeight: 200),
+            constraints: const BoxConstraints(maxHeight: 240),
             decoration: BoxDecoration(
-              color: AppTheme.surfaceCard,
+              color: AppTheme.surface,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade700),
+              border: Border.all(color: AppTheme.border),
+              boxShadow: [BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 8, offset: const Offset(0, 4))],
             ),
             child: ListView.builder(
               shrinkWrap: true,
@@ -64,8 +68,8 @@ class _ProductSelectState extends ConsumerState<ProductSelect> {
                 final p = options.elementAt(index);
                 return ListTile(
                   dense: true,
-                  title: Text(p.name, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13)),
-                  subtitle: Text(p.unit.value, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                  title: Text(p.nameHindi.isNotEmpty ? '${p.name} (${p.nameHindi})' : p.name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 13)),
+                  subtitle: Text(p.unit.value, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
                   onTap: () {
                     onSelected(p);
                     widget.onSelected(p);

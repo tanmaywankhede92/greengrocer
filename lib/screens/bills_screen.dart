@@ -55,22 +55,19 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
     final billsAsync = ref.watch(billListProvider(params));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Bills')),
+      appBar: AppBar(title: const Text('Bills'), actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: TextButton.icon(
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Add Bill'),
+            onPressed: () => context.go('/bills/new'),
+          ),
+        ),
+      ]),
       body: Column(
         children: [
           const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Bills')]),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add Bill'),
-                onPressed: () => context.go('/bills/new'),
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
-              ),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: TextField(
@@ -133,7 +130,7 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
           Expanded(
             child: billsAsync.when(
               loading: () => const LoadingWidget(),
-              error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.error))),
+              error: (e, _) => Center(child: Text('Error: $e', style: TextStyle(color: AppTheme.error))),
               data: (result) {
                 if (result.data.isEmpty) return const EmptyState(icon: Icons.receipt_long, title: 'No bills found');
                 return ListView.builder(
@@ -142,22 +139,23 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
                   itemBuilder: (context, index) {
                     final b = result.data[index];
                     return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
                         leading: Container(
                           width: 44, height: 44,
                           decoration: BoxDecoration(
-                            color: b.status == BillStatus.active ? AppTheme.success.withAlpha(40) : AppTheme.error.withAlpha(40),
+                            color: b.status == BillStatus.active ? AppTheme.success.withAlpha(20) : AppTheme.error.withAlpha(20),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(b.status == BillStatus.active ? Icons.check_circle : Icons.cancel, color: b.status == BillStatus.active ? AppTheme.success : AppTheme.error, size: 22),
                         ),
-                        title: Text(b.billNumber, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                        subtitle: Text('${b.customer?.name ?? ''}  •  ${AppUtils.formatDate(b.billDate)}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                        title: Text(b.billNumber, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                        subtitle: Text('${b.customer?.name ?? ''}  •  ${AppUtils.formatDate(b.billDate)}', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                         trailing: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(AppUtils.formatCurrency(b.total), style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                            Text(AppUtils.formatCurrency(b.total), style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
                             Text(b.status == BillStatus.active ? 'Active' : 'Cancelled', style: TextStyle(color: b.status == BillStatus.active ? AppTheme.success : AppTheme.error, fontSize: 11)),
                           ],
                         ),
@@ -180,11 +178,11 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.primaryGreen.withAlpha(40) : Colors.transparent,
+          color: selected ? AppTheme.primaryRed.withAlpha(15) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? AppTheme.primaryGreenLight : Colors.grey.shade600, width: 1),
+          border: Border.all(color: selected ? AppTheme.primaryRed : AppTheme.border, width: 1),
         ),
-        child: Text(label, style: TextStyle(color: selected ? AppTheme.primaryGreenLight : AppTheme.textSecondary, fontSize: 13, fontWeight: selected ? FontWeight.w600 : FontWeight.normal)),
+        child: Text(label, style: TextStyle(color: selected ? AppTheme.primaryRed : AppTheme.textSecondary, fontSize: 13, fontWeight: selected ? FontWeight.w600 : FontWeight.normal)),
       ),
     );
   }

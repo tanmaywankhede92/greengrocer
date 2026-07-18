@@ -29,22 +29,22 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
     final customersAsync = ref.watch(customerListProvider(params));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Customers')),
+      appBar: AppBar(
+        title: const Text('Customers'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              icon: const Icon(Icons.person_add, size: 18),
+              label: const Text('Add Customer'),
+              onPressed: () => _showCustomerForm(context, null),
+            ),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Customers')]),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.person_add, size: 18),
-                label: const Text('Add Customer'),
-                onPressed: () => _showCustomerForm(context, null),
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
-              ),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
@@ -56,7 +56,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
           Expanded(
             child: customersAsync.when(
               loading: () => const LoadingWidget(),
-              error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.error))),
+              error: (e, _) => Center(child: Text('Error: $e', style: TextStyle(color: AppTheme.error))),
               data: (result) {
                 if (result.data.isEmpty) {
                   return const EmptyState(icon: Icons.people_outline, title: 'No customers found', subtitle: 'Add your first customer to get started');
@@ -65,21 +65,25 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                   children: [
                     Expanded(
                       child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: result.data.length,
                         itemBuilder: (context, index) {
                           final c = result.data[index];
-                          return ListTile(
-                            title: Text(c.name, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                            subtitle: Text('${c.mobile}  •  ${c.address ?? ""}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                            trailing: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(AppUtils.formatCurrency(c.currentDue), style: TextStyle(color: c.currentDue > 0 ? AppTheme.warning : AppTheme.success, fontWeight: FontWeight.w600)),
-                                Text('${c.billCount} bills', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                              ],
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: ListTile(
+                              title: Text(c.name, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                              subtitle: Text('${c.mobile}  •  ${c.address ?? ""}', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                              trailing: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(AppUtils.formatCurrency(c.currentDue), style: TextStyle(color: c.currentDue > 0 ? AppTheme.warning : AppTheme.success, fontWeight: FontWeight.w600)),
+                                  Text('${c.billCount} bills', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                                ],
+                              ),
+                              onTap: () => context.go('/customers/${c.id}'),
                             ),
-                            onTap: () => context.go('/customers/${c.id}'),
                           );
                         },
                       ),
@@ -91,7 +95,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             IconButton(icon: const Icon(Icons.chevron_left), onPressed: _page > 1 ? () => setState(() => _page--) : null),
-                            Text('Page ${result.meta!['page']} of ${result.meta!['totalPages']}', style: const TextStyle(color: AppTheme.textSecondary)),
+                            Text('Page ${result.meta!['page']} of ${result.meta!['totalPages']}', style: TextStyle(color: AppTheme.textSecondary)),
                             IconButton(icon: const Icon(Icons.chevron_right), onPressed: result.meta!['hasNextPage'] == true ? () => setState(() => _page++) : null),
                           ],
                         ),
@@ -121,14 +125,14 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name *')),
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name *', prefixIcon: Icon(Icons.person_outline, size: 18))),
               const SizedBox(height: 12),
-              TextField(controller: mobileCtrl, decoration: const InputDecoration(labelText: 'Mobile *'), keyboardType: TextInputType.phone),
+              TextField(controller: mobileCtrl, decoration: const InputDecoration(labelText: 'Mobile *', prefixIcon: Icon(Icons.phone, size: 18)), keyboardType: TextInputType.phone),
               const SizedBox(height: 12),
-              TextField(controller: addrCtrl, decoration: const InputDecoration(labelText: 'Address')),
+              TextField(controller: addrCtrl, decoration: const InputDecoration(labelText: 'Address', prefixIcon: Icon(Icons.location_on_outlined, size: 18))),
               const SizedBox(height: 12),
-              TextField(controller: gstCtrl, decoration: const InputDecoration(labelText: 'GST Number')),
-              if (initial == null) ...[const SizedBox(height: 12), TextField(controller: balCtrl, decoration: const InputDecoration(labelText: 'Opening Balance'), keyboardType: TextInputType.number)],
+              TextField(controller: gstCtrl, decoration: const InputDecoration(labelText: 'GST Number', prefixIcon: Icon(Icons.numbers, size: 18))),
+              if (initial == null) ...[const SizedBox(height: 12), TextField(controller: balCtrl, decoration: const InputDecoration(labelText: 'Opening Balance', prefixIcon: Icon(Icons.account_balance, size: 18)), keyboardType: TextInputType.number)],
             ],
           ),
         ),
@@ -136,6 +140,10 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(onPressed: () async {
             if (nameCtrl.text.isEmpty || mobileCtrl.text.isEmpty) return;
+            if (!RegExp(r'^\d{10}$').hasMatch(mobileCtrl.text.trim())) {
+              if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Mobile number must be exactly 10 digits')));
+              return;
+            }
             final data = <String, dynamic>{'name': nameCtrl.text, 'mobile': mobileCtrl.text, 'address': addrCtrl.text, 'gstNumber': gstCtrl.text};
             if (initial == null) data['openingBalance'] = double.tryParse(balCtrl.text) ?? 0;
             try {

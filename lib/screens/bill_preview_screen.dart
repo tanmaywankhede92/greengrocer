@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:printing/printing.dart';
+import 'package:dio/dio.dart';
 import '../config/theme.dart';
 import '../core/utils.dart';
 import '../models/customer.dart';
@@ -16,6 +17,7 @@ class BillPreviewScreen extends ConsumerStatefulWidget {
   final Customer customer;
   final List<LineItem> items;
   final String deliveryBoyName;
+  final String deliveryBoyPhone;
   final double paymentAmount;
   final PaymentMode paymentMode;
 
@@ -23,7 +25,8 @@ class BillPreviewScreen extends ConsumerStatefulWidget {
     super.key,
     required this.customer,
     required this.items,
-    required this.deliveryBoyName,
+    this.deliveryBoyName = '',
+    this.deliveryBoyPhone = '',
     required this.paymentAmount,
     required this.paymentMode,
   });
@@ -44,6 +47,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
     _items = widget.items.map((i) => LineItem(
       productId: i.productId,
       productName: i.productName,
+      productNameHindi: i.productNameHindi,
       unit: i.unit,
       quantity: i.quantity,
       defaultRate: i.defaultRate,
@@ -57,22 +61,32 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   double get _total => _subtotal;
   double get _newDue => (widget.customer.currentDue) + _total - _paymentAmount;
 
+  Map<String, dynamic> _buildCreatePayload() {
+    final itemsJson = _items.map((i) => i.toJson()).toList();
+    return {
+      'customerId': widget.customer.id,
+      'billDate': AppUtils.formatDateApi(DateTime.now()),
+      'items': itemsJson,
+      'deliveryBoyName': widget.deliveryBoyName,
+      'deliveryBoyPhone': widget.deliveryBoyPhone,
+      'notes': '',
+      'paymentAmount': _paymentAmount,
+      'paymentMode': _paymentMode.value,
+    };
+  }
+
   Future<void> _print() async {
     setState(() => _isGenerating = true);
     try {
       final billService = ref.read(billServiceProvider);
       final settings = await ref.read(settingsProvider.future);
-      final id = await billService.create({
-        'customerId': widget.customer.id,
-        'billDate': AppUtils.formatDateApi(DateTime.now()),
-        'items': _items.map((i) => i.toJson()).toList(),
-        'deliveryBoyName': widget.deliveryBoyName,
-        'notes': '',
-        'paymentAmount': _paymentAmount,
-        'paymentMode': _paymentMode.value,
-      });
+
+      final payload = _buildCreatePayload();
+      final id = await billService.create(payload);
+
       if (!mounted) return;
       ref.invalidate(billListProvider);
+
       final pdf = await buildBillPdf(
         settings: settings,
         billNumber: id,
@@ -85,6 +99,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
         paidNow: _paymentAmount,
         newDue: _newDue,
         deliveryBoyName: widget.deliveryBoyName,
+        deliveryBoyPhone: widget.deliveryBoyPhone,
         items: _items,
         billDate: DateTime.now(),
         paymentMode: _paymentMode.displayName,
@@ -92,9 +107,25 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
       );
       if (!mounted) return;
       await Printing.layoutPdf(onLayout: (_) => pdf);
-      if (mounted) context.go('/bills/$id');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Bill saved & printed'), backgroundColor: AppTheme.success),
+        );
+        context.go('/bills');
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        final msg = e.response?.data?['message'] ?? 'Failed to save bill. Please try again.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: AppTheme.error),
+        );
+      }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isGenerating = false);
     }
@@ -102,7 +133,13 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final settingsAsync = ref.watch(settingsProvider);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final tableWidth = (screenWidth - 80).clamp(400.0, 800.0);
+    const cSr = 28.0;
+    const cQty = 50.0;
+    const cRate = 60.0;
+    const cAmt = 70.0;
+    final cProd = tableWidth - cSr - cQty - cRate - cAmt;
 
     return Scaffold(
       appBar: AppBar(
@@ -114,157 +151,18 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
           const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Bills', route: '/bills'), Crumb('Preview')]),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  settingsAsync.when(
-                    loading: () => const SizedBox(),
-                    error: (_, __) => const SizedBox(),
-                    data: (settings) => Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(settings.businessName.toUpperCase(), style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                                      if (settings.tagline != null && settings.tagline!.isNotEmpty)
-                                        Text(settings.tagline!, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
-                                      const SizedBox(height: 4),
-                                      if (settings.address != null && settings.address!.isNotEmpty)
-                                        Text(settings.address!, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                                      if (settings.phone != null && settings.phone!.isNotEmpty)
-                                        Text('Phone: ${settings.phone}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                                      if (settings.gstNumber != null && settings.gstNumber!.isNotEmpty)
-                                        Text('GST: ${settings.gstNumber}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                                    ],
-                                  ),
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(AppUtils.formatDate(DateTime.now()), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const Divider(height: 24),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Delivery Boy: ${widget.deliveryBoyName.isNotEmpty ? widget.deliveryBoyName : '-'}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                                    const SizedBox(height: 4),
-                                    Text('Payment: ${_paymentMode.displayName}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                                  ],
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade600), borderRadius: BorderRadius.circular(4)),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      const Text('Bill To:', style: TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
-                                      const SizedBox(height: 4),
-                                      Text(widget.customer.name, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
-                                      Text(widget.customer.mobile, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                                      if (widget.customer.address != null && widget.customer.address!.isNotEmpty)
-                                        Text(widget.customer.address!, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            Table(
-                              columnWidths: const {0: FlexColumnWidth(0.6), 1: FlexColumnWidth(2.8), 2: FlexColumnWidth(1), 3: FlexColumnWidth(1.2), 4: FlexColumnWidth(1.4)},
-                              children: [
-                                TableRow(
-                                  decoration: BoxDecoration(color: AppTheme.surfaceNav),
-                                  children: ['#', 'Item', 'Qty', 'Rate', 'Amount'].map((h) => Padding(
-                                    padding: const EdgeInsets.all(8),
-                                    child: Text(h, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 12)),
-                                  )).toList(),
-                                ),
-                                ..._items.asMap().entries.map((e) {
-                                  final i = e.value;
-                                  return TableRow(
-                                    children: [
-                                      Padding(padding: const EdgeInsets.all(8), child: Text('${e.key + 1}', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 12))),
-                                      Padding(padding: const EdgeInsets.all(8), child: Text(i.productName, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 12))),
-                                      Padding(padding: const EdgeInsets.all(8), child: Text('${i.quantity.toStringAsFixed(0)} ${i.unit}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12))),
-                                      Padding(padding: const EdgeInsets.all(8), child: Text(AppUtils.formatCurrency(i.appliedRate), style: const TextStyle(color: AppTheme.textPrimary, fontSize: 12), textAlign: TextAlign.right)),
-                                      Padding(padding: const EdgeInsets.all(8), child: Text(AppUtils.formatCurrency(i.amount), style: const TextStyle(color: AppTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
-                                    ],
-                                  );
-                                }),
-                              ],
-                            ),
-                            const Divider(height: 24),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Container(
-                                  width: 280,
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade600), borderRadius: BorderRadius.circular(4)),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      _row('Subtotal', _subtotal),
-                                      const Divider(height: 12),
-                                      _row('Total', _total, bold: true, fontSize: 16),
-                                      const SizedBox(height: 4),
-                                      _row('Previous Due', widget.customer.currentDue, color: AppTheme.warning),
-                                      const Divider(height: 12),
-                                      _row('Paid', _paymentAmount, color: AppTheme.success),
-                                      const SizedBox(height: 4),
-                                      _row('New Due', _newDue, bold: true, fontSize: 15, color: _newDue > 0 ? AppTheme.error : AppTheme.success),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            const Divider(),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(settings.footerNote ?? '', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
-                                const Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text('Authorised Signature', style: TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
-                                    SizedBox(height: 20),
-                                    Text('_________________________', style: TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              padding: const EdgeInsets.all(16),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: _buildPreview(cSr, cProd, cQty, cRate, cAmt),
+                ),
               ),
             ),
           ),
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: AppTheme.surfaceCard, border: Border(top: BorderSide(color: Colors.grey.shade800))),
+            decoration: BoxDecoration(color: AppTheme.surface, border: Border(top: BorderSide(color: AppTheme.border))),
             child: Row(
               children: [
                 Expanded(
@@ -279,8 +177,10 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                 Expanded(
                   flex: 2,
                   child: ElevatedButton.icon(
-                    icon: Icon(_isGenerating ? Icons.hourglass_top : Icons.print, size: 18),
-                    label: Text(_isGenerating ? 'Generating...' : 'Print Both Copies'),
+                    icon: _isGenerating
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.print, size: 18),
+                    label: Text(_isGenerating ? 'Saving & Printing...' : 'Print Both Copies'),
                     onPressed: _isGenerating ? null : _print,
                     style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
                   ),
@@ -293,16 +193,159 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
     );
   }
 
-  Widget _row(String label, double amount, {bool bold = false, double fontSize = 13, Color? color}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+  Widget _buildPreview(double colSr, double colProd, double colQty, double colRate, double colAmt) {
+    final cellStyle = TextStyle(fontSize: 10, color: Colors.grey.shade800);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('RATHOD ENTERPRISES', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFFD32F2F), letterSpacing: 1)),
+        const SizedBox(height: 4),
+        Text('Vegetable, Fruits Supplier & Commission Agent', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+        Text('Green & Fresh \u2022 Every Day...', style: TextStyle(fontSize: 10, color: Colors.grey.shade500, fontStyle: FontStyle.italic)),
+        const SizedBox(height: 6),
+        Text('Shop No.95 Kanji House, Mahatma Phule Market, Cotton Market, Nagpur \u2013 440018',
+            style: TextStyle(fontSize: 10, color: Colors.grey.shade700)),
+        Text('Nitesh : 8087344819  |  Vicky : 9529031540  |  7030914867',
+            style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
+        const Divider(height: 24),
+
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('BILL TO', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.red.shade700, letterSpacing: 1)),
+                  const SizedBox(height: 8),
+                  Text(widget.customer.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade900)),
+                  Text(widget.customer.mobile, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                  if (widget.customer.address != null && widget.customer.address!.isNotEmpty)
+                    Text(widget.customer.address!, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('BILL DETAILS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.red.shade700, letterSpacing: 1)),
+                  const SizedBox(height: 8),
+                  _infoRow('Bill No', 'Will be generated on print'),
+                  const SizedBox(height: 4),
+                  _infoRow('Date', AppUtils.formatDate(DateTime.now())),
+                  if (widget.deliveryBoyName.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    _infoRow('Delivery', widget.deliveryBoyName),
+                  ],
+                  if (widget.deliveryBoyPhone.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    _infoRow('Phone', widget.deliveryBoyPhone),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        const Divider(height: 24),
+
+        Text('PRODUCTS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.grey.shade600, letterSpacing: 1.2)),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300, width: 0.5)),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              _headerRow(colSr, colProd, colQty, colRate, colAmt),
+              ...List.generate(_items.length, (i) => _dataRow(i, colSr, colProd, colQty, colRate, colAmt, cellStyle)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(4)),
+          child: Column(
+            children: [
+              _sumRow('Subtotal', _subtotal, 10, false, null),
+              const SizedBox(height: 4),
+              _sumRow('Previous Due', widget.customer.currentDue, 10, false, Colors.orange.shade700),
+              const Divider(height: 16),
+              _sumRow('Grand Total', _subtotal + widget.customer.currentDue, 15, true, Colors.red.shade700),
+              const SizedBox(height: 6),
+              _sumRow('Paid', _paymentAmount, 11, false, Colors.green.shade700),
+              const Divider(height: 16),
+              _sumRow('Remaining Due', _newDue, 13, true, _newDue > 0 ? Colors.red.shade700 : Colors.green.shade700),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: 55, child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey.shade600))),
+        Expanded(child: Text(value, style: TextStyle(fontSize: 10, color: Colors.grey.shade800))),
+      ],
+    );
+  }
+
+  Widget _headerRow(double sr, double prod, double qty, double rate, double amt) {
+    return Container(
+      color: const Color(0xFF37474F),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: fontSize, fontWeight: bold ? FontWeight.w600 : FontWeight.normal)),
-          Text(AppUtils.formatCurrency(amount), style: TextStyle(color: color ?? AppTheme.textPrimary, fontSize: fontSize, fontWeight: bold ? FontWeight.bold : FontWeight.w600)),
+          SizedBox(width: sr, child: const Text('#', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white), textAlign: TextAlign.center)),
+          SizedBox(width: prod, child: const Text('Product', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white))),
+          SizedBox(width: qty, child: const Text('Qty', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white), textAlign: TextAlign.center)),
+          SizedBox(width: rate, child: const Text('Rate', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white), textAlign: TextAlign.center)),
+          SizedBox(width: amt, child: const Text('Amount', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white), textAlign: TextAlign.center)),
         ],
       ),
     );
   }
+
+  Widget _dataRow(int idx, double sr, double prod, double qty, double rate, double amt, TextStyle cell) {
+    final item = _items[idx];
+    final isOdd = idx.isOdd;
+    final isLast = idx == _items.length - 1;
+    final name = item.productNameHindi.isNotEmpty ? '${item.productName} (${item.productNameHindi})' : item.productName;
+    final border = isLast ? null : Border(bottom: BorderSide(color: Colors.grey.shade300, width: 0.5));
+
+    return Container(
+      decoration: BoxDecoration(color: isOdd ? const Color(0xFFF5F5F5) : Colors.white, border: border),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+      child: Row(
+        children: [
+          SizedBox(width: sr, child: Text('${idx + 1}', style: cell, textAlign: TextAlign.center)),
+          SizedBox(width: prod, child: Text(name, style: cell, overflow: TextOverflow.ellipsis)),
+          SizedBox(width: qty, child: Text(item.quantity.toStringAsFixed(0), style: cell, textAlign: TextAlign.center)),
+          SizedBox(width: rate, child: Text(_fmt(item.appliedRate), style: cell, textAlign: TextAlign.right)),
+          SizedBox(width: amt, child: Text(_fmt(item.amount), style: cell.copyWith(fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
+        ],
+      ),
+    );
+  }
+
+  Widget _sumRow(String label, double amount, double fontSize, bool bold, Color? color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(fontWeight: bold ? FontWeight.w600 : FontWeight.normal, fontSize: fontSize.clamp(10, 16), color: Colors.grey.shade700)),
+        Text('\u20B9 ${amount.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: fontSize.clamp(10, 16), color: color ?? Colors.grey.shade900)),
+      ],
+    );
+  }
+
+  String _fmt(double v) => v.toStringAsFixed(0);
 }

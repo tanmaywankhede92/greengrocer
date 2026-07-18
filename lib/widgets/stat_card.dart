@@ -29,25 +29,21 @@ class StatCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(title, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                Text(title, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: (color ?? AppTheme.primaryGreen).withAlpha(30),
+                    color: (color ?? AppTheme.primaryRed).withAlpha(20),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: color ?? AppTheme.primaryGreenLight, size: 20),
+                  child: Icon(icon, color: color ?? AppTheme.primaryRed, size: 20),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             Text(
               isCurrency ? AppUtils.formatCurrency(value) : value.toStringAsFixed(0),
-              style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ],
         ),

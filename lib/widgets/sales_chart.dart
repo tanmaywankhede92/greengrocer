@@ -17,7 +17,7 @@ class SalesChart extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Monthly Sales', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+            Text('Monthly Sales', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 20),
             SizedBox(
               height: 220,
@@ -37,7 +37,7 @@ class SalesChart extends StatelessWidget {
                         if (idx < 0 || idx >= data.length) return const SizedBox();
                         return Padding(
                           padding: const EdgeInsets.only(top: 8),
-                          child: Text(data[idx].month, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
+                          child: Text(data[idx].month, style: TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
                         );
                       },
                     )),
@@ -46,14 +46,14 @@ class SalesChart extends StatelessWidget {
                     show: true,
                     drawVerticalLine: false,
                     horizontalInterval: maxY / 4,
-                    getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade800, strokeWidth: 1),
+                    getDrawingHorizontalLine: (value) => FlLine(color: AppTheme.border, strokeWidth: 1),
                   ),
                   borderData: FlBorderData(show: false),
                   barGroups: data.asMap().entries.map((entry) => BarChartGroupData(
                     x: entry.key,
                     barRods: [BarChartRodData(
                       toY: entry.value.sales,
-                      color: AppTheme.primaryGreen,
+                      color: AppTheme.primaryRed,
                       width: 18,
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(4), topRight: Radius.circular(4),

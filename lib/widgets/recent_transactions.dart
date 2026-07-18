@@ -20,7 +20,7 @@ class RecentTransactions extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Recent Bills', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                Text('Recent Bills', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
                 TextButton(onPressed: () => context.go('/bills'), child: const Text('View All')),
               ],
             ),
@@ -37,9 +37,9 @@ class RecentTransactions extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                 ),
-                title: Text(b.billNumber, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13)),
-                subtitle: Text(b.customer?.name ?? '', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                trailing: Text(AppUtils.formatCurrency(b.total), style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                title: Text(b.billNumber, style: TextStyle(color: AppTheme.textPrimary, fontSize: 13)),
+                subtitle: Text(b.customer?.name ?? '', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                trailing: Text(AppUtils.formatCurrency(b.total), style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
                 onTap: () => context.go('/bills/${b.id}'),
               )),
           ],

@@ -20,7 +20,7 @@ class CustomerDetailScreen extends ConsumerWidget {
 
     return customerAsync.when(
       loading: () => const LoadingWidget(),
-      error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.error))),
+      error: (e, _) => Center(child: Text('Error: $e', style: TextStyle(color: AppTheme.error))),
       data: (customer) {
         return Scaffold(
           appBar: AppBar(
@@ -50,25 +50,25 @@ class CustomerDetailScreen extends ConsumerWidget {
                       children: [
                         CircleAvatar(
                           radius: 30,
-                          backgroundColor: AppTheme.primaryGreen.withAlpha(50),
-                          child: Text(AppUtils.initials(customer.name), style: const TextStyle(color: AppTheme.primaryGreenLight, fontSize: 22, fontWeight: FontWeight.bold)),
+                          backgroundColor: AppTheme.primaryRed.withAlpha(20),
+                          child: Text(AppUtils.initials(customer.name), style: TextStyle(color: AppTheme.primaryRed, fontSize: 22, fontWeight: FontWeight.bold)),
                         ),
                         const SizedBox(width: 20),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(customer.name, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+                              Text(customer.name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 4),
-                              Text(customer.mobile, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
-                              if (customer.address != null && customer.address!.isNotEmpty) Text(customer.address!, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                              Text(customer.mobile, style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                              if (customer.address != null && customer.address!.isNotEmpty) Text(customer.address!, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
                             ],
                           ),
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            const Text('Current Due', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                            Text('Current Due', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                             const SizedBox(height: 4),
                             Text(AppUtils.formatCurrency(customer.currentDue), style: TextStyle(color: customer.currentDue > 0 ? AppTheme.warning : AppTheme.success, fontSize: 24, fontWeight: FontWeight.bold)),
                           ],
@@ -78,13 +78,13 @@ class CustomerDetailScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text('Ledger', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
+                Text('Ledger', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 12),
                 ledgerAsync.when(
                   loading: () => const LoadingWidget(),
                   error: (e, _) => Center(child: Text('Error: $e')),
                   data: (entries) {
-                    if (entries.isEmpty) return const Center(child: Text('No ledger entries', style: TextStyle(color: AppTheme.textSecondary)));
+                    if (entries.isEmpty) return Center(child: Text('No ledger entries', style: TextStyle(color: AppTheme.textSecondary)));
                     return Card(
                       child: ListView.builder(
                         shrinkWrap: true,
@@ -94,14 +94,14 @@ class CustomerDetailScreen extends ConsumerWidget {
                           final e = entries[index];
                           return ListTile(
                             dense: true,
-                            title: Text(e.description, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13)),
-                            subtitle: Text(AppUtils.formatDate(e.entryDate), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                            title: Text(e.description, style: TextStyle(color: AppTheme.textPrimary, fontSize: 13)),
+                            subtitle: Text(AppUtils.formatDate(e.entryDate), style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
                             trailing: Column(
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                if (e.debit > 0) Text(AppUtils.formatCurrency(e.debit), style: const TextStyle(color: AppTheme.error, fontWeight: FontWeight.w600)),
-                                if (e.credit > 0) Text(AppUtils.formatCurrency(e.credit), style: const TextStyle(color: AppTheme.success, fontWeight: FontWeight.w600)),
+                                if (e.debit > 0) Text(AppUtils.formatCurrency(e.debit), style: TextStyle(color: AppTheme.error, fontWeight: FontWeight.w600)),
+                                if (e.credit > 0) Text(AppUtils.formatCurrency(e.credit), style: TextStyle(color: AppTheme.success, fontWeight: FontWeight.w600)),
                               ],
                             ),
                           );

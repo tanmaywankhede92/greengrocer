@@ -25,7 +25,16 @@ const getById = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
-  const result = await billService.createBill(req.body, req.user.id);
+  const body = { ...req.body };
+  delete body._id;
+  delete body.id;
+  if (body.items && Array.isArray(body.items)) {
+    body.items = body.items.map((item) => {
+      const { _id, id, ...rest } = item;
+      return rest;
+    });
+  }
+  const result = await billService.createBill(body, req.user.id);
   ApiResponse.created(res, result, messages.BILL.CREATED);
 });
 
