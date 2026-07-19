@@ -6,8 +6,8 @@ import '../core/utils.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
 import '../core/enums.dart';
+import '../providers/product_provider.dart';
 import '../providers/rate_provider.dart';
-import '../services/product_service.dart';
 import '../widgets/breadcrumb.dart';
 import '../widgets/customer_select.dart';
 import '../widgets/bill_item_row.dart';
@@ -25,9 +25,8 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   final List<LineItem> _items = [];
   double _paymentAmount = 0;
   PaymentMode _paymentMode = PaymentMode.cash;
+  double _deliveryCharge = 0;
   Map<String, double> _defaultRates = {};
-  final _deliveryBoyCtrl = TextEditingController();
-  final _deliveryPhoneCtrl = TextEditingController();
   final _paymentCtrl = TextEditingController();
   final _searchCtrl = TextEditingController();
   final _searchFocusNode = FocusNode();
@@ -41,8 +40,6 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
 
   @override
   void dispose() {
-    _deliveryBoyCtrl.dispose();
-    _deliveryPhoneCtrl.dispose();
     _paymentCtrl.dispose();
     _searchCtrl.dispose();
     _searchFocusNode.dispose();
@@ -50,31 +47,27 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   }
 
   void _onSearchChanged(String query) async {
-    debugPrint('[NewBill] _onSearchChanged: "$query"');
     if (query.isEmpty) {
       setState(() { _searchResults = []; _showSearchDropdown = false; });
       return;
     }
     try {
-      final results = await ProductService().getAll(search: query);
-      debugPrint('[NewBill] _onSearchChanged: got ${results.length} results');
-      if (mounted) setState(() {
-        _searchResults = results.where((p) => p.isActive).toList();
-        _showSearchDropdown = _searchResults.isNotEmpty;
-      });
-    } catch (e) {
-      debugPrint('[NewBill] _onSearchChanged ERROR: $e');
-    }
+      final results = await ref.read(productServiceProvider).getAll(search: query);
+      if (mounted) {
+        setState(() {
+          _searchResults = results.where((p) => p.isActive).toList();
+          _showSearchDropdown = _searchResults.isNotEmpty;
+        });
+      }
+    } catch (_) {}
   }
 
   void _addProduct(Product product) {
     final defaultRate = _defaultRates[product.id] ?? 0;
-    print('[NewBill] _addProduct: "${product.name}" id=${product.id} rate=$defaultRate');
     setState(() {
       final existing = _items.where((i) => i.productId == product.id).firstOrNull;
       if (existing != null) {
         existing.quantity += 1;
-        print('[NewBill] _addProduct: incremented qty to ${existing.quantity}');
       } else {
         _items.add(LineItem(
           productId: product.id,
@@ -85,7 +78,6 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
           defaultRate: defaultRate,
           appliedRate: defaultRate,
         ));
-        print('[NewBill] _addProduct: added new item (total items: ${_items.length})');
       }
       _searchCtrl.clear();
       _searchResults = [];
@@ -95,8 +87,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   }
 
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.amount);
-  double get _total => _subtotal;
-  double get _newDue => (_selectedCustomer?.currentDue ?? 0) + _total - _paymentAmount;
+  double get _total => _subtotal + _deliveryCharge;
 
   void _removeItem(int index) {
     setState(() => _items.removeAt(index));
@@ -116,17 +107,10 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     if (_selectedCustomer == null) return;
     if (_items.isEmpty || _items.any((i) => i.productName.isEmpty || i.quantity <= 0)) return;
 
-    final phone = _deliveryPhoneCtrl.text.trim();
-    if (phone.isNotEmpty && !RegExp(r'^\d{10}$').hasMatch(phone)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Delivery phone must be exactly 10 digits')));
-      return;
-    }
-
     Navigator.push(context, MaterialPageRoute(builder: (_) => BillPreviewScreen(
       customer: _selectedCustomer!,
       items: List.from(_items),
-      deliveryBoyName: _deliveryBoyCtrl.text.trim(),
-      deliveryBoyPhone: _deliveryPhoneCtrl.text.trim(),
+      deliveryCharge: _deliveryCharge,
       paymentAmount: _paymentAmount,
       paymentMode: _paymentMode,
     )));
@@ -266,38 +250,19 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              const Expanded(child: Text('Delivery Boy', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14))),
+                              const Expanded(child: Text('Delivery Charge', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14))),
                               SizedBox(
-                                width: 180,
+                                width: 120,
                                 child: TextField(
-                                  controller: _deliveryBoyCtrl,
-                                  decoration: const InputDecoration(isDense: true, hintText: 'Name', contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Expanded(child: Text('Delivery Phone', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14))),
-                              SizedBox(
-                                width: 180,
-                                child: TextField(
-                                  controller: _deliveryPhoneCtrl,
-                                  keyboardType: TextInputType.phone,
-                                  decoration: const InputDecoration(isDense: true, hintText: 'Phone number', contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(isDense: true, hintText: 'Amount', contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                                  onChanged: (v) => setState(() => _deliveryCharge = double.tryParse(v) ?? 0),
                                 ),
                               ),
                             ],
                           ),
                           const Divider(height: 24),
                           _summaryRow('Total', _total, bold: true),
-                          if (_selectedCustomer != null) ...[
-                            const SizedBox(height: 4),
-                            _summaryRow('Previous Due', _selectedCustomer!.currentDue),
-                            const Divider(height: 24),
-                            _summaryRow('Amount Payable', _selectedCustomer!.currentDue + _total),
-                          ],
                         ],
                       ),
                     ),
@@ -318,21 +283,6 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
                           ),
                           const SizedBox(height: 12),
                           PaymentModeSelect(value: _paymentMode, onChanged: (v) => setState(() => _paymentMode = v ?? PaymentMode.cash)),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: _newDue > 0 ? AppTheme.warning.withAlpha(15) : AppTheme.success.withAlpha(15),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('New Due', style: TextStyle(color: AppTheme.textSecondary)),
-                                Text(AppUtils.formatCurrency(_newDue), style: TextStyle(color: _newDue > 0 ? AppTheme.warning : AppTheme.success, fontSize: 18, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ),
                         ],
                       ),
                     ),

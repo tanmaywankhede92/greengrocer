@@ -16,8 +16,7 @@ import '../widgets/bill_pdf.dart';
 class BillPreviewScreen extends ConsumerStatefulWidget {
   final Customer customer;
   final List<LineItem> items;
-  final String deliveryBoyName;
-  final String deliveryBoyPhone;
+  final double deliveryCharge;
   final double paymentAmount;
   final PaymentMode paymentMode;
 
@@ -25,8 +24,7 @@ class BillPreviewScreen extends ConsumerStatefulWidget {
     super.key,
     required this.customer,
     required this.items,
-    this.deliveryBoyName = '',
-    this.deliveryBoyPhone = '',
+    this.deliveryCharge = 0,
     required this.paymentAmount,
     required this.paymentMode,
   });
@@ -58,8 +56,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   }
 
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.amount);
-  double get _total => _subtotal;
-  double get _newDue => (widget.customer.currentDue) + _total - _paymentAmount;
+  double get _total => _subtotal + widget.deliveryCharge;
 
   Map<String, dynamic> _buildCreatePayload() {
     final itemsJson = _items.map((i) => i.toJson()).toList();
@@ -67,8 +64,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
       'customerId': widget.customer.id,
       'billDate': AppUtils.formatDateApi(DateTime.now()),
       'items': itemsJson,
-      'deliveryBoyName': widget.deliveryBoyName,
-      'deliveryBoyPhone': widget.deliveryBoyPhone,
+      'deliveryCharge': widget.deliveryCharge,
       'notes': '',
       'paymentAmount': _paymentAmount,
       'paymentMode': _paymentMode.value,
@@ -82,24 +78,22 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
       final settings = await ref.read(settingsProvider.future);
 
       final payload = _buildCreatePayload();
-      final id = await billService.create(payload);
+      final result = await billService.create(payload);
+      final billNumber = result['billNumber'] as String;
 
       if (!mounted) return;
       ref.invalidate(billListProvider);
 
       final pdf = await buildBillPdf(
         settings: settings,
-        billNumber: id,
+        billNumber: billNumber,
         customerName: widget.customer.name,
         customerMobile: widget.customer.mobile,
         customerAddress: widget.customer.address,
         subtotal: _subtotal,
         total: _total,
-        previousDue: widget.customer.currentDue,
+        deliveryCharge: widget.deliveryCharge,
         paidNow: _paymentAmount,
-        newDue: _newDue,
-        deliveryBoyName: widget.deliveryBoyName,
-        deliveryBoyPhone: widget.deliveryBoyPhone,
         items: _items,
         billDate: DateTime.now(),
         paymentMode: _paymentMode.displayName,
@@ -238,14 +232,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                   _infoRow('Bill No', 'Will be generated on print'),
                   const SizedBox(height: 4),
                   _infoRow('Date', AppUtils.formatDate(DateTime.now())),
-                  if (widget.deliveryBoyName.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    _infoRow('Delivery', widget.deliveryBoyName),
-                  ],
-                  if (widget.deliveryBoyPhone.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    _infoRow('Phone', widget.deliveryBoyPhone),
-                  ],
+
                 ],
               ),
             ),
@@ -255,15 +242,56 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
 
         Text('PRODUCTS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.grey.shade600, letterSpacing: 1.2)),
         const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300, width: 0.5)),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              _headerRow(colSr, colProd, colQty, colRate, colAmt),
-              ...List.generate(_items.length, (i) => _dataRow(i, colSr, colProd, colQty, colRate, colAmt, cellStyle)),
-            ],
-          ),
+        Builder(
+          builder: (context) {
+            final isMobile = MediaQuery.of(context).size.width < 768;
+            if (isMobile) {
+              return Column(
+                children: List.generate(_items.length, (idx) {
+                  final i = _items[idx];
+                  final name = i.productNameHindi.isNotEmpty ? '${i.productName} (${i.productNameHindi})' : i.productName;
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            Text('#${idx + 1}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.grey.shade600)),
+                            const Spacer(),
+                            Text('Qty: ${i.quantity.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          ]),
+                          const SizedBox(height: 6),
+                          Text(name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          Row(children: [
+                            Text('Rate: \u20B9${_fmt(i.appliedRate)}', style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
+                            const Spacer(),
+                            Text('Amount: \u20B9${_fmt(i.amount)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.red)),
+                          ]),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              );
+            }
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                return Container(
+                  decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300, width: 0.5)),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      _headerRow(colSr, colProd, colQty, colRate, colAmt),
+                      ...List.generate(_items.length, (i) => _dataRow(i, colSr, colProd, colQty, colRate, colAmt, cellStyle)),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         ),
         const SizedBox(height: 24),
 
@@ -274,14 +302,16 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
           child: Column(
             children: [
               _sumRow('Subtotal', _subtotal, 10, false, null),
-              const SizedBox(height: 4),
-              _sumRow('Previous Due', widget.customer.currentDue, 10, false, Colors.orange.shade700),
+              if (widget.deliveryCharge > 0) ...[
+                const SizedBox(height: 4),
+                _sumRow('Delivery Charge', widget.deliveryCharge, 10, false, null),
+              ],
               const Divider(height: 16),
-              _sumRow('Grand Total', _subtotal + widget.customer.currentDue, 15, true, Colors.red.shade700),
-              const SizedBox(height: 6),
-              _sumRow('Paid', _paymentAmount, 11, false, Colors.green.shade700),
-              const Divider(height: 16),
-              _sumRow('Remaining Due', _newDue, 13, true, _newDue > 0 ? Colors.red.shade700 : Colors.green.shade700),
+              _sumRow('Total', _total, 15, true, Colors.red.shade700),
+              if (_paymentAmount > 0) ...[
+                const SizedBox(height: 6),
+                _sumRow('Paid', _paymentAmount, 11, false, Colors.green.shade700),
+              ],
             ],
           ),
         ),

@@ -1,7 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'api_client.dart';
-import '../core/constants.dart';
-import '../models/user.dart';
+import '../../../services/api_client.dart';
+import '../../../core/constants.dart';
+import '../../../models/user.dart';
 
 class AuthService {
   final ApiClient _client = ApiClient();

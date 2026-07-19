@@ -19,9 +19,7 @@ const createBillSchema = Joi.object({
   billDate: Joi.date().required(),
   items: Joi.array().items(itemSchema).min(1).required()
     .messages({ 'array.min': 'At least one item is required' }),
-  deliveryBoyName: Joi.string().trim().max(100).allow('').default(''),
-  deliveryBoyPhone: Joi.string().trim().pattern(/^\d{10}$/).allow('').default('')
-    .messages({ 'string.pattern.base': 'Delivery boy phone must be exactly 10 digits' }),
+  deliveryCharge: Joi.number().min(0).default(0),
   notes: Joi.string().trim().max(500).allow('').default(''),
   paymentAmount: Joi.number().min(0).default(0),
   paymentMode: Joi.string().valid(...PAYMENT_MODES).default('cash'),

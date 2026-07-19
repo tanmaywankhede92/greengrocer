@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../config/theme.dart';
 import '../core/constants.dart';
-import '../providers/auth_provider.dart';
+import '../features/auth/presentation/providers/auth_provider.dart';
 
 class Sidebar extends ConsumerWidget {
   const Sidebar({super.key});

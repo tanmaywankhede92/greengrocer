@@ -23,7 +23,14 @@ const findCustomers = async ({ search, page, limit, skip, sort }) => {
   const [ledgerSummaries, billSummaries, paymentSummaries] = await Promise.all([
     LedgerEntry.aggregate([
       { $match: { customerId: { $in: customerIds } } },
-      { $group: { _id: '$customerId', balance: { $sum: { $subtract: ['$debit', '$credit'] } } } },
+      {
+        $group: {
+          _id: '$customerId',
+          balance: { $sum: { $subtract: ['$debit', '$credit'] } },
+          totalPaid: { $sum: '$credit' },
+          totalBilled: { $sum: '$debit' },
+        },
+      },
     ]),
     Bill.aggregate([
       { $match: { customerId: { $in: customerIds }, status: 'active' } },
@@ -41,18 +48,20 @@ const findCustomers = async ({ search, page, limit, skip, sort }) => {
     ]),
   ]);
 
-  const ledgerMap = Object.fromEntries(ledgerSummaries.map((l) => [l._id.toString(), l.balance]));
+  const ledgerMap = Object.fromEntries(ledgerSummaries.map((l) => [l._id.toString(), l]));
+
   const billMap = Object.fromEntries(billSummaries.map((b) => [b._id.toString(), b]));
   const paymentMap = Object.fromEntries(paymentSummaries.map((p) => [p._id.toString(), p]));
 
   const enriched = customers.map((c) => {
     const id = c._id.toString();
-    const ledgerBal = ledgerMap[id] || 0;
+    const ledgerInfo = ledgerMap[id] || { balance: 0, totalPaid: 0, totalBilled: 0 };
     const billInfo = billMap[id];
     const payInfo = paymentMap[id];
     return {
       ...c,
-      currentDue: (c.openingBalance || 0) + ledgerBal,
+      currentDue: (c.openingBalance || 0) + ledgerInfo.balance,
+      totalPaid: ledgerInfo.totalPaid,
       billCount: billInfo?.billCount || 0,
       lastBillDate: billInfo?.lastBillDate || null,
       lastPaymentDate: payInfo?.lastPaymentDate || null,

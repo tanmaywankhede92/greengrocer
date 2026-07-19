@@ -33,7 +33,7 @@ class CustomerDetailScreen extends ConsumerWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.payment),
-                onPressed: () => context.go('/payments/new', extra: {'customerId': id}),
+                onPressed: () => context.go('/payments'),
               ),
             ],
           ),

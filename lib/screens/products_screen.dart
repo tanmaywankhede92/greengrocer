@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
 import '../models/product.dart';
 import '../providers/product_provider.dart';
-import '../services/product_service.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/empty_state.dart';
 
@@ -32,11 +31,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
       return;
     }
     try {
-      final results = await ProductService().getAll(activeOnly: true, search: query);
+      final results = await ref.read(productServiceProvider).getAll(activeOnly: true, search: query);
       if (mounted) setState(() => _searchResults = results);
-    } catch (e) {
-      debugPrint('[Products] search error: $e');
-    }
+    } catch (_) {}
   }
 
   @override
@@ -186,7 +183,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                   TextField(controller: nameHindiCtrl, decoration: const InputDecoration(labelText: 'Name (Hindi)', prefixIcon: Icon(Icons.translate, size: 18), hintText: 'e.g. आलू, टमाटर')),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: isCustom ? 'custom' : unit,
+                    initialValue: isCustom ? 'custom' : unit,
                     decoration: const InputDecoration(labelText: 'Unit', prefixIcon: Icon(Icons.scale, size: 18)),
                     items: [
                       ..._commonUnits.map((u) => DropdownMenuItem(value: u, child: Text(u, style: TextStyle(color: AppTheme.textPrimary)))),

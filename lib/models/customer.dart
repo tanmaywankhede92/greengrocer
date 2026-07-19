@@ -12,6 +12,7 @@ class Customer extends Equatable {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final double currentDue;
+  final double totalPaid;
   final int billCount;
   final DateTime? lastBillDate;
   final DateTime? lastPaymentDate;
@@ -28,6 +29,7 @@ class Customer extends Equatable {
     this.createdAt,
     this.updatedAt,
     this.currentDue = 0,
+    this.totalPaid = 0,
     this.billCount = 0,
     this.lastBillDate,
     this.lastPaymentDate,
@@ -45,6 +47,7 @@ class Customer extends Equatable {
     createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
     updatedAt: json['updatedAt'] != null ? DateTime.tryParse(json['updatedAt']) : null,
     currentDue: (json['currentDue'] ?? 0).toDouble(),
+    totalPaid: (json['totalPaid'] ?? 0).toDouble(),
     billCount: json['billCount'] ?? 0,
     lastBillDate: json['lastBillDate'] != null ? DateTime.tryParse(json['lastBillDate']) : null,
     lastPaymentDate: json['lastPaymentDate'] != null ? DateTime.tryParse(json['lastPaymentDate']) : null,
@@ -63,10 +66,10 @@ class Customer extends Equatable {
     id: id, name: name, mobile: mobile, address: address,
     gstNumber: gstNumber, openingBalance: openingBalance, notes: notes,
     isDeleted: isDeleted, createdAt: createdAt, updatedAt: updatedAt,
-    currentDue: currentDue ?? this.currentDue, billCount: billCount,
+    currentDue: currentDue ?? this.currentDue, totalPaid: totalPaid, billCount: billCount,
     lastBillDate: lastBillDate, lastPaymentDate: lastPaymentDate,
   );
 
   @override
-  List<Object?> get props => [id, name, mobile, currentDue];
+  List<Object?> get props => [id, name, mobile, currentDue, totalPaid];
 }

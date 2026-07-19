@@ -20,29 +20,15 @@ const billSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
-  deliveryBoyName: {
-    type: String,
-    default: '',
-    maxlength: 100,
-  },
-  deliveryBoyPhone: {
-    type: String,
-    default: '',
-    maxlength: 20,
+  deliveryCharge: {
+    type: Number,
+    default: 0,
   },
   total: {
     type: Number,
     default: 0,
   },
-  previousDue: {
-    type: Number,
-    default: 0,
-  },
   paidNow: {
-    type: Number,
-    default: 0,
-  },
-  newDue: {
     type: Number,
     default: 0,
   },

@@ -48,34 +48,26 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                       Text(customer.name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
                       Text(customer.mobile, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
                       const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: InkWell(
-                              onTap: () async {
-                                final picked = await showDatePicker(context: context, initialDate: _from, firstDate: DateTime(2020), lastDate: DateTime.now());
-                                if (picked != null) setState(() => _from = picked);
-                              },
-                              child: InputDecorator(
-                                decoration: const InputDecoration(labelText: 'From', isDense: true),
-                                child: Text(AppUtils.formatDate(_from), style: TextStyle(color: AppTheme.textPrimary)),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () async {
-                                final picked = await showDatePicker(context: context, initialDate: _to, firstDate: DateTime(2020), lastDate: DateTime.now());
-                                if (picked != null) setState(() => _to = picked);
-                              },
-                              child: InputDecorator(
-                                decoration: const InputDecoration(labelText: 'To', isDense: true),
-                                child: Text(AppUtils.formatDate(_to), style: TextStyle(color: AppTheme.textPrimary)),
-                              ),
-                            ),
-                          ),
-                        ],
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isNarrow = constraints.maxWidth < 500;
+                          if (isNarrow) {
+                            return Column(
+                              children: [
+                                _datePickerField('From', _from, (picked) => setState(() => _from = picked)),
+                                const SizedBox(height: 8),
+                                _datePickerField('To', _to, (picked) => setState(() => _to = picked)),
+                              ],
+                            );
+                          }
+                          return Row(
+                            children: [
+                              Expanded(child: _datePickerField('From', _from, (picked) => setState(() => _from = picked))),
+                              const SizedBox(width: 12),
+                              Expanded(child: _datePickerField('To', _to, (picked) => setState(() => _to = picked))),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -92,56 +84,22 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                     final totalDebit = (data['totalDebit'] ?? 0).toDouble();
                     final totalCredit = (data['totalCredit'] ?? 0).toDouble();
 
-                    return Column(
-                      children: [
-                        Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _stat('Opening', openingBalance),
-                                _stat('Debit', totalDebit, AppTheme.error),
-                                _stat('Credit', totalCredit, AppTheme.success),
-                                _stat('Closing', closingBalance, AppTheme.warning),
-                              ],
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isMobile = constraints.maxWidth < 768;
+
+                        return Column(
+                          children: [
+                            _summaryCard(isMobile, openingBalance, totalDebit, totalCredit, closingBalance),
+                            const SizedBox(height: 8),
+                            Expanded(
+                              child: isMobile
+                                  ? _mobileEntryList(rows)
+                                  : _desktopEntryTable(rows, constraints.maxWidth),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Expanded(
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: rows.length,
-                            itemBuilder: (context, index) {
-                              final r = rows[index] as Map<String, dynamic>;
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 4),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(r['description'] ?? '', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
-                                            Text(AppUtils.formatDate(DateTime.parse(r['date'])), style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                                          ],
-                                        ),
-                                      ),
-                                      SizedBox(width: 80, child: Text((r['debit'] ?? 0) > 0 ? AppUtils.formatCurrency((r['debit'] as num).toDouble()) : '', style: TextStyle(color: AppTheme.error), textAlign: TextAlign.right)),
-                                      SizedBox(width: 80, child: Text((r['credit'] ?? 0) > 0 ? AppUtils.formatCurrency((r['credit'] as num).toDouble()) : '', style: TextStyle(color: AppTheme.success), textAlign: TextAlign.right)),
-                                      SizedBox(width: 80, child: Text(AppUtils.formatCurrency((r['balance'] as num).toDouble()), style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                          ],
+                        );
+                      },
                     );
                   },
                 ),
@@ -149,6 +107,174 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _datePickerField(String label, DateTime date, ValueChanged<DateTime> onPicked) {
+    return InkWell(
+      onTap: () async {
+        final picked = await showDatePicker(context: context, initialDate: date, firstDate: DateTime(2020), lastDate: DateTime.now());
+        if (picked != null) onPicked(picked);
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(labelText: label, isDense: true),
+        child: Text(AppUtils.formatDate(date), style: TextStyle(color: AppTheme.textPrimary)),
+      ),
+    );
+  }
+
+  Widget _summaryCard(bool isMobile, double opening, double debit, double credit, double closing) {
+    if (isMobile) {
+      return Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: [
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [_statLabel('Opening', opening)]),
+              const SizedBox(height: 8),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [_statLabel('Debit', debit, AppTheme.error)]),
+              const SizedBox(height: 8),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [_statLabel('Credit', credit, AppTheme.success)]),
+              const SizedBox(height: 8),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [_statLabel('Closing', closing, AppTheme.warning)]),
+            ],
+          ),
+        ),
+      );
+    }
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _stat('Opening', opening),
+            _stat('Debit', debit, AppTheme.error),
+            _stat('Credit', credit, AppTheme.success),
+            _stat('Closing', closing, AppTheme.warning),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _mobileEntryList(List<dynamic> rows) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: rows.length,
+      itemBuilder: (context, index) {
+        final r = rows[index] as Map<String, dynamic>;
+        final debit = (r['debit'] ?? 0) as num;
+        final credit = (r['credit'] ?? 0) as num;
+        final balance = (r['balance'] as num).toDouble();
+        final dateStr = AppUtils.formatDate(DateTime.parse(r['date']));
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 6),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(r['description'] ?? '', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
+                    ),
+                    Text(dateStr, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                  ],
+                ),
+                const Divider(height: 12),
+                _entryDetailRow('Balance', AppUtils.formatCurrency(balance), AppTheme.textPrimary),
+                if (debit > 0) _entryDetailRow('Debit', AppUtils.formatCurrency(debit.toDouble()), AppTheme.error),
+                if (credit > 0) _entryDetailRow('Credit', AppUtils.formatCurrency(credit.toDouble()), AppTheme.success),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _desktopEntryTable(List<dynamic> rows, double maxWidth) {
+    final descFlex = 3;
+    final numFlex = 1;
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+          color: AppTheme.textPrimary.withOpacity(0.05),
+          child: Row(
+            children: [
+              const Expanded(flex: 3, child: Text('Description', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
+              Expanded(flex: numFlex, child: Text('Debit', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
+              Expanded(flex: numFlex, child: Text('Credit', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
+              Expanded(flex: numFlex, child: Text('Balance', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: rows.length,
+            itemBuilder: (context, index) {
+              final r = rows[index] as Map<String, dynamic>;
+              return Card(
+                margin: const EdgeInsets.only(bottom: 2),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: descFlex,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(r['description'] ?? '', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
+                            Text(AppUtils.formatDate(DateTime.parse(r['date'])), style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                      Expanded(flex: numFlex, child: Text((r['debit'] ?? 0) > 0 ? AppUtils.formatCurrency((r['debit'] as num).toDouble()) : '-', textAlign: TextAlign.right, style: TextStyle(color: AppTheme.error, fontSize: 13))),
+                      Expanded(flex: numFlex, child: Text((r['credit'] ?? 0) > 0 ? AppUtils.formatCurrency((r['credit'] as num).toDouble()) : '-', textAlign: TextAlign.right, style: TextStyle(color: AppTheme.success, fontSize: 13))),
+                      Expanded(flex: numFlex, child: Text(AppUtils.formatCurrency((r['balance'] as num).toDouble()), textAlign: TextAlign.right, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13))),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _entryDetailRow(String label, String value, Color valueColor) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+          Text(value, style: TextStyle(color: valueColor, fontWeight: FontWeight.w600, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  Widget _statLabel(String label, double amount, [Color? color]) {
+    return Expanded(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          Text(AppUtils.formatCurrency(amount), style: TextStyle(color: color ?? AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 15)),
+        ],
       ),
     );
   }

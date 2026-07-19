@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../core/constants.dart';
-import '../models/user.dart';
-import '../services/auth_service.dart';
+import '../../../../core/constants.dart';
+import '../../../../models/user.dart';
+import '../../data/auth_service.dart';
 
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 

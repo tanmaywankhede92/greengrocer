@@ -24,7 +24,7 @@ const getBill = async (id) => {
   return result;
 };
 
-const createBill = async ({ customerId, billDate, items, deliveryBoyName, deliveryBoyPhone, notes, paymentAmount, paymentMode }, userId) => {
+const createBill = async ({ customerId, billDate, items, deliveryCharge, notes, paymentAmount, paymentMode }, userId) => {
   const customer = await customerRepository.findById(customerId);
   if (!customer) {
     const error = new Error('Customer not found');
@@ -36,13 +36,11 @@ const createBill = async ({ customerId, billDate, items, deliveryBoyName, delive
   items.forEach((item) => {
     subtotal += item.quantity * item.appliedRate;
   });
-  const total = subtotal;
+  const total = subtotal + (deliveryCharge || 0);
 
   const settings = await settingsRepository.findSettings();
   const prefix = settings?.invoicePrefix || 'RE';
-  const previousDue = (customer.openingBalance || 0) + (await ledgerRepository.getCustomerBalance(customerId));
   const paid = paymentAmount || 0;
-  const newDue = previousDue + total - paid;
   const paymentType = paid >= total && paid > 0 ? 'cash' : paid > 0 ? 'partial' : 'credit';
 
   let lastError;
@@ -54,12 +52,9 @@ const createBill = async ({ customerId, billDate, items, deliveryBoyName, delive
         customerId,
         billDate: new Date(billDate),
         subtotal,
-        deliveryBoyName: deliveryBoyName || '',
-        deliveryBoyPhone: deliveryBoyPhone || '',
+        deliveryCharge: deliveryCharge || 0,
         total,
-        previousDue,
         paidNow: paid,
-        newDue,
         paymentType,
         notes: notes || '',
         status: 'active',
@@ -116,7 +111,7 @@ const createBill = async ({ customerId, billDate, items, deliveryBoyName, delive
         });
       }
 
-      return { id: bill._id };
+      return { id: bill._id, billNumber: bill.billNumber };
     } catch (error) {
       lastError = error;
       if (error.code === 11000) {

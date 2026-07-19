@@ -299,11 +299,8 @@ Future<Uint8List> buildBillPdf({
   String? customerAddress,
   required double subtotal,
   required double total,
-  required double previousDue,
+  required double deliveryCharge,
   required double paidNow,
-  required double newDue,
-  required String deliveryBoyName,
-  String deliveryBoyPhone = '',
   required List<LineItem> items,
   required DateTime billDate,
   String? paymentMode,
@@ -316,7 +313,7 @@ Future<Uint8List> buildBillPdf({
   Uint8List? logoBytes;
   try {
     final data = await rootBundle.load('assets/logo.png');
-    logoBytes = data.buffer.asUint8List();
+    logoBytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
   } catch (_) {}
 
   const red = PdfColors.red800;
@@ -393,7 +390,7 @@ Future<Uint8List> buildBillPdf({
             ? 'ORIGINAL'
             : 'DUPLICATE';
     final copySuffix = isCustomerCopy ? 'Customer Copy' : 'Office Copy';
-    final grandTotal = total > 0 ? total : (subtotal + previousDue);
+    final grandTotal = total > 0 ? total : subtotal;
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
@@ -493,9 +490,6 @@ Future<Uint8List> buildBillPdf({
                   pw.SizedBox(height: 8),
                   infoRow('Time', DateFormat('hh:mm a').format(billDate)),
                   pw.SizedBox(height: 8),
-                  infoRow('Delivery Boy', deliveryBoyName.isNotEmpty ? deliveryBoyName : '-'),
-                  pw.SizedBox(height: 8),
-                  infoRow('Phone', deliveryBoyPhone.isNotEmpty ? deliveryBoyPhone : '-'),
                 ],
               ),
             ),
@@ -609,7 +603,7 @@ Future<Uint8List> buildBillPdf({
               crossAxisAlignment: pw.CrossAxisAlignment.stretch,
               children: [
                 amountRow('Subtotal', subtotal),
-                if (previousDue > 0) amountRow('Previous Due', previousDue),
+                if (deliveryCharge > 0) amountRow('Delivery Charge', deliveryCharge),
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(vertical: 8),
                   decoration: pw.BoxDecoration(
@@ -621,19 +615,12 @@ Future<Uint8List> buildBillPdf({
                   child: pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Text(
-                        'Grand Total',
-                        style: pw.TextStyle(font: fontB, fontSize: 12, color: textColor),
-                      ),
-                      pw.Text(
-                        money(grandTotal),
-                        style: pw.TextStyle(font: fontB, fontSize: 12, color: textColor),
-                      ),
+                      pw.Text('Grand Total', style: pw.TextStyle(font: fontB, fontSize: 12, color: textColor)),
+                      pw.Text(money(grandTotal), style: pw.TextStyle(font: fontB, fontSize: 12, color: textColor)),
                     ],
                   ),
                 ),
-                amountRow('Paid', paidNow),
-                amountRow('Remaining Due', newDue),
+                if (paidNow > 0) amountRow('Paid', paidNow),
               ],
             ),
           ),

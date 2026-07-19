@@ -15,6 +15,7 @@ class DailyRatesScreen extends ConsumerStatefulWidget {
 class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
   DateTime _selectedDate = DateTime.now();
   final Map<String, TextEditingController> _rateControllers = {};
+  bool _saving = false;
 
   @override
   void initState() {
@@ -27,11 +28,30 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
   }
 
   Future<void> _saveRate(String productId, double rate) async {
-    try {
-      await ref.read(rateServiceProvider).upsert(productId, rate, _selectedDate);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rate saved'), duration: Duration(seconds: 1)));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    await ref.read(rateServiceProvider).upsert(productId, rate, _selectedDate);
+  }
+
+  Future<void> _saveAllRates() async {
+    setState(() => _saving = true);
+    int saved = 0;
+    int failed = 0;
+    for (final entry in _rateControllers.entries) {
+      final rate = double.tryParse(entry.value.text.trim());
+      if (rate == null) continue;
+      try {
+        await _saveRate(entry.key, rate);
+        saved++;
+      } catch (_) {
+        failed++;
+      }
+    }
+    if (mounted) {
+      setState(() => _saving = false);
+      if (failed == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$saved rate${saved == 1 ? '' : 's'} saved'), duration: const Duration(seconds: 2)));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$saved saved, $failed failed'), backgroundColor: Colors.orange));
+      }
     }
   }
 
@@ -41,7 +61,21 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
     final ratesAsync = ref.watch(rateByDateProvider(_selectedDate));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Daily Rates')),
+      appBar: AppBar(
+        title: const Text('Daily Rates'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              icon: _saving
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.save, size: 18),
+              label: Text(_saving ? 'Saving...' : 'Save All'),
+              onPressed: _saving ? null : _saveAllRates,
+            ),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -117,8 +151,8 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
                                   const SizedBox(width: 8),
                                   Text(p.unit.value, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                                   const SizedBox(width: 8),
-                                  SizedBox(
-                                    width: 100,
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(minWidth: 80, maxWidth: 120),
                                     child: TextField(
                                       controller: ctrl,
                                       keyboardType: TextInputType.number,
@@ -127,9 +161,16 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
                                         isDense: true,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                       ),
-                                      onSubmitted: (v) {
+                                      onSubmitted: (v) async {
                                         final rate = double.tryParse(v);
-                                        if (rate != null) _saveRate(p.id, rate);
+                                        if (rate != null) {
+                                          try {
+                                            await _saveRate(p.id, rate);
+                                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rate saved'), duration: Duration(seconds: 1)));
+                                          } catch (e) {
+                                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                          }
+                                        }
                                       },
                                     ),
                                   ),

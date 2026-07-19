@@ -29,9 +29,9 @@ class BillService {
     return (bill: bill, items: items);
   }
 
-  Future<String> create(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> create(Map<String, dynamic> data) async {
     final response = await _client.post('/bills', data: data);
-    return response.data['data']['id'] as String;
+    return response.data['data'] as Map<String, dynamic>;
   }
 
   Future<void> cancel(String id) async {
