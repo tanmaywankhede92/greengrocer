@@ -39,7 +39,7 @@ const createPayment = async ({ customerId, amount, mode, reference, notes, payme
     createdBy: userId,
   });
 
-  return { id: payment._id };
+  return { id: payment._id, receiptNumber };
 };
 
 module.exports = { listPayments, createPayment };
