@@ -10,6 +10,7 @@ const Map<String, List<String>> _subUnitOptions = {
   'quintal': ['quintal', '50kg', '10kg', '5kg'],
   'box': ['box', 'half-box'],
   'bag': ['bag', 'half-bag'],
+  'bunch': ['bunch', 'half-bunch'],
 };
 
 class ProductEditRow extends StatefulWidget {

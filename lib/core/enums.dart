@@ -2,6 +2,7 @@ enum ProductUnit {
   kg('kg'),
   pcs('pcs'),
   bundle('bundle'),
+  bunch('bunch'),
   box('box'),
   dozen('dozen'),
   quintal('quintal'),
