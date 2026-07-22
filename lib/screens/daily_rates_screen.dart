@@ -61,21 +61,7 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
     final ratesAsync = ref.watch(rateByDateProvider(_selectedDate));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Daily Rates'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: TextButton.icon(
-              icon: _saving
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.save, size: 18),
-              label: Text(_saving ? 'Saving...' : 'Save All'),
-              onPressed: _saving ? null : _saveAllRates,
-            ),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Daily Rates')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -186,6 +172,21 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
               ),
             ),
           ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.only(left: 24, right: 24, top: 12, bottom: MediaQuery.of(context).padding.bottom + 12),
+        decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 8, offset: const Offset(0, -2))]),
+        child: SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton.icon(
+            icon: _saving
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.save, size: 18),
+            label: Text(_saving ? 'Saving...' : 'Save All Rates', style: const TextStyle(fontSize: 15)),
+            onPressed: _saving ? null : _saveAllRates,
+          ),
         ),
       ),
     );

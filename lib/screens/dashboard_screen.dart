@@ -32,57 +32,73 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ),
       data: (stats) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Dashboard', style: TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 24),
-              LayoutBuilder(builder: (context, constraints) {
-                final isWide = constraints.maxWidth > 800;
-                return Wrap(
-                  spacing: 16, runSpacing: 16,
-                  children: [
-                    SizedBox(
-                      width: isWide ? (constraints.maxWidth - 48) / 4 : constraints.maxWidth,
-                      child: StatCard(title: "Today's Revenue", value: stats.todayRevenue, icon: Icons.trending_up, color: AppTheme.success),
-                    ),
-                    SizedBox(
-                      width: isWide ? (constraints.maxWidth - 48) / 4 : constraints.maxWidth,
-                      child: StatCard(title: "Today's Orders", value: stats.todayOrders.toDouble(), icon: Icons.receipt_long, color: AppTheme.info, isCurrency: false),
-                    ),
-                    SizedBox(
-                      width: isWide ? (constraints.maxWidth - 48) / 4 : constraints.maxWidth,
-                      child: StatCard(title: 'Monthly Collection', value: stats.monthlyCollection, icon: Icons.account_balance_wallet, color: AppTheme.warning),
-                    ),
-                    SizedBox(
-                      width: isWide ? (constraints.maxWidth - 48) / 4 : constraints.maxWidth,
-                      child: StatCard(title: 'Outstanding', value: stats.outstanding, icon: Icons.warning, color: AppTheme.error),
-                    ),
-                  ],
-                );
-              }),
-              const SizedBox(height: 24),
-              LayoutBuilder(builder: (context, constraints) {
-                final isWide = constraints.maxWidth > 900;
-                return Row(
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final w = constraints.maxWidth;
+            final isDesktop = w >= 900;
+            final isTablet = w >= 600 && w < 900;
+            final cardCount = isDesktop ? 4 : isTablet ? 2 : 1;
+            final cardGap = 16.0;
+            final cardW = (w - 48 - (cardCount - 1) * cardGap) / cardCount;
+
+            return RefreshIndicator(
+              onRefresh: () async => ref.invalidate(dashboardProvider),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(flex: isWide ? 3 : 1, child: Column(
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        SizedBox(height: 280, child: SalesChart(data: stats.salesSeries)),
-                        const SizedBox(height: 16),
-                        RecentTransactions(bills: stats.recentBills),
+                        Text('Dashboard', style: TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.bold)),
+                        if (isDesktop)
+                          IconButton(
+                            icon: Icon(Icons.refresh, size: 20, color: AppTheme.textSecondary),
+                            onPressed: () => ref.invalidate(dashboardProvider),
+                            tooltip: 'Refresh',
+                          ),
                       ],
-                    )),
-                    if (isWide) const SizedBox(width: 16),
-                    if (isWide) Expanded(flex: 2, child: TopCustomers(customers: stats.topCustomers)),
+                    ),
+                    const SizedBox(height: 24),
+                    Wrap(
+                      spacing: cardGap, runSpacing: cardGap,
+                      children: [
+                        SizedBox(width: cardW, child: StatCard(title: "Today's Revenue", value: stats.todayRevenue, icon: Icons.trending_up, color: AppTheme.success)),
+                        SizedBox(width: cardW, child: StatCard(title: "Today's Orders", value: stats.todayOrders.toDouble(), icon: Icons.receipt_long, color: AppTheme.info, isCurrency: false)),
+                        SizedBox(width: cardW, child: StatCard(title: 'Monthly Collection', value: stats.monthlyCollection, icon: Icons.account_balance_wallet, color: AppTheme.warning)),
+                        SizedBox(width: cardW, child: StatCard(title: 'Outstanding', value: stats.outstanding, icon: Icons.warning_amber_rounded, color: AppTheme.error)),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    if (isDesktop)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 3, child: SizedBox(height: 300, child: SalesChart(data: stats.salesSeries))),
+                          const SizedBox(width: 16),
+                          Expanded(flex: 2, child: SizedBox(height: 300, child: TopCustomers(customers: stats.topCustomers))),
+                        ],
+                      )
+                    else
+                      Column(
+                        children: [
+                          SizedBox(height: isTablet ? 280 : 260, child: SalesChart(data: stats.salesSeries)),
+                          const SizedBox(height: 16),
+                          SizedBox(height: 300, child: TopCustomers(customers: stats.topCustomers)),
+                        ],
+                      ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      height: isDesktop ? 340 : (isTablet ? 360 : 400),
+                      child: RecentTransactions(bills: stats.recentBills),
+                    ),
                   ],
-                );
-              }),
-            ],
-          ),
+                ),
+              ),
+            );
+          },
         );
       },
     );

@@ -20,32 +20,52 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(title, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: (color ?? AppTheme.primaryRed).withAlpha(20),
-                    borderRadius: BorderRadius.circular(8),
+    final c = color ?? AppTheme.primaryRed;
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      elevation: 1,
+      shadowColor: c.withAlpha(25),
+      surfaceTintColor: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: null,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppTheme.border),
+          ),
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(title,
+                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  child: Icon(icon, color: color ?? AppTheme.primaryRed, size: 20),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              isCurrency ? AppUtils.formatCurrency(value) : value.toStringAsFixed(0),
-              style: TextStyle(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-          ],
+                  const SizedBox(width: 12),
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      color: c.withAlpha(15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, color: c, size: 22),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isCurrency ? AppUtils.formatCurrency(value) : value.toStringAsFixed(0),
+                style: TextStyle(color: AppTheme.textPrimary, fontSize: 28, fontWeight: FontWeight.bold, height: 1.1),
+              ),
+            ],
+          ),
         ),
       ),
     );

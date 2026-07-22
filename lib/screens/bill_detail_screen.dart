@@ -1,27 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:printing/printing.dart';
+import 'package:intl/intl.dart';
+import '../core/print_pdf.dart';
 import '../config/theme.dart';
 import '../core/utils.dart';
 import '../core/enums.dart';
+import '../models/bill.dart';
+import '../models/bill_item.dart';
 import '../providers/bill_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/breadcrumb.dart';
-import '../widgets/bill_item_row.dart';
 import '../widgets/bill_pdf.dart';
+import '../widgets/bill_item_row.dart';
 
 class BillDetailScreen extends ConsumerWidget {
   final String id;
   const BillDetailScreen({super.key, required this.id});
 
+  static const _red = Color(0xFFB71C1C);
+  static const _muted = Color(0xFF757575);
+  static const _line = Color(0xFFBDBDBD);
+  static const _lightLine = Color(0xFFE0E0E0);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(billDetailProvider(id));
+
     return detailAsync.when(
       loading: () => const LoadingWidget(),
-      error: (e, _) => Center(child: Text('Error: $e', style: TextStyle(color: AppTheme.error))),
+      error: (e, _) => Center(
+        child: Text('Error: $e', style: TextStyle(color: AppTheme.error)),
+      ),
       data: (detail) {
         final bill = detail.bill;
         final items = detail.items;
@@ -29,538 +40,494 @@ class BillDetailScreen extends ConsumerWidget {
 
         return Scaffold(
           appBar: AppBar(
-            leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/bills')),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => context.go('/bills'),
+            ),
             title: Text(bill.billNumber, style: const TextStyle(fontWeight: FontWeight.w600)),
             actions: [
-              Container(
-                margin: const EdgeInsets.only(right: 4),
-                child: _ActionBtn(
-                  icon: Icons.print,
-                  label: 'Reprint',
-                  color: AppTheme.primaryRed,
-                  onPressed: () async {
-                    try {
-                      final settings = await ref.read(settingsProvider.future);
-                      final lineItems = items.map((i) => LineItem(
-                        productId: i.productId,
-                        productName: i.productName,
-                        productNameHindi: i.productNameHindi,
-                        unit: i.unit,
-                        quantity: i.quantity,
-                        appliedRate: i.appliedRate,
-                      )).toList();
-                      final pdf = await buildBillPdf(
-                        settings: settings,
-                        billNumber: bill.billNumber,
-                        customerName: bill.customer?.name ?? '',
-                        customerMobile: bill.customer?.mobile ?? '',
-                        customerAddress: bill.customer?.address,
-                        subtotal: bill.subtotal,
-                        total: bill.total,
-                        deliveryCharge: bill.deliveryCharge,
-                        paidNow: bill.paidNow,
-                        items: lineItems,
-                        billDate: bill.billDate,
-                        paymentMode: bill.paymentType,
-                        isReprint: true,
-                      );
-                      await Printing.layoutPdf(onLayout: (_) => pdf);
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
-                      }
-                    }
-                  },
-                ),
-              ),
               if (isActive)
                 Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  child: _ActionBtn(
-                    icon: Icons.cancel_outlined,
-                    label: 'Cancel',
-                    color: AppTheme.error,
-                    onPressed: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Cancel Bill'),
-                          content: Text('Cancel ${bill.billNumber}? This will reverse the ledger entries.'),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
-                            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes, Cancel'), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error)),
-                          ],
-                        ),
-                      );
-                      if (confirm == true) {
-                        try {
-                          await ref.read(billServiceProvider).cancel(id);
-                          ref.invalidate(billDetailProvider(id));
-                          ref.invalidate(billListProvider);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bill cancelled'), backgroundColor: AppTheme.success));
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
-                          }
-                        }
-                      }
-                    },
+                  margin: const EdgeInsets.only(right: 4),
+                  child: TextButton.icon(
+                    icon: const Icon(Icons.cancel_outlined, size: 18, color: Colors.red),
+                    label: const Text('Cancel', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
+                    onPressed: () => _cancelBill(context, ref, bill),
+                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12)),
                   ),
                 ),
             ],
           ),
-          body: Container(
-            color: const Color(0xFFF5F6FA),
-            child: ListView(
-              padding: const EdgeInsets.all(32),
-              children: [
-                _PageHeader(billNumber: bill.billNumber, status: bill.status, paymentType: bill.paymentType),
-                const SizedBox(height: 24),
-                _InfoPanel(customer: bill.customer, bill: bill),
-                const SizedBox(height: 28),
-                _ProductsSection(items: items),
-                const SizedBox(height: 20),
-                _SummaryCard(bill: bill),
-                const SizedBox(height: 40),
-              ],
-            ),
+          body: Column(
+            children: [
+              const Breadcrumb(crumbs: [
+                Crumb('Home', route: '/dashboard'),
+                Crumb('Bills', route: '/bills'),
+                Crumb('Bill Detail'),
+              ]),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        if (isActive)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: AppTheme.success.withAlpha(25),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppTheme.success.withAlpha(60)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 8, height: 8,
+                                  decoration: const BoxDecoration(shape: BoxShape.circle, color: AppTheme.success),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Active',
+                                  style: TextStyle(
+                                    color: AppTheme.success,
+                                    fontWeight: FontWeight.w600, fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: AppTheme.error.withAlpha(25),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppTheme.error.withAlpha(60)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 8, height: 8,
+                                  decoration: const BoxDecoration(shape: BoxShape.circle, color: AppTheme.error),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Cancelled',
+                                  style: TextStyle(
+                                    color: AppTheme.error,
+                                    fontWeight: FontWeight.w600, fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        _buildCopy(
+                          isCustomerCopy: true,
+                          maxWidth: 700,
+                          bill: bill,
+                          items: items,
+                        ),
+                        const SizedBox(height: 24),
+                        _buildCopy(
+                          isCustomerCopy: false,
+                          maxWidth: 700,
+                          bill: bill,
+                          items: items,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface,
+                  border: Border(top: BorderSide(color: AppTheme.border)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.arrow_back, size: 18),
+                        label: const Text('Back to Bills'),
+                        onPressed: () => context.go('/bills'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.print, size: 18),
+                        label: const Text('Print Both Copies'),
+                        onPressed: () => _reprint(context, ref, bill, items),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
     );
   }
-}
 
-class _ActionBtn extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onPressed;
-  const _ActionBtn({required this.icon, required this.label, required this.color, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextButton.icon(
-      icon: Icon(icon, size: 18, color: color),
-      label: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w500)),
-      onPressed: onPressed,
-      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12)),
-    );
-  }
-}
-
-class _PageHeader extends StatelessWidget {
-  final String billNumber;
-  final BillStatus status;
-  final String? paymentType;
-  const _PageHeader({required this.billNumber, required this.status, required this.paymentType});
-
-  @override
-  Widget build(BuildContext context) {
-    final isActive = status == BillStatus.active;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const Expanded(
-          child: Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Bills', route: '/bills'), Crumb('Bill Detail')]),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          decoration: BoxDecoration(
-            color: isActive ? AppTheme.success.withAlpha(25) : AppTheme.error.withAlpha(25),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: isActive ? AppTheme.success.withAlpha(60) : AppTheme.error.withAlpha(60)),
+  Future<void> _cancelBill(BuildContext context, WidgetRef ref, Bill bill) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Bill'),
+        content: Text('Cancel ${bill.billNumber}? This will reverse the ledger entries.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No'),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 8, height: 8,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: isActive ? AppTheme.success : AppTheme.error),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                isActive ? 'Active' : 'Cancelled',
-                style: TextStyle(
-                  color: isActive ? AppTheme.success : AppTheme.error,
-                  fontWeight: FontWeight.w600, fontSize: 13,
-                ),
-              ),
-            ],
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes, Cancel'),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
           ),
-        ),
-      ],
+        ],
+      ),
     );
+
+    if (confirm == true) {
+      try {
+        await ref.read(billServiceProvider).cancel(bill.id);
+        ref.invalidate(billDetailProvider(bill.id));
+        ref.invalidate(billListProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Bill cancelled'), backgroundColor: AppTheme.success),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+          );
+        }
+      }
+    }
   }
-}
 
-class _InfoPanel extends StatelessWidget {
-  final dynamic customer;
-  final dynamic bill;
-  const _InfoPanel({required this.customer, required this.bill});
+  Future<void> _reprint(
+    BuildContext context,
+    WidgetRef ref,
+    Bill bill,
+    List<BillItem> items,
+  ) async {
+    try {
+      openPrintWindow();
+      final settings = await ref.read(settingsProvider.future);
+      final lineItems = items.map((i) => LineItem(
+        productId: i.productId,
+        productName: i.productName,
+        productNameHindi: i.productNameHindi,
+        unit: i.unit,
+        quantity: i.quantity,
+        defaultRate: i.defaultRate,
+        appliedRate: i.appliedRate,
+      )).toList();
+      final pdf = await buildBillPdf(
+        settings: settings,
+        billNumber: bill.billNumber,
+        customerName: bill.customer?.name ?? '',
+        customerMobile: bill.customer?.mobile ?? '',
+        customerAddress: bill.customer?.address,
+        subtotal: bill.subtotal,
+        total: bill.total,
+        deliveryCharge: bill.deliveryCharge,
+        paidNow: bill.paidNow,
+        items: lineItems,
+        billDate: bill.billDate,
+        paymentMode: bill.paymentType,
+        isReprint: true,
+      );
+      await printPdf(pdf, filename: bill.billNumber);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    }
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 768;
-    final customerPanel = Container(
-      padding: const EdgeInsets.all(24),
+  // ── Receipt copy builder (exact same layout as preview) ──
+
+  Widget _buildCopy({
+    required bool isCustomerCopy,
+    required double maxWidth,
+    required Bill bill,
+    required List<BillItem> items,
+  }) {
+    const copyLabel = 'ORIGINAL';
+    final copySuffix = isCustomerCopy ? 'Customer Copy' : 'Office Copy';
+    final billDate = bill.billDate;
+    final grandTotal = bill.total > 0 ? bill.total : bill.subtotal;
+
+    return Container(
+      constraints: BoxConstraints(maxWidth: maxWidth),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE8E8EC)),
+        border: Border.all(color: _lightLine, width: 0.5),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Icon(Icons.person_outline, size: 16, color: AppTheme.primaryRed),
-              const SizedBox(width: 8),
-              Text('CUSTOMER', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.primaryRed, letterSpacing: 1.2)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(customer?.name ?? '', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF2D2D2D))),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Icon(Icons.phone_outlined, size: 13, color: Colors.grey.shade500),
-              const SizedBox(width: 6),
-              Text(customer?.mobile ?? '', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-            ],
-          ),
-          if (customer?.address != null && customer!.address!.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Container(height: 3, color: _red),
+          const SizedBox(height: 12),
+
+          // ── Header (centered) ──
+          Center(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Icon(Icons.location_on_outlined, size: 13, color: Colors.grey.shade500),
-                const SizedBox(width: 6),
-                Expanded(child: Text(customer!.address!, style: TextStyle(fontSize: 13, color: Colors.grey.shade600))),
+                Text('RATHOD ENTERPRISES',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _red, letterSpacing: 1)),
+                const SizedBox(height: 4),
+                Text('Vegetable, Fruits Supplier & Commission Agent',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _muted)),
+                const SizedBox(height: 2),
+                Text('Green & Fresh  •  Every Day',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 10, color: AppTheme.success, fontStyle: FontStyle.italic)),
+                const SizedBox(height: 6),
+                Text('Shop No.95 Kanji House, Mahatma Phule Market,',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 10, color: _muted)),
+                Text('Cotton Market, Nagpur – 440018',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 10, color: _muted)),
+                const SizedBox(height: 4),
+                Text('Nitesh : 8087344819   |   Vicky : 9529031540   |   7030914867',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 9.5, color: AppTheme.textPrimary)),
               ],
             ),
-          ],
-        ],
-      ),
-    );
-    final billPanel = Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE8E8EC)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.receipt_outlined, size: 16, color: AppTheme.primaryRed),
-              const SizedBox(width: 8),
-              Text('BILL DETAILS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.primaryRed, letterSpacing: 1.2)),
-            ],
           ),
+
           const SizedBox(height: 14),
-          _DetailRow(label: 'Bill No', value: bill.billNumber),
+          _thinLine(),
+          const SizedBox(height: 12),
+
+          // ── Info section ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _infoField('Bill No.', bill.billNumber),
+                      const SizedBox(height: 6),
+                      _infoField('Customer', bill.customer?.name ?? '-'),
+                      const SizedBox(height: 6),
+                      _infoField('Mobile', bill.customer?.mobile ?? '-'),
+                      const SizedBox(height: 6),
+                      _infoField('Address', bill.customer?.address?.isNotEmpty == true ? bill.customer!.address! : '-'),
+                    ],
+                  ),
+                ),
+                Container(width: 1, height: 80, color: _line),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _infoField('Date', AppUtils.formatDate(billDate)),
+                        const SizedBox(height: 6),
+                        _infoField('Time', DateFormat('hh:mm a').format(billDate)),
+                        if (bill.paymentType != null && bill.paymentType!.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          _infoField('Payment', bill.paymentType!),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+          _thinLine(),
+          const SizedBox(height: 8),
+
+          // ── Products table ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Table(
+              columnWidths: const {
+                0: FlexColumnWidth(0.55),
+                1: FlexColumnWidth(2.25),
+                2: FlexColumnWidth(1.0),
+                3: FlexColumnWidth(0.85),
+                4: FlexColumnWidth(1.0),
+                5: FlexColumnWidth(1.15),
+              },
+              border: TableBorder.all(color: _line, width: 0.7),
+              children: [
+                TableRow(
+                  decoration: const BoxDecoration(color: Color(0xFFF5F5F5)),
+                  children: ['Sr.', 'Product', 'Unit', 'Qty', 'Rate (₹)', 'Amount (₹)'].map((h) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                      child: Text(h,
+                          textAlign: h == 'Product' ? TextAlign.left : TextAlign.center,
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                    );
+                  }).toList(),
+                ),
+                ...items.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final item = entry.value;
+                  final productName = item.productNameHindi.isNotEmpty
+                      ? '${item.productName} (${item.productNameHindi})'
+                      : item.productName;
+
+                  return TableRow(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                        child: Text('${idx + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                        child: Text(productName, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                        child: Text(item.unit, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                        child: Text(item.quantity.toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                        child: Text(item.appliedRate.toStringAsFixed(2), textAlign: TextAlign.right, style: const TextStyle(fontSize: 10)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                        child: Text(item.amount.toStringAsFixed(2), textAlign: TextAlign.right, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // ── Summary (right-aligned) ──
+          Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              width: 220,
+              padding: const EdgeInsets.only(right: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _amountRow('Subtotal', bill.subtotal),
+                  if (bill.deliveryCharge > 0)
+                    _amountRow('Delivery Charge', bill.deliveryCharge),
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: _line, width: 0.7),
+                        bottom: BorderSide(color: _line, width: 0.7),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Grand Total', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                        Text('₹ ${grandTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                  if (bill.paidNow > 0) _amountRow('Paid', bill.paidNow),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 18),
+          _thinLine(),
           const SizedBox(height: 10),
-          _DetailRow(label: 'Date', value: AppUtils.formatDate(bill.billDate)),
-          if (bill.paymentType != null && bill.paymentType!.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            _DetailRow(label: 'Payment', value: bill.paymentType!),
-          ],
+
+          // ── Footer ──
+          Center(
+            child: Column(
+              children: [
+                Text('Thank You!  Visit Again',
+                    style: TextStyle(fontSize: 11, color: _muted)),
+                const SizedBox(height: 4),
+                Text('RATHOD ENTERPRISES',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _red, letterSpacing: 1.2)),
+                const SizedBox(height: 8),
+                Container(height: 1, color: Colors.grey.shade400),
+                const SizedBox(height: 8),
+                Text('$copyLabel – $copySuffix',
+                    style: TextStyle(fontSize: 10, color: _muted)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
         ],
       ),
     );
-    if (isMobile) {
-      return Column(
-        children: [
-          customerPanel,
-          const SizedBox(height: 24),
-          billPanel,
-        ],
-      );
-    }
+  }
+
+  // ── Helpers ──
+
+  Widget _thinLine() => Container(height: 0.7, color: _line);
+
+  Widget _infoField(String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: customerPanel),
-        const SizedBox(width: 24),
-        Expanded(child: billPanel),
+        SizedBox(
+          width: 72,
+          child: Text(label, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+        ),
+        const Text(':  ', style: TextStyle(fontSize: 10.5)),
+        Expanded(child: Text(value, style: TextStyle(fontSize: 10.5, color: AppTheme.textPrimary))),
       ],
     );
   }
-}
 
-class _DetailRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _DetailRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 60, maxWidth: 100),
-          child: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey.shade500)),
-        ),
-        Expanded(
-          child: Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF2D2D2D))),
-        ),
-      ],
-    );
-  }
-}
-
-class _ProductsSection extends StatelessWidget {
-  final List items;
-  const _ProductsSection({required this.items});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE8E8EC)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-            child: Row(
-              children: [
-                Icon(Icons.inventory_2_outlined, size: 16, color: AppTheme.primaryRed),
-                const SizedBox(width: 8),
-                Text('PRODUCTS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.primaryRed, letterSpacing: 1.2)),
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: const Color(0xFFF0F0F5), borderRadius: BorderRadius.circular(4)),
-                  child: Text('${items.length} items', style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
-                ),
-              ],
-            ),
-          ),
-          Builder(
-            builder: (context) {
-              final isMobile = MediaQuery.of(context).size.width < 768;
-              if (isMobile) {
-                return Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Column(
-                    children: List.generate(items.length, (idx) {
-                      final i = items[idx];
-                      final name = i.productNameHindi.isNotEmpty ? '${i.productName} (${i.productNameHindi})' : i.productName;
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Colors.grey.shade200)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(children: [
-                                Text('#${idx + 1}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.grey.shade600)),
-                                const Spacer(),
-                                Text('Qty: ${i.quantity.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                              ]),
-                              const SizedBox(height: 6),
-                              Text(name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 4),
-                              Row(children: [
-                                Text('Rate: \u20B9${_fmt(i.appliedRate)}', style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
-                                const Spacer(),
-                                Text('Amount: \u20B9${_fmt(i.amount)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.red)),
-                              ]),
-                            ],
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                );
-              }
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final totalW = constraints.maxWidth;
-                    final cSr = 44.0;
-                    final cQty = 72.0;
-                    final cRate = 96.0;
-                    final cAmt = 112.0;
-                    final cProd = (totalW - cSr - cQty - cRate - cAmt).clamp(120.0, double.infinity);
-                    return Column(
-                      children: [
-                        _TableHeader(sr: cSr, prod: cProd, qty: cQty, rate: cRate, amt: cAmt),
-                        ...List.generate(items.length, (idx) {
-                          final i = items[idx];
-                          final name = i.productNameHindi.isNotEmpty ? '${i.productName} (${i.productNameHindi})' : i.productName;
-                          return _TableRow(
-                            idx: idx, sr: cSr, prod: cProd, qty: cQty, rate: cRate, amt: cAmt,
-                            name: name, quantity: i.quantity, rateVal: i.appliedRate, amountVal: i.amount,
-                            isLast: idx == items.length - 1,
-                          );
-                        }),
-                      ],
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TableHeader extends StatelessWidget {
-  final double sr, prod, qty, rate, amt;
-  const _TableHeader({required this.sr, required this.prod, required this.qty, required this.rate, required this.amt});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF2D2D3A),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 12),
+  Widget _amountRow(String label, double value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          SizedBox(width: sr, child: const Text('#', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white), textAlign: TextAlign.center)),
-          SizedBox(width: prod, child: const Text('Product', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white))),
-          SizedBox(width: qty, child: const Text('Qty', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white), textAlign: TextAlign.center)),
-          SizedBox(width: rate, child: const Text('Rate', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white), textAlign: TextAlign.right)),
-          SizedBox(width: amt, child: const Text('Amount', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white), textAlign: TextAlign.right)),
+          Text(label, style: TextStyle(fontSize: 11, color: AppTheme.textPrimary)),
+          Text('₹ ${value.toStringAsFixed(0)}', style: TextStyle(fontSize: 11, color: AppTheme.textPrimary)),
         ],
       ),
     );
   }
 }
-
-class _TableRow extends StatelessWidget {
-  final int idx;
-  final double sr, prod, qty, rate, amt;
-  final String name;
-  final double quantity, rateVal, amountVal;
-  final bool isLast;
-  const _TableRow({
-    required this.idx, required this.sr, required this.prod, required this.qty, required this.rate, required this.amt,
-    required this.name, required this.quantity, required this.rateVal, required this.amountVal, required this.isLast,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isOdd = idx.isOdd;
-    return Container(
-      decoration: BoxDecoration(
-        color: isOdd ? const Color(0xFFFAFAFC) : Colors.white,
-        border: isLast ? null : Border(bottom: BorderSide(color: const Color(0xFFEEEEF0), width: 0.5)),
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          SizedBox(width: sr, child: Text('${idx + 1}', style: TextStyle(fontSize: 12, color: Colors.grey.shade700), textAlign: TextAlign.center)),
-          SizedBox(width: prod, child: Text(name, style: const TextStyle(fontSize: 13, color: Color(0xFF2D2D2D)), overflow: TextOverflow.ellipsis)),
-          SizedBox(width: qty, child: Text(quantity.toStringAsFixed(0), style: TextStyle(fontSize: 12, color: Colors.grey.shade700), textAlign: TextAlign.center)),
-          SizedBox(width: rate, child: Text(_fmt(rateVal), style: TextStyle(fontSize: 12, color: Colors.grey.shade700), textAlign: TextAlign.right)),
-          SizedBox(width: amt, child: Text(_fmt(amountVal), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2D2D)), textAlign: TextAlign.right)),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryCard extends StatelessWidget {
-  final dynamic bill;
-  const _SummaryCard({required this.bill});
-
-  @override
-  Widget build(BuildContext context) {
-    final double totalDue = bill.total - bill.paidNow;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final summaryWidth = screenWidth < 768 ? double.infinity : 340.0;
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Container(
-        width: summaryWidth,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFE8E8EC)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.summarize_outlined, size: 16, color: AppTheme.primaryRed),
-                const SizedBox(width: 8),
-                Text('SUMMARY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.primaryRed, letterSpacing: 1.2)),
-              ],
-            ),
-            const SizedBox(height: 18),
-            _SummaryLine(label: 'Subtotal', value: bill.subtotal, bold: false, color: null),
-            if (bill.deliveryCharge > 0) ...[
-              const SizedBox(height: 8),
-              _SummaryLine(label: 'Delivery Charge', value: bill.deliveryCharge, bold: false, color: null),
-            ],
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 10),
-              child: Divider(height: 1, color: Color(0xFFE0E0E0)),
-            ),
-            _SummaryLine(label: 'Total', value: bill.total, bold: true, color: Colors.red.shade700),
-            if (bill.paidNow > 0) ...[
-              const SizedBox(height: 8),
-              _SummaryLine(label: 'Paid', value: bill.paidNow, bold: false, color: Colors.green.shade700),
-            ],
-            if (bill.paidNow > 0 && totalDue > 0) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 10),
-                child: Divider(height: 1, color: Color(0xFFE0E0E0)),
-              ),
-              _SummaryLine(label: 'Balance Due', value: totalDue, bold: true, color: Colors.red.shade700),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SummaryLine extends StatelessWidget {
-  final String label;
-  final double value;
-  final bool bold;
-  final Color? color;
-  const _SummaryLine({required this.label, required this.value, required this.bold, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: TextStyle(
-          fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
-          fontSize: bold ? 15 : 13,
-          color: color ?? Colors.grey.shade600,
-        )),
-        Text('\u20B9 ${value.toStringAsFixed(0)}', style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: bold ? 17 : 14,
-          color: color ?? const Color(0xFF2D2D2D),
-        )),
-      ],
-    );
-  }
-}
-
-String _fmt(double v) => v.toStringAsFixed(0);

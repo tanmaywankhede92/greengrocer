@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:printing/printing.dart';
+import 'package:intl/intl.dart';
+import '../core/print_pdf.dart';
 import 'package:dio/dio.dart';
 import '../config/theme.dart';
 import '../core/utils.dart';
@@ -100,7 +101,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
         isReprint: false,
       );
       if (!mounted) return;
-      await Printing.layoutPdf(onLayout: (_) => pdf);
+      await printPdf(pdf, filename: billNumber);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Bill saved & printed'), backgroundColor: AppTheme.success),
@@ -125,16 +126,266 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
     }
   }
 
+  static const _red = Color(0xFFB71C1C);
+  static const _muted = Color(0xFF757575);
+  static const _line = Color(0xFFBDBDBD);
+  static const _lightLine = Color(0xFFE0E0E0);
+
+  Widget _thinLine({double thickness = 0.7}) {
+    return Container(height: thickness, color: _line);
+  }
+
+  Widget _buildCopy({required bool isCustomerCopy, required double maxWidth}) {
+    final copyLabel = 'ORIGINAL';
+    final copySuffix = isCustomerCopy ? 'Customer Copy' : 'Office Copy';
+    final now = DateTime.now();
+    final grandTotal = _total > 0 ? _total : _subtotal;
+
+    return Container(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: _lightLine, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(height: 3, color: _red),
+          const SizedBox(height: 12),
+
+          // ── Header (centered) ──
+          Center(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text('RATHOD ENTERPRISES',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _red, letterSpacing: 1)),
+                const SizedBox(height: 4),
+                Text('Vegetable, Fruits Supplier & Commission Agent',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _muted)),
+                const SizedBox(height: 2),
+                Text('Green & Fresh  •  Every Day',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 10, color: AppTheme.success, fontStyle: FontStyle.italic)),
+                const SizedBox(height: 6),
+                Text('Shop No.95 Kanji House, Mahatma Phule Market,',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 10, color: _muted)),
+                Text('Cotton Market, Nagpur – 440018',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 10, color: _muted)),
+                const SizedBox(height: 4),
+                Text('Nitesh : 8087344819   |   Vicky : 9529031540   |   7030914867',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 9.5, color: AppTheme.textPrimary)),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 14),
+          _thinLine(thickness: 0.7),
+          const SizedBox(height: 12),
+
+          // ── Info section (two columns with divider) ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _infoField('Bill No.', 'Will be generated on print'),
+                      const SizedBox(height: 6),
+                      _infoField('Customer', widget.customer.name),
+                      const SizedBox(height: 6),
+                      _infoField('Mobile', widget.customer.mobile),
+                      const SizedBox(height: 6),
+                      _infoField('Address', widget.customer.address?.isNotEmpty == true ? widget.customer.address! : '-'),
+                    ],
+                  ),
+                ),
+                Container(width: 1, height: 80, color: _line),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _infoField('Date', AppUtils.formatDate(now)),
+                        const SizedBox(height: 6),
+                        _infoField('Time', DateFormat('hh:mm a').format(now)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+          _thinLine(thickness: 0.7),
+          const SizedBox(height: 8),
+
+          // ── Products table (6 columns, same as PDF) ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Table(
+              columnWidths: const {
+                0: FlexColumnWidth(0.55),
+                1: FlexColumnWidth(2.25),
+                2: FlexColumnWidth(1.0),
+                3: FlexColumnWidth(0.85),
+                4: FlexColumnWidth(1.0),
+                5: FlexColumnWidth(1.15),
+              },
+              border: TableBorder.all(color: _line, width: 0.7),
+              children: [
+                // Header row
+                TableRow(
+                  decoration: const BoxDecoration(color: Color(0xFFF5F5F5)),
+                  children: ['Sr.', 'Product', 'Unit', 'Qty', 'Rate (₹)', 'Amount (₹)'].map((h) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                      child: Text(h,
+                          textAlign: h == 'Product' ? TextAlign.left : TextAlign.center,
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                    );
+                  }).toList(),
+                ),
+                // Data rows
+                ..._items.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final item = entry.value;
+                  final productName = item.productNameHindi.isNotEmpty
+                      ? '${item.productName} (${item.productNameHindi})'
+                      : item.productName;
+
+                  return TableRow(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                        child: Text('${idx + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                        child: Text(productName, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                        child: Text(item.unit, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                        child: Text(item.quantity.toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                        child: Text(item.appliedRate.toStringAsFixed(2), textAlign: TextAlign.right, style: const TextStyle(fontSize: 10)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                        child: Text(item.amount.toStringAsFixed(2), textAlign: TextAlign.right, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // ── Summary (right-aligned, same as PDF) ──
+          Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              width: 220,
+              padding: const EdgeInsets.only(right: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _amountRow('Subtotal', _subtotal),
+                  if (widget.deliveryCharge > 0)
+                    _amountRow('Delivery Charge', widget.deliveryCharge),
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    decoration: const BoxDecoration(
+                      border: Border(top: BorderSide(color: _line, width: 0.7), bottom: BorderSide(color: _line, width: 0.7)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Grand Total', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                        Text('₹ ${grandTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                  if (_paymentAmount > 0) _amountRow('Paid', _paymentAmount),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 18),
+          _thinLine(thickness: 0.7),
+          const SizedBox(height: 10),
+
+          // ── Footer ──
+          Center(
+            child: Column(
+              children: [
+                Text('Thank You!  Visit Again',
+                    style: TextStyle(fontSize: 11, color: _muted)),
+                const SizedBox(height: 4),
+                Text('RATHOD ENTERPRISES',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _red, letterSpacing: 1.2)),
+                const SizedBox(height: 8),
+                Container(height: 1, color: Colors.grey.shade400),
+                const SizedBox(height: 8),
+                Text('$copyLabel – $copySuffix',
+                    style: TextStyle(fontSize: 10, color: _muted)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoField(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 72,
+          child: Text(label, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+        ),
+        const Text(':  ', style: TextStyle(fontSize: 10.5)),
+        Expanded(child: Text(value, style: TextStyle(fontSize: 10.5, color: AppTheme.textPrimary))),
+      ],
+    );
+  }
+
+  Widget _amountRow(String label, double value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontSize: 11, color: AppTheme.textPrimary)),
+          Text('₹ ${value.toStringAsFixed(0)}', style: TextStyle(fontSize: 11, color: AppTheme.textPrimary)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final tableWidth = (screenWidth - 80).clamp(400.0, 800.0);
-    const cSr = 28.0;
-    const cQty = 50.0;
-    const cRate = 60.0;
-    const cAmt = 70.0;
-    final cProd = tableWidth - cSr - cQty - cRate - cAmt;
-
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
@@ -146,10 +397,13 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: _buildPreview(cSr, cProd, cQty, cRate, cAmt),
+              child: Center(
+                child: Column(
+                  children: [
+                    _buildCopy(isCustomerCopy: true, maxWidth: 700),
+                    const SizedBox(height: 24),
+                    _buildCopy(isCustomerCopy: false, maxWidth: 700),
+                  ],
                 ),
               ),
             ),
@@ -175,7 +429,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.print, size: 18),
                     label: Text(_isGenerating ? 'Saving & Printing...' : 'Print Both Copies'),
-                    onPressed: _isGenerating ? null : _print,
+                    onPressed: _isGenerating ? null : () { openPrintWindow(); _print(); },
                     style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
                   ),
                 ),
@@ -186,196 +440,4 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
       ),
     );
   }
-
-  Widget _buildPreview(double colSr, double colProd, double colQty, double colRate, double colAmt) {
-    final cellStyle = TextStyle(fontSize: 10, color: Colors.grey.shade800);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('RATHOD ENTERPRISES', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFFD32F2F), letterSpacing: 1)),
-        const SizedBox(height: 4),
-        Text('Vegetable, Fruits Supplier & Commission Agent', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-        Text('Green & Fresh \u2022 Every Day...', style: TextStyle(fontSize: 10, color: Colors.grey.shade500, fontStyle: FontStyle.italic)),
-        const SizedBox(height: 6),
-        Text('Shop No.95 Kanji House, Mahatma Phule Market, Cotton Market, Nagpur \u2013 440018',
-            style: TextStyle(fontSize: 10, color: Colors.grey.shade700)),
-        Text('Nitesh : 8087344819  |  Vicky : 9529031540  |  7030914867',
-            style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
-        const Divider(height: 24),
-
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('BILL TO', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.red.shade700, letterSpacing: 1)),
-                  const SizedBox(height: 8),
-                  Text(widget.customer.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade900)),
-                  Text(widget.customer.mobile, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                  if (widget.customer.address != null && widget.customer.address!.isNotEmpty)
-                    Text(widget.customer.address!, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                ],
-              ),
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('BILL DETAILS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.red.shade700, letterSpacing: 1)),
-                  const SizedBox(height: 8),
-                  _infoRow('Bill No', 'Will be generated on print'),
-                  const SizedBox(height: 4),
-                  _infoRow('Date', AppUtils.formatDate(DateTime.now())),
-
-                ],
-              ),
-            ),
-          ],
-        ),
-        const Divider(height: 24),
-
-        Text('PRODUCTS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.grey.shade600, letterSpacing: 1.2)),
-        const SizedBox(height: 8),
-        Builder(
-          builder: (context) {
-            final isMobile = MediaQuery.of(context).size.width < 768;
-            if (isMobile) {
-              return Column(
-                children: List.generate(_items.length, (idx) {
-                  final i = _items[idx];
-                  final name = i.productNameHindi.isNotEmpty ? '${i.productName} (${i.productNameHindi})' : i.productName;
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(children: [
-                            Text('#${idx + 1}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.grey.shade600)),
-                            const Spacer(),
-                            Text('Qty: ${i.quantity.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                          ]),
-                          const SizedBox(height: 6),
-                          Text(name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 4),
-                          Row(children: [
-                            Text('Rate: \u20B9${_fmt(i.appliedRate)}', style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
-                            const Spacer(),
-                            Text('Amount: \u20B9${_fmt(i.amount)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.red)),
-                          ]),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              );
-            }
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                return Container(
-                  decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300, width: 0.5)),
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
-                    children: [
-                      _headerRow(colSr, colProd, colQty, colRate, colAmt),
-                      ...List.generate(_items.length, (i) => _dataRow(i, colSr, colProd, colQty, colRate, colAmt, cellStyle)),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        ),
-        const SizedBox(height: 24),
-
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(4)),
-          child: Column(
-            children: [
-              _sumRow('Subtotal', _subtotal, 10, false, null),
-              if (widget.deliveryCharge > 0) ...[
-                const SizedBox(height: 4),
-                _sumRow('Delivery Charge', widget.deliveryCharge, 10, false, null),
-              ],
-              const Divider(height: 16),
-              _sumRow('Total', _total, 15, true, Colors.red.shade700),
-              if (_paymentAmount > 0) ...[
-                const SizedBox(height: 6),
-                _sumRow('Paid', _paymentAmount, 11, false, Colors.green.shade700),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _infoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(width: 55, child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey.shade600))),
-        Expanded(child: Text(value, style: TextStyle(fontSize: 10, color: Colors.grey.shade800))),
-      ],
-    );
-  }
-
-  Widget _headerRow(double sr, double prod, double qty, double rate, double amt) {
-    return Container(
-      color: const Color(0xFF37474F),
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-      child: Row(
-        children: [
-          SizedBox(width: sr, child: const Text('#', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white), textAlign: TextAlign.center)),
-          SizedBox(width: prod, child: const Text('Product', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white))),
-          SizedBox(width: qty, child: const Text('Qty', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white), textAlign: TextAlign.center)),
-          SizedBox(width: rate, child: const Text('Rate', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white), textAlign: TextAlign.center)),
-          SizedBox(width: amt, child: const Text('Amount', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white), textAlign: TextAlign.center)),
-        ],
-      ),
-    );
-  }
-
-  Widget _dataRow(int idx, double sr, double prod, double qty, double rate, double amt, TextStyle cell) {
-    final item = _items[idx];
-    final isOdd = idx.isOdd;
-    final isLast = idx == _items.length - 1;
-    final name = item.productNameHindi.isNotEmpty ? '${item.productName} (${item.productNameHindi})' : item.productName;
-    final border = isLast ? null : Border(bottom: BorderSide(color: Colors.grey.shade300, width: 0.5));
-
-    return Container(
-      decoration: BoxDecoration(color: isOdd ? const Color(0xFFF5F5F5) : Colors.white, border: border),
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-      child: Row(
-        children: [
-          SizedBox(width: sr, child: Text('${idx + 1}', style: cell, textAlign: TextAlign.center)),
-          SizedBox(width: prod, child: Text(name, style: cell, overflow: TextOverflow.ellipsis)),
-          SizedBox(width: qty, child: Text(item.quantity.toStringAsFixed(0), style: cell, textAlign: TextAlign.center)),
-          SizedBox(width: rate, child: Text(_fmt(item.appliedRate), style: cell, textAlign: TextAlign.right)),
-          SizedBox(width: amt, child: Text(_fmt(item.amount), style: cell.copyWith(fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
-        ],
-      ),
-    );
-  }
-
-  Widget _sumRow(String label, double amount, double fontSize, bool bold, Color? color) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: TextStyle(fontWeight: bold ? FontWeight.w600 : FontWeight.normal, fontSize: fontSize.clamp(10, 16), color: Colors.grey.shade700)),
-        Text('\u20B9 ${amount.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: fontSize.clamp(10, 16), color: color ?? Colors.grey.shade900)),
-      ],
-    );
-  }
-
-  String _fmt(double v) => v.toStringAsFixed(0);
 }

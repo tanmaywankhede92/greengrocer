@@ -16,8 +16,8 @@ class PaymentService {
     return (data: list, meta: body['meta'] as Map<String, dynamic>?);
   }
 
-  Future<String> create(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> create(Map<String, dynamic> data) async {
     final response = await _client.post('/payments', data: data);
-    return response.data['data']['id'] as String;
+    return response.data['data'] as Map<String, dynamic>;
   }
 }

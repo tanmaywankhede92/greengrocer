@@ -383,15 +383,7 @@ Future<Uint8List> buildBillPdf({
     );
   }
 
-  pw.Widget buildCopy({required bool isCustomerCopy}) {
-    final copyLabel = isReprint
-        ? 'REPRINT'
-        : isCustomerCopy
-            ? 'ORIGINAL'
-            : 'DUPLICATE';
-    final copySuffix = isCustomerCopy ? 'Customer Copy' : 'Office Copy';
-    final grandTotal = total > 0 ? total : subtotal;
-
+  pw.Widget buildHeader() {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
@@ -414,12 +406,7 @@ Future<Uint8List> buildBillPdf({
               pw.Text(
                 'RATHOD ENTERPRISES',
                 textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(
-                  font: fontB,
-                  fontSize: 24,
-                  color: red,
-                  letterSpacing: 1.0,
-                ),
+                style: pw.TextStyle(font: fontB, fontSize: 24, color: red, letterSpacing: 1.0),
               ),
               pw.SizedBox(height: 4),
               pw.Text(
@@ -431,11 +418,7 @@ Future<Uint8List> buildBillPdf({
               pw.Text(
                 'Green & Fresh  •  Every Day',
                 textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(
-                  font: fontI,
-                  fontSize: 9.5,
-                  color: PdfColors.green700,
-                ),
+                style: pw.TextStyle(font: fontI, fontSize: 9.5, color: PdfColors.green700),
               ),
               pw.SizedBox(height: 8),
               pw.Text(
@@ -513,14 +496,7 @@ Future<Uint8List> buildBillPdf({
           children: [
             pw.TableRow(
               decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-              children: [
-                'Sr.',
-                'Product',
-                'Unit',
-                'Qty',
-                'Rate (₹)',
-                'Amount (₹)',
-              ].map((h) {
+              children: ['Sr.', 'Product', 'Unit', 'Qty', 'Rate (₹)', 'Amount (₹)'].map((h) {
                 return pw.Padding(
                   padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 6),
                   child: pw.Text(
@@ -531,68 +507,72 @@ Future<Uint8List> buildBillPdf({
                 );
               }).toList(),
             ),
-            ...items.asMap().entries.map((entry) {
-              final index = entry.key + 1;
-              final item = entry.value;
-              final productName = item.productNameHindi.isNotEmpty
-                  ? '${item.productName} (${item.productNameHindi})'
-                  : item.productName;
-
-              return pw.TableRow(
-                children: [
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 11, horizontal: 6),
-                    child: pw.Text(
-                      '$index',
-                      textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(font: font, fontSize: 9.5),
-                    ),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 11, horizontal: 6),
-                    child: pw.Text(
-                      productName,
-                      style: pw.TextStyle(font: font, fontSize: 9.5),
-                    ),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 11, horizontal: 6),
-                    child: pw.Text(
-                      item.unit,
-                      textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(font: font, fontSize: 9.5),
-                    ),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 11, horizontal: 6),
-                    child: pw.Text(
-                      item.quantity.toStringAsFixed(0),
-                      textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(font: font, fontSize: 9.5),
-                    ),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 11, horizontal: 6),
-                    child: pw.Text(
-                      item.appliedRate.toStringAsFixed(2),
-                      textAlign: pw.TextAlign.right,
-                      style: pw.TextStyle(font: font, fontSize: 9.5),
-                    ),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 11, horizontal: 6),
-                    child: pw.Text(
-                      item.amount.toStringAsFixed(2),
-                      textAlign: pw.TextAlign.right,
-                      style: pw.TextStyle(font: font, fontSize: 9.5),
-                    ),
-                  ),
-                ],
-              );
-            }),
           ],
         ),
+      ],
+    );
+  }
 
+  List<pw.Widget> buildRows() {
+    return items.asMap().entries.map((entry) {
+      final index = entry.key + 1;
+      final item = entry.value;
+      final productName = item.productNameHindi.isNotEmpty
+          ? '${item.productName} (${item.productNameHindi})'
+          : item.productName;
+
+      return pw.Table(
+        border: pw.TableBorder.all(color: lineColor, width: 0.7),
+        columnWidths: const {
+          0: pw.FlexColumnWidth(0.55),
+          1: pw.FlexColumnWidth(2.25),
+          2: pw.FlexColumnWidth(1.0),
+          3: pw.FlexColumnWidth(0.85),
+          4: pw.FlexColumnWidth(1.0),
+          5: pw.FlexColumnWidth(1.15),
+        },
+        children: [
+          pw.TableRow(
+            children: [
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(vertical: 11, horizontal: 6),
+                child: pw.Text('$index', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 9.5)),
+              ),
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(vertical: 11, horizontal: 6),
+                child: pw.Text(productName, style: pw.TextStyle(font: font, fontSize: 9.5)),
+              ),
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(vertical: 11, horizontal: 6),
+                child: pw.Text(item.unit, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 9.5)),
+              ),
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(vertical: 11, horizontal: 6),
+                child: pw.Text(item.quantity.toStringAsFixed(0), textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 9.5)),
+              ),
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(vertical: 11, horizontal: 6),
+                child: pw.Text(item.appliedRate.toStringAsFixed(2), textAlign: pw.TextAlign.right, style: pw.TextStyle(font: font, fontSize: 9.5)),
+              ),
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(vertical: 11, horizontal: 6),
+                child: pw.Text(item.amount.toStringAsFixed(2), textAlign: pw.TextAlign.right, style: pw.TextStyle(font: font, fontSize: 9.5)),
+              ),
+            ],
+          ),
+        ],
+      );
+    }).toList();
+  }
+
+  pw.Widget buildFooter({required bool isCustomerCopy}) {
+    final copyLabel = isReprint ? 'REPRINT' : isCustomerCopy ? 'ORIGINAL' : 'DUPLICATE';
+    final copySuffix = isCustomerCopy ? 'Customer Copy' : 'Office Copy';
+    final grandTotal = total > 0 ? total : subtotal;
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+      children: [
         pw.SizedBox(height: 18),
 
         pw.Align(
@@ -633,31 +613,13 @@ Future<Uint8List> buildBillPdf({
         pw.Center(
           child: pw.Column(
             children: [
-              pw.Text(
-                'Thank You!  Visit Again',
-                style: pw.TextStyle(font: font, fontSize: 10, color: muted),
-              ),
+              pw.Text('Thank You!  Visit Again', style: pw.TextStyle(font: font, fontSize: 10, color: muted)),
               pw.SizedBox(height: 4),
-              pw.Text(
-                'RATHOD ENTERPRISES',
-                style: pw.TextStyle(
-                  font: fontB,
-                  fontSize: 11.5,
-                  color: red,
-                  letterSpacing: 1.2,
-                ),
-              ),
+              pw.Text('RATHOD ENTERPRISES', style: pw.TextStyle(font: fontB, fontSize: 11.5, color: red, letterSpacing: 1.2)),
               pw.SizedBox(height: 8),
-              pw.Container(
-                width: double.infinity,
-                height: 1,
-                color: PdfColors.grey500,
-              ),
+              pw.Container(width: double.infinity, height: 1, color: PdfColors.grey500),
               pw.SizedBox(height: 8),
-              pw.Text(
-                '$copyLabel – $copySuffix',
-                style: pw.TextStyle(font: font, fontSize: 9.5, color: muted),
-              ),
+              pw.Text('$copyLabel – $copySuffix', style: pw.TextStyle(font: font, fontSize: 9.5, color: muted)),
             ],
           ),
         ),
@@ -668,18 +630,22 @@ Future<Uint8List> buildBillPdf({
   final doc = pw.Document();
 
   doc.addPage(
-    pw.Page(
+    pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      build: (_) => buildCopy(isCustomerCopy: true),
+      header: (_) => buildHeader(),
+      build: (_) => buildRows(),
+      footer: (_) => buildFooter(isCustomerCopy: true),
     ),
   );
 
   doc.addPage(
-    pw.Page(
+    pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      build: (_) => buildCopy(isCustomerCopy: false),
+      header: (_) => buildHeader(),
+      build: (_) => buildRows(),
+      footer: (_) => buildFooter(isCustomerCopy: false),
     ),
   );
 
