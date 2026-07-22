@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../core/print_pdf.dart';
-import 'package:intl/intl.dart';
 import '../config/theme.dart';
-import '../core/utils.dart';
+import '../core/print_pdf.dart';
 import '../core/params.dart';
-import '../core/enums.dart';
 import '../models/customer.dart';
+import '../models/payment.dart';
 import '../providers/customer_provider.dart';
 import '../providers/payment_provider.dart';
-import '../providers/statement_provider.dart';
+import '../providers/bill_provider.dart';
+import '../providers/settings_provider.dart';
 import '../widgets/breadcrumb.dart';
-import '../widgets/loading_widget.dart';
-import '../widgets/empty_state.dart';
-import '../widgets/payment_receipt_pdf.dart';
-import '../widgets/statement_pdf.dart';
-import '../widgets/payment_mode_select.dart';
+import '../widgets/bill_pdf.dart';
+import '../widgets/bill_item_row.dart';
+import 'payments/widgets/summary_cards.dart';
+import 'payments/widgets/payment_toolbar.dart';
+import 'payments/widgets/customer_outstanding_table.dart';
+import 'payments/widgets/customer_outstanding_cards.dart';
+import 'payments/widgets/recent_transactions_table.dart';
+import 'payments/widgets/recent_transactions_cards.dart';
+import 'payments/widgets/payment_details_dialog.dart';
+import 'payments/widgets/statement_dialog.dart';
+import 'payments/widgets/add_payment_dialog.dart';
 
+enum _ViewTab { customers, payments }
 
 class PaymentsScreen extends ConsumerStatefulWidget {
   const PaymentsScreen({super.key});
@@ -26,496 +32,431 @@ class PaymentsScreen extends ConsumerStatefulWidget {
 }
 
 class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
-  final _searchCtrl = TextEditingController();
+  _ViewTab _activeTab = _ViewTab.customers;
   String _search = '';
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
-
-  void _showAddPaymentDialog(Customer customer) {
-    final amountCtrl = TextEditingController();
-    final refCtrl = TextEditingController();
-    final notesCtrl = TextEditingController();
-    PaymentMode mode = PaymentMode.cash;
-    bool submitting = false;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Add Payment'),
-          content: SizedBox(
-            width: 400,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(customer.name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text(customer.mobile, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                  const Divider(height: 20),
-                  _dialogRow('Outstanding', AppUtils.formatCurrency(customer.currentDue)),
-                  _dialogRow('Total Paid', AppUtils.formatCurrency(customer.totalPaid)),
-                  if (customer.currentDue > 0)
-                    _dialogRow('Due', AppUtils.formatCurrency(customer.currentDue), valueColor: AppTheme.error),
-                  const Divider(height: 20),
-                  TextField(controller: amountCtrl, keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Payment Amount *', prefixIcon: Icon(Icons.currency_rupee, size: 18))),
-                  const SizedBox(height: 12),
-                  PaymentModeSelect(value: mode, onChanged: (v) => setDialogState(() => mode = v ?? PaymentMode.cash)),
-                  const SizedBox(height: 12),
-                  TextField(controller: refCtrl, decoration: const InputDecoration(labelText: 'Reference (optional)', prefixIcon: Icon(Icons.receipt, size: 18))),
-                  const SizedBox(height: 12),
-                  TextField(controller: notesCtrl, decoration: const InputDecoration(labelText: 'Notes (optional)', prefixIcon: Icon(Icons.notes, size: 18)), maxLines: 2),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: submitting ? null : () {
-                openPrintWindow();
-                () async {
-                  final amount = double.tryParse(amountCtrl.text);
-                  if (amount == null || amount <= 0) return;
-                  setDialogState(() => submitting = true);
-                  try {
-                    final result = await ref.read(paymentServiceProvider).create({
-                      'customerId': customer.id,
-                      'amount': amount,
-                      'mode': mode.value,
-                      'reference': refCtrl.text,
-                      'notes': notesCtrl.text,
-                      'paymentDate': AppUtils.formatDateApi(DateTime.now()),
-                    });
-                    final receiptNum = result['receiptNumber'] as String? ?? result['id'] as String;
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    if (mounted) {
-                      ref.invalidate(customerListProvider(CustomerListParams()));
-                      _showReceipt(customer, receiptNum, amount, mode, refCtrl.text, notesCtrl.text, customer.currentDue, customer.currentDue - amount);
-                    }
-                  } catch (e) {
-                    if (ctx.mounted) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
-                    }
-                    setDialogState(() => submitting = false);
-                  }
-                }();
-              },
-              child: submitting
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Receive Payment'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showReceipt(Customer customer, String paymentId, double amount, PaymentMode mode,
-      String ref, String notes, double outstandingBefore, double outstandingAfter) async {
-    try {
-      final pdf = await buildPaymentReceiptPdf(
-        receiptNumber: paymentId,
-        customer: customer,
-        amount: amount,
-        modeDisplay: mode.displayName,
-        reference: ref.isNotEmpty ? ref : null,
-        notes: notes.isNotEmpty ? notes : null,
-        paymentDate: DateTime.now(),
-        outstandingBefore: outstandingBefore,
-        outstandingAfter: outstandingAfter,
-      );
-      if (mounted) await printPdf(pdf, filename: 'Receipt-$paymentId');
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Receipt error: $e'), backgroundColor: AppTheme.error));
-      }
-    }
-  }
-
-  Future<void> _downloadInvoice(Customer customer) async {
-    try {
-      final service = ref.read(statementServiceProvider);
-      final from = AppUtils.formatDateApi(DateTime.now().subtract(const Duration(days: 30)));
-      final to = AppUtils.formatDateApi(DateTime.now());
-      final data = await service.getStatement(customer.id, from: from, to: to);
-      final pdf = await buildStatementPdf(
-        customerName: data['customer']['name'] ?? customer.name,
-        customerMobile: data['customer']['mobile'] ?? customer.mobile,
-        customerAddress: customer.address,
-        from: from,
-        to: to,
-        openingBalance: (data['openingBalance'] ?? 0).toDouble(),
-        closingBalance: (data['closingBalance'] ?? 0).toDouble(),
-        totalDebit: (data['totalDebit'] ?? 0).toDouble(),
-        totalCredit: (data['totalCredit'] ?? 0).toDouble(),
-        rows: (data['rows'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [],
-      );
-      if (mounted) await printPdf(pdf, filename: 'Statement-${customer.name}');
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invoice error: $e'), backgroundColor: AppTheme.error));
-      }
-    }
-  }
-
-  Future<void> _showStatementDialog(Customer customer) async {
-    DateTime from = DateTime.now().subtract(const Duration(days: 30));
-    DateTime to = DateTime.now();
-    bool loading = false;
-
-    await showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Download Statement'),
-          content: SizedBox(
-            width: 360,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(customer.name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text(customer.mobile, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                const Divider(height: 20),
-                InkWell(
-                  onTap: () async {
-                    final picked = await showDatePicker(context: ctx, initialDate: from, firstDate: DateTime(2020), lastDate: DateTime.now());
-                    if (picked != null) setDialogState(() => from = picked);
-                  },
-                  child: InputDecorator(
-                    decoration: const InputDecoration(labelText: 'From Date', isDense: true),
-                    child: Text(DateFormat('dd MMM yyyy').format(from), style: TextStyle(fontSize: 14, color: AppTheme.textPrimary)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                InkWell(
-                  onTap: () async {
-                    final picked = await showDatePicker(context: ctx, initialDate: to, firstDate: DateTime(2020), lastDate: DateTime.now());
-                    if (picked != null) setDialogState(() => to = picked);
-                  },
-                  child: InputDecorator(
-                    decoration: const InputDecoration(labelText: 'To Date', isDense: true),
-                    child: Text(DateFormat('dd MMM yyyy').format(to), style: TextStyle(fontSize: 14, color: AppTheme.textPrimary)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton.icon(
-              icon: loading
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.download, size: 18),
-              label: Text(loading ? 'Generating...' : 'Download'),
-              onPressed: loading ? null : () {
-                openPrintWindow();
-                () async {
-                  setDialogState(() => loading = true);
-                  try {
-                    final service = ref.read(statementServiceProvider);
-                    final data = await service.getStatement(customer.id,
-                      from: AppUtils.formatDateApi(from), to: AppUtils.formatDateApi(to));
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    final pdf = await buildStatementPdf(
-                      customerName: data['customer']['name'] ?? customer.name,
-                      customerMobile: data['customer']['mobile'] ?? customer.mobile,
-                      customerAddress: customer.address,
-                      from: AppUtils.formatDateApi(from),
-                      to: AppUtils.formatDateApi(to),
-                      openingBalance: (data['openingBalance'] ?? 0).toDouble(),
-                      closingBalance: (data['closingBalance'] ?? 0).toDouble(),
-                      totalDebit: (data['totalDebit'] ?? 0).toDouble(),
-                      totalCredit: (data['totalCredit'] ?? 0).toDouble(),
-                      rows: (data['rows'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [],
-                    );
-                    if (mounted) await printPdf(pdf, filename: 'Statement-${customer.name}');
-                  } catch (e) {
-                    if (ctx.mounted) {
-                      setDialogState(() => loading = false);
-                      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
-                    }
-                  }
-                }();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  String _activeFilter = 'all';
+  int _customerPage = 1;
+  int _paymentPage = 1;
+  String? _loadingAction;
+  static const _pageSize = 20;
 
   @override
   Widget build(BuildContext context) {
-    final params = CustomerListParams(search: _search, page: 1, limit: 200);
-    final customersAsync = ref.watch(customerListProvider(params));
     final isMobile = MediaQuery.of(context).size.width < 768;
+    final customersParams = CustomerListParams(search: _search, page: _customerPage, limit: _pageSize);
+    final customersAsync = ref.watch(customerListProvider(customersParams));
+    final paymentsAsync = ref.watch(paymentListProvider(PaymentListParams(page: _paymentPage, limit: _pageSize)));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Payments'),
-        actions: [
-          if (_search.isNotEmpty)
-            IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() { _search = ''; _searchCtrl.clear(); })),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: TextButton.icon(
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Add Payment'),
-              onPressed: () => context.go('/payments/add'),
-              style: TextButton.styleFrom(foregroundColor: AppTheme.primaryRed),
-            ),
-          ),
-        ],
-      ),
+      backgroundColor: AppTheme.background,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Payments')]),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-            child: SizedBox(
-              width: isMobile ? double.infinity : 420,
-              child: TextField(
-                controller: _searchCtrl,
-                decoration: const InputDecoration(hintText: 'Search customer...', prefixIcon: Icon(Icons.search), isDense: true),
-                onChanged: (v) => setState(() => _search = v),
-              ),
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+            child: PaymentToolbar(
+              searchQuery: _search,
+              onSearchChanged: (v) => setState(() { _search = v; _customerPage = 1; _paymentPage = 1; }),
+              activeFilter: _activeFilter,
+              onFilterChanged: (v) => setState(() => _activeFilter = v),
+              onRefresh: () => setState(() {}),
+              onAddPayment: () => context.go('/payments/add'),
+              isMobile: isMobile,
             ),
           ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: customersAsync.when(
-              loading: () => const LoadingWidget(),
-              error: (e, _) => Center(child: Text('$e', style: TextStyle(color: AppTheme.error))),
-              data: (result) {
-                if (result.data.isEmpty) return const EmptyState(icon: Icons.people_outline, title: 'No customers found');
-                return LayoutBuilder(
-                  builder: (context, constraints) {
-                    if (constraints.maxWidth < 768) {
-                      return _buildMobileList(result.data);
-                    }
-                    return _buildDesktopTable(result.data, constraints.maxWidth);
-                  },
-                );
-              },
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: _ViewToggle(
+              activeTab: _activeTab,
+              onChanged: (t) => setState(() => _activeTab = t),
+              isMobile: isMobile,
             ),
+          ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: const SummaryCards(),
+          ),
+          const SizedBox(height: 6),
+          Expanded(
+            child: _activeTab == _ViewTab.customers
+                ? _buildCustomersView(customersAsync, isMobile)
+                : _buildPaymentsView(paymentsAsync, isMobile),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMobileList(List<Customer> data) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      itemCount: data.length,
-      itemBuilder: (context, index) {
-        final c = data[index];
-        final status = c.currentDue <= 0 ? 'Paid' : c.totalPaid > 0 ? 'Partial' : 'Unpaid';
-        final statusColor = c.currentDue <= 0 ? AppTheme.success : c.totalPaid > 0 ? AppTheme.info : AppTheme.error;
-        return _buildMobileCard(c, status, statusColor);
+  Widget _buildCustomersView(AsyncValue<({List<Customer> data, Map<String, dynamic>? meta})> async, bool isMobile) {
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryRed)),
+      error: (e, _) => _ErrorCard(message: '$e', onRetry: () => setState(() {})),
+      data: (result) {
+        final filtered = _applyCustomerFilter(result.data);
+        final meta = result.meta;
+        final totalPages = meta != null ? ((meta['totalPages'] ?? 1) as int) : 1;
+        if (isMobile) {
+          return Column(
+            children: [
+              Expanded(
+                child: filtered.isEmpty
+                    ? _EmptyView(icon: Icons.people_outline, title: 'No customers found', subtitle: 'Try adjusting your search')
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        itemCount: filtered.length,
+                        itemBuilder: (_, i) => CustomerOutstandingCard(
+                          customer: filtered[i],
+                          loadingAction: _loadingAction,
+                          onPay: (c) => AddPaymentDialog.show(context, ref: ref, customer: c, onPaymentRecorded: () => setState(() {})),
+                          onStatement: (c) => StatementDownloadDialog.show(context, ref: ref, customer: c),
+                          onInvoice: (c) => _downloadInvoice(c, actionKey: 'inv_${c.id}'),
+                          onViewLedger: (c) => context.go('/customers/${c.id}'),
+                        ),
+                      ),
+              ),
+              if (totalPages > 1) _PaginationBar(
+                page: _customerPage, totalPages: totalPages,
+                onPrev: _customerPage > 1 ? () => setState(() => _customerPage--) : null,
+                onNext: _customerPage < totalPages ? () => setState(() => _customerPage++) : null,
+              ),
+            ],
+          );
+        }
+        return Column(
+          children: [
+            Expanded(
+              child: filtered.isEmpty
+                  ? _EmptyView(icon: Icons.people_outline, title: 'No customers found', subtitle: 'Try adjusting your search')
+                  : CustomerOutstandingTable(
+                      customers: filtered,
+                      loadingAction: _loadingAction,
+                      onPay: (c) => AddPaymentDialog.show(context, ref: ref, customer: c, onPaymentRecorded: () => setState(() {})),
+                      onStatement: (c) => StatementDownloadDialog.show(context, ref: ref, customer: c),
+                      onInvoice: (c) => _downloadInvoice(c, actionKey: 'inv_${c.id}'),
+                      onViewLedger: (c) => context.go('/customers/${c.id}'),
+                    ),
+            ),
+            if (totalPages > 1) _PaginationBar(
+              page: _customerPage, totalPages: totalPages,
+              onPrev: _customerPage > 1 ? () => setState(() => _customerPage--) : null,
+              onNext: _customerPage < totalPages ? () => setState(() => _customerPage++) : null,
+            ),
+          ],
+        );
       },
     );
   }
 
-  Widget _buildMobileCard(Customer c, String status, Color statusColor) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildPaymentsView(AsyncValue<({List<Payment> data, Map<String, dynamic>? meta})> async, bool isMobile) {
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryRed)),
+      error: (e, _) => _ErrorCard(message: '$e', onRetry: () => setState(() {})),
+      data: (result) {
+        final payments = _applyPaymentFilter(result.data);
+        final meta = result.meta;
+        final totalPages = meta != null ? ((meta['totalPages'] ?? 1) as int) : 1;
+        if (isMobile) {
+          return Column(
+            children: [
+              Expanded(
+                child: payments.isEmpty
+                    ? _EmptyView(icon: Icons.receipt_long, title: 'No transactions found', subtitle: 'Payments will appear here')
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        itemCount: payments.length,
+                        itemBuilder: (_, i) {
+                          final pay = payments[i];
+                          final cust = pay.customer;
+                          final invKey = cust != null ? 'inv_${cust.id}' : null;
+                          return TransactionCard(
+                            payment: pay,
+                            loadingAction: _loadingAction,
+                            onView: (p) => PaymentDetailsDialog.show(context, payment: p, loadingAction: _loadingAction,
+                              onPrint: p.customer != null ? () => _downloadInvoice(p.customer!, actionKey: 'dlg_print_${p.customer!.id}') : null,
+                              onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, actionKey: 'dlg_dl_${p.customer!.id}') : null),
+                            onPrint: cust != null ? (_) => _downloadInvoice(cust, actionKey: invKey) : (_) {},
+                            onDownload: cust != null ? (_) => _downloadInvoice(cust, actionKey: invKey) : (_) {},
+                          );
+                        },
+                      ),
+              ),
+              if (totalPages > 1) _PaginationBar(
+                page: _paymentPage, totalPages: totalPages,
+                onPrev: _paymentPage > 1 ? () => setState(() => _paymentPage--) : null,
+                onNext: _paymentPage < totalPages ? () => setState(() => _paymentPage++) : null,
+              ),
+            ],
+          );
+        }
+        return Column(
           children: [
-            Text(c.name, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
-            const SizedBox(height: 2),
-            Text(c.mobile, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Outstanding', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                      const SizedBox(height: 2),
-                      Text(AppUtils.formatCurrency(c.currentDue), style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Paid', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                      const SizedBox(height: 2),
-                      Text(AppUtils.formatCurrency(c.totalPaid), style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: statusColor.withAlpha(25), borderRadius: BorderRadius.circular(4)),
-              child: Text(status, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w600)),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                if (c.currentDue > 0)
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.payments, size: 14),
-                      label: const Text('Pay', style: TextStyle(fontSize: 11)),
-                      onPressed: () => _showAddPaymentDialog(c),
+            Expanded(
+              child: payments.isEmpty
+                  ? _EmptyView(icon: Icons.receipt_long, title: 'No transactions found', subtitle: 'Payments will appear here')
+                  : RecentTransactionsTable(
+                      payments: payments,
+                      loadingAction: _loadingAction,
+                      onView: (p) => PaymentDetailsDialog.show(context, payment: p, loadingAction: _loadingAction,
+                        onPrint: p.customer != null ? () => _downloadInvoice(p.customer!, actionKey: 'dlg_print_${p.customer!.id}') : null,
+                        onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, actionKey: 'dlg_dl_${p.customer!.id}') : null),
+                      onPrint: (p) => p.customer != null ? _downloadInvoice(p.customer!, actionKey: 'inv_${p.customer!.id}') : null,
+                      onDownload: (p) => p.customer != null ? _downloadInvoice(p.customer!, actionKey: 'inv_${p.customer!.id}') : null,
                     ),
-                  ),
-                if (c.currentDue > 0) const SizedBox(width: 4),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.description_outlined, size: 14),
-                    label: const Text('Stmt', style: TextStyle(fontSize: 11)),
-                    onPressed: () => _showStatementDialog(c),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.receipt_long_outlined, size: 14),
-                    label: const Text('Inv', style: TextStyle(fontSize: 11)),
-                    onPressed: () { openPrintWindow(); _downloadInvoice(c); },
-                  ),
-                ),
-              ],
             ),
+            if (totalPages > 1) _PaginationBar(
+              page: _paymentPage, totalPages: totalPages,
+              onPrev: _paymentPage > 1 ? () => setState(() => _paymentPage--) : null,
+              onNext: _paymentPage < totalPages ? () => setState(() => _paymentPage++) : null,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  List<Customer> _applyCustomerFilter(List<Customer> data) {
+    switch (_activeFilter) {
+      case 'paid': return data.where((c) => c.currentDue <= 0).toList();
+      case 'unpaid': return data.where((c) => c.currentDue > 0 && c.totalPaid <= 0).toList();
+      case 'partial': return data.where((c) => c.currentDue > 0 && c.totalPaid > 0).toList();
+      default: return data;
+    }
+  }
+
+  List<Payment> _applyPaymentFilter(List<Payment> data) {
+    switch (_activeFilter) {
+      case 'cash': return data.where((p) => p.mode.value == 'cash').toList();
+      case 'upi': return data.where((p) => p.mode.value == 'upi').toList();
+      case 'bank': return data.where((p) => p.mode.value == 'bank_transfer').toList();
+      default: return data;
+    }
+  }
+
+  Future<void> _downloadInvoice(Customer customer, {String? actionKey}) async {
+    if (actionKey != null) setState(() => _loadingAction = actionKey);
+    try {
+      final billService = ref.read(billServiceProvider);
+      final result = await billService.getAll(search: customer.name, status: 'active', limit: 1);
+      if (result.data.isEmpty) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No active bills found for ${customer.name}'), backgroundColor: AppTheme.error),
+        );
+        return;
+      }
+      final bill = result.data.first;
+      final billDetail = await billService.getById(bill.id);
+      final settings = await ref.read(settingsProvider.future);
+      final lineItems = billDetail.items.map((i) => LineItem(
+        productId: i.productId, productName: i.productName, productNameHindi: i.productNameHindi,
+        unit: i.unit, quantity: i.quantity, defaultRate: i.defaultRate, appliedRate: i.appliedRate,
+      )).toList();
+      final pdf = await buildBillPdf(
+        settings: settings, billNumber: bill.billNumber,
+        customerName: bill.customer?.name ?? customer.name,
+        customerMobile: bill.customer?.mobile ?? customer.mobile,
+        customerAddress: bill.customer?.address ?? customer.address,
+        subtotal: bill.subtotal, total: bill.total, deliveryCharge: bill.deliveryCharge,
+        paidNow: bill.paidNow, items: lineItems, billDate: bill.billDate,
+        paymentMode: bill.paymentType, isReprint: true,
+      );
+      openPrintWindow();
+      await printPdf(pdf, filename: bill.billNumber);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Invoice error: $e'), backgroundColor: AppTheme.error),
+      );
+    } finally {
+      if (mounted && actionKey != null) setState(() => _loadingAction = null);
+    }
+  }
+}
+
+class _ViewToggle extends StatelessWidget {
+  final _ViewTab activeTab;
+  final ValueChanged<_ViewTab> onChanged;
+  final bool isMobile;
+
+  const _ViewToggle({required this.activeTab, required this.onChanged, this.isMobile = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 42,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: _ToggleBtn(
+            icon: Icons.people_outline,
+            label: 'Customers',
+            isActive: activeTab == _ViewTab.customers,
+            onTap: () => onChanged(_ViewTab.customers),
+            isMobile: isMobile,
+          )),
+          Container(width: 1, color: AppTheme.border),
+          Expanded(child: _ToggleBtn(
+            icon: Icons.receipt_long,
+            label: 'Payments',
+            isActive: activeTab == _ViewTab.payments,
+            onTap: () => onChanged(_ViewTab.payments),
+            isMobile: isMobile,
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToggleBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+  final bool isMobile;
+
+  const _ToggleBtn({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+    this.isMobile = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: isActive ? AppTheme.primaryRed.withAlpha(20) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: isActive ? AppTheme.primaryRed : AppTheme.textSecondary),
+            const SizedBox(width: 6),
+            Text(label, style: TextStyle(
+              fontSize: isMobile ? 13 : 14,
+              fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+              color: isActive ? AppTheme.primaryRed : AppTheme.textSecondary,
+            )),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildDesktopTable(List<Customer> data, double maxWidth) {
-    const pad = 48.0;
-    const colSr = 36.0;
-    const colActions = 210.0;
-    const colStatus = 80.0;
-    const colMobile = 110.0;
-    final otherFixed = colSr + colActions + colStatus + colMobile;
-    final available = (maxWidth - pad - otherFixed).clamp(100, double.infinity);
-    final colName = available * 0.38;
-    final colOutstanding = available * 0.31;
-    final colPaid = available * 0.31;
+class _PaginationBar extends StatelessWidget {
+  final int page;
+  final int totalPages;
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
-          child: Row(
-            children: [
-              SizedBox(width: colSr, child: _th('Sr', TextAlign.center)),
-              SizedBox(width: colName, child: _th('Customer')),
-              SizedBox(width: colMobile, child: _th('Mobile')),
-              SizedBox(width: colOutstanding, child: _th('Outstanding', TextAlign.right)),
-              SizedBox(width: colPaid, child: _th('Total Paid', TextAlign.right)),
-              SizedBox(width: colStatus, child: _th('Status', TextAlign.center)),
-              SizedBox(width: colActions, child: _th('Actions', TextAlign.center)),
-            ],
-          ),
-        ),
-        Container(height: 1, color: const Color(0xFFE0E0E0), margin: const EdgeInsets.symmetric(horizontal: 24)),
-        Expanded(
-          child: ListView.builder(
-            padding: EdgeInsets.zero,
-            itemCount: data.length,
-            itemBuilder: (context, index) {
-              final c = data[index];
-              final status = c.currentDue <= 0 ? 'Paid' : c.totalPaid > 0 ? 'Partial' : 'Unpaid';
-              final statusColor = c.currentDue <= 0 ? AppTheme.success : c.totalPaid > 0 ? AppTheme.info : AppTheme.error;
-              final isOdd = index.isOdd;
-              return Container(
-                decoration: BoxDecoration(
-                  color: isOdd ? const Color(0xFFFAFAFC) : Colors.white,
-                  border: Border(bottom: BorderSide(color: const Color(0xFFEEEEF0), width: 0.5)),
-                ),
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
-                child: Row(
-                  children: [
-                    SizedBox(width: colSr, child: Text('${index + 1}', style: TextStyle(fontSize: 12, color: Colors.grey.shade500), textAlign: TextAlign.center)),
-                    SizedBox(width: colName, child: Text(c.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF2D2D2D)), overflow: TextOverflow.ellipsis)),
-                    SizedBox(width: colMobile, child: Text(c.mobile, style: TextStyle(fontSize: 13, color: Colors.grey.shade600))),
-                    SizedBox(width: colOutstanding, child: Text(AppUtils.formatCurrency(c.currentDue), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF2D2D2D)), textAlign: TextAlign.right, overflow: TextOverflow.ellipsis)),
-                    SizedBox(width: colPaid, child: Text(AppUtils.formatCurrency(c.totalPaid), style: TextStyle(fontSize: 13, color: Colors.grey.shade600), textAlign: TextAlign.right, overflow: TextOverflow.ellipsis)),
-                    SizedBox(width: colStatus, child: Center(child: _statusBadge(status, statusColor))),
-                    SizedBox(
-                      width: colActions,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _actionBtn(Icons.payments, 'Pay', AppTheme.primaryRed,
-                              c.currentDue > 0 ? () => _showAddPaymentDialog(c) : null),
-                          const SizedBox(width: 2),
-                          _actionBtn(Icons.description_outlined, 'Stmt', AppTheme.textSecondary,
-                              () => _showStatementDialog(c)),
-                          const SizedBox(width: 2),
-                          _actionBtn(Icons.receipt_long_outlined, 'Inv', AppTheme.textSecondary,
-                              () => _downloadInvoice(c)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
+  const _PaginationBar({required this.page, required this.totalPages, this.onPrev, this.onNext});
 
-  Widget _th(String label, [TextAlign align = TextAlign.left]) {
-    return Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.grey.shade600, letterSpacing: 0.5), textAlign: align);
-  }
-
-  Widget _statusBadge(String label, Color color) {
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withAlpha(20),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withAlpha(50)),
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppTheme.border.withAlpha(128))),
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
-    );
-  }
-
-  Widget _actionBtn(IconData icon, String label, Color color, VoidCallback? onPressed) {
-    return TextButton.icon(
-      icon: Icon(icon, size: 13, color: onPressed == null ? Colors.grey.shade300 : color),
-      label: Text(label, style: TextStyle(fontSize: 10, color: onPressed == null ? Colors.grey.shade300 : color, fontWeight: FontWeight.w500)),
-      onPressed: onPressed,
-      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), visualDensity: VisualDensity.compact, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-    );
-  }
-
-  Widget _dialogRow(String label, String value, {Color? valueColor}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-          Text(value, style: TextStyle(color: valueColor ?? AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+          IconButton(
+            icon: const Icon(Icons.chevron_left, size: 20),
+            onPressed: onPrev,
+            color: onPrev != null ? AppTheme.primaryRed : Colors.grey.shade300,
+          ),
+          const SizedBox(width: 8),
+          Text('Page $page of $totalPages', style: TextStyle(
+            color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w500,
+          )),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.chevron_right, size: 20),
+            onPressed: onNext,
+            color: onNext != null ? AppTheme.primaryRed : Colors.grey.shade300,
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _EmptyView extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  const _EmptyView({required this.icon, required this.title, this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 56, color: AppTheme.textSecondary.withAlpha(80)),
+            const SizedBox(height: 16),
+            Text(title, style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+            if (subtitle != null) ...[
+              const SizedBox(height: 6),
+              Text(subtitle!, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13), textAlign: TextAlign.center),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorCard extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _ErrorCard({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.error.withAlpha(60)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: AppTheme.error),
+            const SizedBox(height: 12),
+            Text('Something went wrong', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text(message, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13), textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Retry'),
+              onPressed: onRetry,
+              style: FilledButton.styleFrom(backgroundColor: AppTheme.error),
+            ),
+          ],
+        ),
       ),
     );
   }

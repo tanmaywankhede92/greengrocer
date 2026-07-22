@@ -9,19 +9,24 @@ String _extractRef(String description) {
   return match != null ? match.group(1)! : '';
 }
 
-String _shortLabel(String description) {
-  if (description.toLowerCase().contains('opening')) return 'Opening Balance';
-  if (description.toLowerCase().contains('payment')) return 'Payment';
-  if (description.toLowerCase().contains('cancel')) return 'Cancelled Bill';
-  return description.length > 30 ? '${description.substring(0, 30)}...' : description;
+String _typeLabel(String type) {
+  switch (type) {
+    case 'bill':
+      return 'Bill';
+    case 'payment':
+      return 'Payment';
+    case 'adjustment':
+      return 'Adjustment';
+    case 'opening_balance':
+      return 'Opening Balance';
+    default:
+      return 'Other';
+  }
 }
 
-String _entryType(String description) {
-  if (description.toLowerCase().contains('opening')) return 'opening';
-  if (description.toLowerCase().contains('payment')) return 'payment';
-  if (description.toLowerCase().contains('bill') || description.toLowerCase().contains('sale')) return 'bill';
-  if (description.toLowerCase().contains('cancel') || description.toLowerCase().contains('revers')) return 'cancel';
-  return 'other';
+String _shortDesc(String description) {
+  if (description.toLowerCase().contains('opening')) return 'Opening Balance';
+  return description.length > 40 ? '${description.substring(0, 40)}...' : description;
 }
 
 Future<Uint8List> buildStatementPdf({
@@ -51,9 +56,11 @@ Future<Uint8List> buildStatementPdf({
   const muted = PdfColors.grey700;
   const lineColor = PdfColors.grey400;
   const lightLine = PdfColors.grey300;
+  const altRow = PdfColor(0.97, 0.97, 0.98);
 
   final fromDate = DateFormat('dd MMM yyyy').format(DateTime.parse(from));
   final toDate = DateFormat('dd MMM yyyy').format(DateTime.parse(to));
+  final generatedAt = DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now());
   String money(double v) => '₹ ${v.toStringAsFixed(0)}';
 
   pw.Widget thinLine({double thickness = 0.6}) {
@@ -78,15 +85,10 @@ Future<Uint8List> buildStatementPdf({
     );
   }
 
-  // ── Group rows by date ──
-  final grouped = <String, List<Map<String, dynamic>>>{};
-  for (final r in rows) {
-    final dateStr = r['date']?.toString() ?? '';
-    final key = dateStr.isNotEmpty ? DateFormat('dd MMM yyyy').format(DateTime.parse(dateStr)) : 'Unknown';
-    grouped.putIfAbsent(key, () => []).add(r);
-  }
+  final netChange = totalDebit - totalCredit;
+  final hasRows = rows.isNotEmpty;
 
-  pw.Widget buildHeader() {
+  pw.Widget buildCompanyHeader() {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
@@ -155,7 +157,7 @@ Future<Uint8List> buildStatementPdf({
                 children: [
                   infoRow('Period', '$fromDate – $toDate'),
                   pw.SizedBox(height: 6),
-                  infoRow('Generated', DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())),
+                  infoRow('Generated', generatedAt),
                 ],
               ),
             ),
@@ -165,104 +167,126 @@ Future<Uint8List> buildStatementPdf({
         pw.SizedBox(height: 14),
         thinLine(thickness: 0.7),
         pw.SizedBox(height: 10),
-
-        pw.Container(
-          padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-          decoration: pw.BoxDecoration(color: PdfColors.grey900),
-          child: pw.Row(
-            children: [
-              pw.Expanded(flex: 2, child: pw.Text('Date', style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.white))),
-              pw.Expanded(flex: 2, child: pw.Text('Bill No.', style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.white))),
-              pw.Expanded(flex: 2, child: pw.Text('Bill Price', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.white))),
-              pw.Expanded(flex: 2, child: pw.Text('Payment', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.white))),
-              pw.Expanded(flex: 2, child: pw.Text('Balance', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.white))),
-            ],
-          ),
-        ),
-
-        if (openingBalance != 0)
-          pw.Container(
-            padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-            decoration: const pw.BoxDecoration(color: PdfColors.grey100),
-            child: pw.Row(
-              children: [
-                pw.Expanded(flex: 2, child: pw.Text('-', style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey500))),
-                pw.Expanded(flex: 2, child: pw.Text('Opening Balance', style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.grey700))),
-                pw.Expanded(flex: 2, child: pw.Text('-', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey500))),
-                pw.Expanded(flex: 2, child: pw.Text('-', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey500))),
-                pw.Expanded(flex: 2, child: pw.Text(money(openingBalance), textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 9, color: textColor))),
-              ],
-            ),
-          ),
       ],
     );
   }
 
-  List<pw.Widget> buildRows() {
-    final List<pw.Widget> result = [];
-    for (final entry in grouped.entries) {
-      final dateKey = entry.key;
-      final entries = entry.value;
-      result.add(pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+  pw.Widget buildTableHeader() {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+      decoration: const pw.BoxDecoration(color: PdfColors.grey900),
+      child: pw.Row(
         children: [
-          pw.Container(
-            padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-            child: pw.Text(dateKey, style: pw.TextStyle(font: fontB, fontSize: 9, color: red)),
-          ),
-          ...entries.map((r) {
-            final desc = r['description']?.toString() ?? '';
-            final ref = _extractRef(desc);
-            final label = ref.isNotEmpty ? ref : _shortLabel(desc);
-            final debit = (r['debit'] ?? 0).toDouble();
-            final credit = (r['credit'] ?? 0).toDouble();
-            final balance = (r['balance'] ?? 0).toDouble();
-            final type = _entryType(desc);
-            final isCancel = type == 'cancel';
-            final isPayment = type == 'payment';
-
-            return pw.Container(
-              padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-              decoration: isCancel ? pw.BoxDecoration(color: PdfColor(0.0, 0.95, 0.88)) : null,
-              child: pw.Row(
-                children: [
-                  pw.Expanded(flex: 2, child: pw.Text('-', style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey500))),
-                  pw.Expanded(
-                    flex: 2,
-                    child: pw.Text(label, style: pw.TextStyle(font: font, fontSize: 9,
-                      color: isCancel ? PdfColor(0.9, 0.32, 0.0) : (isPayment ? PdfColors.green700 : textColor)))),
-                  pw.Expanded(
-                    flex: 2,
-                    child: pw.Text(debit > 0 ? money(debit) : '-', textAlign: pw.TextAlign.right,
-                      style: pw.TextStyle(font: font, fontSize: 9, color: isCancel ? PdfColor(0.9, 0.32, 0.0) : PdfColors.red800))),
-                  pw.Expanded(
-                    flex: 2,
-                    child: pw.Text(credit > 0 ? money(credit) : '-', textAlign: pw.TextAlign.right,
-                      style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.green700))),
-                  pw.Expanded(
-                    flex: 2,
-                    child: pw.Text(money(balance), textAlign: pw.TextAlign.right,
-                      style: pw.TextStyle(font: fontB, fontSize: 9, color: textColor))),
-                ],
-              ),
-            );
-          }),
+          pw.Expanded(flex: 20, child: pw.Text('Date', style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.white))),
+          pw.Expanded(flex: 18, child: pw.Text('Type', style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.white))),
+          pw.Expanded(flex: 28, child: pw.Text('Ref No.', style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.white))),
+          pw.Expanded(flex: 30, child: pw.Text('Description', style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.white))),
+          pw.Expanded(flex: 26, child: pw.Text('Debit', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.white))),
+          pw.Expanded(flex: 26, child: pw.Text('Credit', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.white))),
+          pw.Expanded(flex: 28, child: pw.Text('Balance', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.white))),
         ],
-      ));
-    }
-    return result;
+      ),
+    );
   }
 
-  pw.Widget buildFooter() {
+  pw.Widget buildOpeningRow() {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+      decoration: const pw.BoxDecoration(color: PdfColors.grey100),
+      child: pw.Row(
+        children: [
+          pw.Expanded(flex: 20, child: pw.Text('-', style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey500))),
+          pw.Expanded(flex: 18, child: pw.Text('Opening', style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.grey700))),
+          pw.Expanded(flex: 28, child: pw.Text('-', style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey500))),
+          pw.Expanded(flex: 30, child: pw.Text('Opening Balance', style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.grey700))),
+          pw.Expanded(flex: 26, child: pw.Text('-', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey500))),
+          pw.Expanded(flex: 26, child: pw.Text('-', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey500))),
+          pw.Expanded(flex: 28, child: pw.Text(money(openingBalance), textAlign: pw.TextAlign.right,
+            style: pw.TextStyle(font: fontB, fontSize: 9, color: textColor))),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget buildTransactionRow(Map<String, dynamic> r, bool isAlt) {
+    final dateStr = r['date']?.toString() ?? '';
+    final type = (r['type'] ?? 'other').toString();
+    final desc = r['description']?.toString() ?? '';
+    final debit = (r['debit'] ?? 0).toDouble();
+    final credit = (r['credit'] ?? 0).toDouble();
+    final balance = (r['balance'] ?? 0).toDouble();
+    final ref = _extractRef(desc);
+    final shortDesc = _shortDesc(desc);
+    final label = _typeLabel(type);
+
+    final isCancel = type == 'adjustment' && desc.toLowerCase().contains('cancel');
+    final isPayment = type == 'payment';
+
+    final bgColor = isCancel
+        ? PdfColor(1.0, 0.95, 0.88)
+        : (isAlt ? altRow : null);
+
+    final typeColor = isCancel
+        ? PdfColor(0.9, 0.32, 0.0)
+        : (isPayment ? PdfColors.green700 : (type == 'bill' ? red : textColor));
+
+    final dateFormatted = dateStr.isNotEmpty
+        ? DateFormat('dd MMM').format(DateTime.parse(dateStr))
+        : '-';
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 7, horizontal: 6),
+      decoration: bgColor != null ? pw.BoxDecoration(color: bgColor) : null,
+      child: pw.Row(
+        children: [
+          pw.Expanded(flex: 20, child: pw.Text(dateFormatted,
+            style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey700))),
+          pw.Expanded(flex: 18, child: pw.Text(label,
+            style: pw.TextStyle(font: fontB, fontSize: 8.5, color: typeColor))),
+          pw.Expanded(flex: 28, child: pw.Text(ref.isNotEmpty ? ref : '-',
+            style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey700))),
+          pw.Expanded(flex: 30, child: pw.Text(shortDesc,
+            style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey800))),
+          pw.Expanded(flex: 26, child: pw.Text(debit > 0 ? money(debit) : '-',
+            textAlign: pw.TextAlign.right,
+            style: pw.TextStyle(font: font, fontSize: 8.5,
+              color: isCancel ? PdfColor(0.9, 0.32, 0.0) : red))),
+          pw.Expanded(flex: 26, child: pw.Text(credit > 0 ? money(credit) : '-',
+            textAlign: pw.TextAlign.right,
+            style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.green700))),
+          pw.Expanded(flex: 28, child: pw.Text(money(balance),
+            textAlign: pw.TextAlign.right,
+            style: pw.TextStyle(font: fontB, fontSize: 8.5, color: textColor))),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget buildNoTransactions() {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 24, horizontal: 12),
+      child: pw.Center(
+        child: pw.Text('No transactions found for selected period.',
+          style: pw.TextStyle(font: fontI, fontSize: 10, color: PdfColors.grey500)),
+      ),
+    );
+  }
+
+  pw.Widget buildSummary() {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
-        pw.SizedBox(height: 14),
+        pw.SizedBox(height: 18),
+        thinLine(thickness: 0.7),
+        pw.SizedBox(height: 12),
+
+        pw.Text('Summary', style: pw.TextStyle(font: fontB, fontSize: 12, color: textColor)),
+        pw.SizedBox(height: 8),
 
         pw.Align(
           alignment: pw.Alignment.centerRight,
           child: pw.SizedBox(
-            width: 260,
+            width: 280,
             child: pw.Container(
               padding: const pw.EdgeInsets.all(14),
               decoration: pw.BoxDecoration(
@@ -271,9 +295,9 @@ Future<Uint8List> buildStatementPdf({
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                 children: [
-                  _amountRow('Opening Balance', money(openingBalance), font, fontB),
-                  _amountRow('Total Bills', money(totalDebit), font, fontB, valueColor: PdfColors.red800),
-                  _amountRow('Total Payments', money(totalCredit), font, fontB, valueColor: PdfColors.green700),
+                  _summaryRow('Opening Balance', money(openingBalance), font, fontB),
+                  _summaryRow('Bills (Selected Period)', money(totalDebit), font, fontB, valueColor: red),
+                  _summaryRow('Payments (Selected Period)', money(totalCredit), font, fontB, valueColor: PdfColors.green700),
                   pw.Container(
                     padding: const pw.EdgeInsets.symmetric(vertical: 6),
                     decoration: pw.BoxDecoration(
@@ -282,9 +306,9 @@ Future<Uint8List> buildStatementPdf({
                     child: pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
-                        pw.Text('Outstanding', style: pw.TextStyle(font: fontB, fontSize: 10, color: textColor)),
-                        pw.Text(money(totalDebit - totalCredit),
-                          style: pw.TextStyle(font: fontB, fontSize: 10, color: textColor)),
+                        pw.Text('Net Change', style: pw.TextStyle(font: fontB, fontSize: 10, color: textColor)),
+                        pw.Text(money(netChange),
+                          style: pw.TextStyle(font: fontB, fontSize: 10, color: netChange >= 0 ? red : PdfColors.green700)),
                       ],
                     ),
                   ),
@@ -295,12 +319,12 @@ Future<Uint8List> buildStatementPdf({
                       pw.Text('Closing Balance', style: pw.TextStyle(font: fontB, fontSize: 11, color: textColor)),
                       pw.Text(money(closingBalance),
                         style: pw.TextStyle(font: fontB, fontSize: 11,
-                          color: closingBalance > 0 ? PdfColors.red800 : PdfColors.green700)),
+                          color: closingBalance > 0 ? red : PdfColors.green700)),
                     ],
                   ),
                   if (closingBalance > 0) ...[
                     pw.SizedBox(height: 4),
-                    pw.Text('Amount Payable', style: pw.TextStyle(font: fontB, fontSize: 10, color: PdfColors.red800)),
+                    pw.Text('Amount Payable', style: pw.TextStyle(font: fontB, fontSize: 10, color: red)),
                   ],
                   if (closingBalance <= 0 && totalCredit > 0) ...[
                     pw.SizedBox(height: 4),
@@ -327,7 +351,7 @@ Future<Uint8List> buildStatementPdf({
               pw.SizedBox(height: 8),
               pw.Container(width: double.infinity, height: 1, color: PdfColors.grey500),
               pw.SizedBox(height: 8),
-              pw.Text('STATEMENT',
+              pw.Text('CUSTOMER LEDGER STATEMENT',
                 style: pw.TextStyle(font: fontB, fontSize: 9.5, color: muted, letterSpacing: 1)),
             ],
           ),
@@ -337,19 +361,84 @@ Future<Uint8List> buildStatementPdf({
   }
 
   final doc = pw.Document();
+
   doc.addPage(
     pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      header: (_) => buildHeader(),
-      build: (_) => buildRows(),
-      footer: (_) => buildFooter(),
+      header: (context) {
+        if (context.pageNumber == 1) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              buildCompanyHeader(),
+              buildTableHeader(),
+            ],
+          );
+        }
+        return pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          children: [
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+              decoration: const pw.BoxDecoration(color: PdfColors.grey100),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('CUSTOMER LEDGER STATEMENT',
+                    style: pw.TextStyle(font: fontB, fontSize: 8, color: muted, letterSpacing: 0.5)),
+                  pw.Text('$customerName  |  $fromDate – $toDate',
+                    style: pw.TextStyle(font: font, fontSize: 8, color: muted)),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 4),
+            buildTableHeader(),
+          ],
+        );
+      },
+      build: (context) {
+        final List<pw.Widget> content = [];
+
+        if (!hasRows) {
+          content.add(buildNoTransactions());
+        } else {
+          if (openingBalance != 0) {
+            content.add(buildOpeningRow());
+          }
+
+          for (var i = 0; i < rows.length; i++) {
+            content.add(buildTransactionRow(rows[i], i % 2 == 1));
+          }
+        }
+
+        content.add(buildSummary());
+        return content;
+      },
+      footer: (context) {
+        return pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          children: [
+            pw.SizedBox(height: 6),
+            pw.Container(height: 0.5, color: lightLine),
+            pw.SizedBox(height: 4),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Rathod Enterprises', style: pw.TextStyle(font: font, fontSize: 7.5, color: PdfColors.grey500)),
+                pw.Text('Page ${context.pageNumber} of ${context.pagesCount}',
+                  style: pw.TextStyle(font: fontB, fontSize: 7.5, color: PdfColors.grey600)),
+              ],
+            ),
+          ],
+        );
+      },
     ),
   );
   return doc.save();
 }
 
-pw.Widget _amountRow(String label, String value, pw.Font font, pw.Font fontB, {PdfColor? valueColor}) {
+pw.Widget _summaryRow(String label, String value, pw.Font font, pw.Font fontB, {PdfColor? valueColor}) {
   return pw.Container(
     padding: const pw.EdgeInsets.symmetric(vertical: 6),
     decoration: const pw.BoxDecoration(

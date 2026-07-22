@@ -11,12 +11,11 @@ import '../models/customer.dart';
 import '../models/payment.dart';
 import '../providers/customer_provider.dart';
 import '../providers/payment_provider.dart';
-import '../providers/statement_provider.dart';
 import '../widgets/breadcrumb.dart';
 import '../widgets/customer_select.dart';
 import '../widgets/payment_mode_select.dart';
 import '../widgets/payment_receipt_pdf.dart';
-import '../widgets/statement_pdf.dart';
+import 'payments/widgets/statement_dialog.dart';
 
 
 class AddPaymentScreen extends ConsumerStatefulWidget {
@@ -91,94 +90,9 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
     }
   }
 
-  Future<void> _downloadStatement() async {
+  void _downloadStatement() {
     if (_selectedCustomer == null) return;
-    final c = _selectedCustomer!;
-    DateTime from = DateTime.now().subtract(const Duration(days: 30));
-    DateTime to = DateTime.now();
-    bool loading = false;
-
-    await showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Download Statement'),
-          content: SizedBox(
-            width: 360,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(c.name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text(c.mobile, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                const Divider(height: 20),
-                InkWell(
-                  onTap: () async {
-                    final picked = await showDatePicker(context: ctx, initialDate: from, firstDate: DateTime(2020), lastDate: DateTime.now());
-                    if (picked != null) setDialogState(() => from = picked);
-                  },
-                  child: InputDecorator(
-                    decoration: const InputDecoration(labelText: 'From Date', isDense: true),
-                    child: Text(DateFormat('dd MMM yyyy').format(from), style: TextStyle(fontSize: 14, color: AppTheme.textPrimary)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                InkWell(
-                  onTap: () async {
-                    final picked = await showDatePicker(context: ctx, initialDate: to, firstDate: DateTime(2020), lastDate: DateTime.now());
-                    if (picked != null) setDialogState(() => to = picked);
-                  },
-                  child: InputDecorator(
-                    decoration: const InputDecoration(labelText: 'To Date', isDense: true),
-                    child: Text(DateFormat('dd MMM yyyy').format(to), style: TextStyle(fontSize: 14, color: AppTheme.textPrimary)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton.icon(
-              icon: loading
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.download, size: 18),
-              label: Text(loading ? 'Generating...' : 'Download'),
-              onPressed: loading ? null : () {
-                openPrintWindow();
-                () async {
-                  setDialogState(() => loading = true);
-                  try {
-                    final service = ref.read(statementServiceProvider);
-                    final data = await service.getStatement(c.id,
-                      from: AppUtils.formatDateApi(from), to: AppUtils.formatDateApi(to));
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    final pdf = await buildStatementPdf(
-                      customerName: data['customer']['name'] ?? c.name,
-                      customerMobile: data['customer']['mobile'] ?? c.mobile,
-                      customerAddress: c.address,
-                      from: AppUtils.formatDateApi(from),
-                      to: AppUtils.formatDateApi(to),
-                      openingBalance: (data['openingBalance'] ?? 0).toDouble(),
-                      closingBalance: (data['closingBalance'] ?? 0).toDouble(),
-                      totalDebit: (data['totalDebit'] ?? 0).toDouble(),
-                      totalCredit: (data['totalCredit'] ?? 0).toDouble(),
-                      rows: (data['rows'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [],
-                    );
-                    if (mounted) await printPdf(pdf, filename: 'Statement-${c.name}');
-                  } catch (e) {
-                    if (ctx.mounted) {
-                      setDialogState(() => loading = false);
-                      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
-                    }
-                  }
-                }();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
+    StatementDownloadDialog.show(context, ref: ref, customer: _selectedCustomer!);
   }
 
   @override

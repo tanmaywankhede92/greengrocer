@@ -228,6 +228,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
   }
 
   Widget _summaryBar(bool isMobile, double opening, double debit, double credit, double closing) {
+    final netChange = debit - credit;
     if (isMobile) {
       return Card(
         margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -235,11 +236,13 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
           padding: const EdgeInsets.all(12),
           child: Column(
             children: [
-              _summaryRow('Opening', opening, AppTheme.textPrimary),
+              _summaryRow('Opening Balance', opening, AppTheme.textPrimary),
               const SizedBox(height: 6),
-              _summaryRow('Total Bills', debit, AppTheme.error),
+              _summaryRow('Bills (Period)', debit, AppTheme.error),
               const SizedBox(height: 6),
-              _summaryRow('Total Payments', credit, AppTheme.success),
+              _summaryRow('Payments (Period)', credit, AppTheme.success),
+              const SizedBox(height: 6),
+              _summaryRow('Net Change', netChange, netChange >= 0 ? AppTheme.error : AppTheme.success),
               const Divider(height: 12),
               _summaryRow('Closing Balance', closing, closing > 0 ? AppTheme.error : AppTheme.success),
             ],
@@ -254,10 +257,11 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _summaryStat('Opening', opening),
-            _summaryStat('Total Bills', debit, AppTheme.error),
-            _summaryStat('Total Payments', credit, AppTheme.success),
-            _summaryStat('Closing', closing, closing > 0 ? AppTheme.error : AppTheme.success),
+            _summaryStat('Opening Balance', opening),
+            _summaryStat('Bills (Period)', debit, AppTheme.error),
+            _summaryStat('Payments (Period)', credit, AppTheme.success),
+            _summaryStat('Net Change', netChange, netChange >= 0 ? AppTheme.error : AppTheme.success),
+            _summaryStat('Closing Balance', closing, closing > 0 ? AppTheme.error : AppTheme.success),
           ],
         ),
       ),
@@ -292,12 +296,19 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
     return match != null ? match.group(1)! : '';
   }
 
-  String _entryType(String description) {
-    if (description.toLowerCase().contains('opening')) return 'opening';
-    if (description.toLowerCase().contains('payment')) return 'payment';
-    if (description.toLowerCase().contains('bill') || description.toLowerCase().contains('sale')) return 'bill';
-    if (description.toLowerCase().contains('cancel') || description.toLowerCase().contains('revers')) return 'cancel';
-    return 'other';
+  String _typeLabel(String type) {
+    switch (type) {
+      case 'bill':
+        return 'Bill';
+      case 'payment':
+        return 'Payment';
+      case 'adjustment':
+        return 'Adjustment';
+      case 'opening_balance':
+        return 'Opening';
+      default:
+        return 'Other';
+    }
   }
 
   Map<String, List<Map<String, dynamic>>> _groupByDate(List<dynamic> rows) {
@@ -326,9 +337,10 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
           child: const Row(
             children: [
               Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.white))),
-              Expanded(flex: 2, child: Text('Bill No.', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.white))),
-              Expanded(flex: 2, child: Text('Bill Price', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.white))),
-              Expanded(flex: 2, child: Text('Payment', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.white))),
+              Expanded(flex: 2, child: Text('Type', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.white))),
+              Expanded(flex: 2, child: Text('Ref No.', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.white))),
+              Expanded(flex: 2, child: Text('Debit', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.white))),
+              Expanded(flex: 2, child: Text('Credit', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.white))),
               Expanded(flex: 2, child: Text('Balance', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.white))),
             ],
           ),
@@ -341,8 +353,9 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
             color: const Color(0xFFF5F5F5),
             child: Row(
               children: [
-                const Expanded(flex: 2, child: Text('-', style: TextStyle(fontSize: 12))),
-                const Expanded(flex: 2, child: Text('Opening Balance', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF616161)))),
+                const Expanded(flex: 2, child: Text('-', style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E)))),
+                const Expanded(flex: 2, child: Text('Opening', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF616161)))),
+                const Expanded(flex: 2, child: Text('-', style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E)))),
                 const Expanded(flex: 2, child: Text('-', textAlign: TextAlign.right, style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E)))),
                 const Expanded(flex: 2, child: Text('-', textAlign: TextAlign.right, style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E)))),
                 Expanded(flex: 2, child: Text(
@@ -392,34 +405,43 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
 
   Widget _desktopRow(Map<String, dynamic> r) {
     final desc = r['description']?.toString() ?? '';
+    final type = (r['type'] ?? 'other').toString();
     final debit = (r['debit'] ?? 0) as num;
     final credit = (r['credit'] ?? 0) as num;
     final balance = (r['balance'] ?? 0) as num;
     final billNo = _extractBillNumber(desc);
-    final type = _entryType(desc);
+    final label = _typeLabel(type);
+    final dateStr = r['date']?.toString() ?? '';
+    final dateFormatted = dateStr.isNotEmpty ? AppUtils.formatDateShort(DateTime.parse(dateStr)) : '-';
 
-    final isCancel = type == 'cancel';
+    final isCancel = type == 'adjustment' && desc.toLowerCase().contains('cancel');
     final isPayment = type == 'payment';
-    final isOpening = type == 'opening';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 1),
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
       decoration: BoxDecoration(
-        color: isCancel ? const Color(0xFFFFF3E0) : (isOpening ? const Color(0xFFF5F5F5) : Colors.white),
+        color: isCancel ? const Color(0xFFFFF3E0) : (type == 'opening_balance' ? const Color(0xFFF5F5F5) : Colors.white),
       ),
       child: Row(
         children: [
-          const Expanded(flex: 2, child: Text('-', style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E)))),
+          Expanded(flex: 2, child: Text(dateFormatted, style: const TextStyle(fontSize: 12, color: Color(0xFF9E9E9E)))),
           Expanded(
             flex: 2,
             child: Text(
-              billNo.isNotEmpty ? billNo : _shortLabel(desc),
+              label,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: isCancel ? Colors.orange.shade800 : (isPayment ? AppTheme.success : AppTheme.textPrimary),
               ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              billNo.isNotEmpty ? billNo : '-',
+              style: const TextStyle(fontSize: 12, color: Color(0xFF616161)),
             ),
           ),
           Expanded(
@@ -505,12 +527,13 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
             ),
             ...entries.map((r) {
               final desc = r['description']?.toString() ?? '';
+              final type = (r['type'] ?? 'other').toString();
               final debit = (r['debit'] ?? 0) as num;
               final credit = (r['credit'] ?? 0) as num;
               final balance = (r['balance'] ?? 0) as num;
               final billNo = _extractBillNumber(desc);
-              final type = _entryType(desc);
-              final isCancel = type == 'cancel';
+              final label = _typeLabel(type);
+              final isCancel = type == 'adjustment' && desc.toLowerCase().contains('cancel');
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 4),
@@ -518,25 +541,25 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              billNo.isNotEmpty ? billNo : _shortLabel(desc),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: isCancel ? Colors.orange.shade800 : AppTheme.textPrimary,
-                              ),
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            billNo.isNotEmpty ? billNo : label,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isCancel ? Colors.orange.shade800 : AppTheme.textPrimary,
                             ),
                           ),
-                          Text(
-                            AppUtils.formatCurrency(balance.toDouble()),
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
-                          ),
-                        ],
-                      ),
+                        ),
+                        Text(
+                          AppUtils.formatCurrency(balance.toDouble()),
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                        ),
+                      ],
+                    ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
@@ -564,10 +587,4 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
     );
   }
 
-  String _shortLabel(String description) {
-    if (description.toLowerCase().contains('opening')) return 'Opening Balance';
-    if (description.toLowerCase().contains('payment')) return 'Payment';
-    if (description.toLowerCase().contains('cancel')) return 'Cancelled Bill';
-    return description.length > 30 ? '${description.substring(0, 30)}...' : description;
-  }
 }
