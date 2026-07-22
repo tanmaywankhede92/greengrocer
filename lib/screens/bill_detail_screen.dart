@@ -167,7 +167,7 @@ class BillDetailScreen extends ConsumerWidget {
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.print, size: 18),
                         label: const Text('Print Both Copies'),
-                        onPressed: () { openPrintWindow(); _reprint(context, ref, bill, items); },
+                        onPressed: () => _reprint(context, ref, bill, items),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
@@ -419,7 +419,7 @@ class BillDetailScreen extends ConsumerWidget {
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text(item.quantity.toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
+                        child: Text(item.quantity.toStringAsFixed(item.quantity == item.quantity.roundToDouble() ? 0 : 1), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),

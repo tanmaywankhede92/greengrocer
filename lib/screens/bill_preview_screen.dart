@@ -280,7 +280,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text(item.quantity.toStringAsFixed(0), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
+                        child: Text(item.quantity.toStringAsFixed(item.quantity == item.quantity.roundToDouble() ? 0 : 1), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
@@ -429,7 +429,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.print, size: 18),
                     label: Text(_isGenerating ? 'Saving & Printing...' : 'Print Both Copies'),
-                    onPressed: _isGenerating ? null : () { openPrintWindow(); _print(); },
+                    onPressed: _isGenerating ? null : () => _print(),
                     style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
                   ),
                 ),

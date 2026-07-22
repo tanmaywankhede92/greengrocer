@@ -252,7 +252,7 @@ Future<Uint8List> buildBillPdf({
               pw.SizedBox(width: 30, child: pw.Text('${i + 1}', style: pw.TextStyle(font: font, fontSize: 9, color: muted), textAlign: pw.TextAlign.center)),
               pw.Expanded(flex: 40, child: pw.Text(productName, style: pw.TextStyle(font: font, fontSize: 9, color: darkText))),
               pw.SizedBox(width: 45, child: pw.Text(item.unit, style: pw.TextStyle(font: font, fontSize: 9, color: muted), textAlign: pw.TextAlign.center)),
-              pw.SizedBox(width: 40, child: pw.Text(item.quantity.toStringAsFixed(0), style: pw.TextStyle(font: font, fontSize: 9, color: darkText), textAlign: pw.TextAlign.right)),
+              pw.SizedBox(width: 40, child: pw.Text(item.quantity == item.quantity.roundToDouble() ? item.quantity.toStringAsFixed(0) : item.quantity.toStringAsFixed(1), style: pw.TextStyle(font: font, fontSize: 9, color: darkText), textAlign: pw.TextAlign.right)),
               pw.SizedBox(width: 65, child: pw.Text(money(item.appliedRate), style: pw.TextStyle(font: font, fontSize: 9, color: darkText), textAlign: pw.TextAlign.right)),
               pw.SizedBox(width: 72, child: pw.Text(money(item.amount), style: pw.TextStyle(font: fontB, fontSize: 9, color: darkText), textAlign: pw.TextAlign.right)),
             ],

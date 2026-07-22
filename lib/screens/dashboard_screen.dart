@@ -76,7 +76,7 @@ class DashboardScreen extends ConsumerWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(flex: 3, child: SizedBox(height: 300, child: SalesChart(data: stats.salesSeries))),
+                          Expanded(flex: 3, child: SizedBox(height: 300, child: SalesChart())),
                           const SizedBox(width: 16),
                           Expanded(flex: 2, child: SizedBox(height: 300, child: TopCustomers(customers: stats.topCustomers))),
                         ],
@@ -84,7 +84,7 @@ class DashboardScreen extends ConsumerWidget {
                     else
                       Column(
                         children: [
-                          SizedBox(height: isTablet ? 280 : 260, child: SalesChart(data: stats.salesSeries)),
+                          SizedBox(height: isTablet ? 280 : 260, child: SalesChart()),
                           const SizedBox(height: 16),
                           SizedBox(height: 300, child: TopCustomers(customers: stats.topCustomers)),
                         ],

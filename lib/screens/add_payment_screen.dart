@@ -237,7 +237,7 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
                 : const Icon(Icons.check_circle, size: 20),
             label: Text(_isSubmitting ? 'Recording...' : 'Record Payment', style: const TextStyle(fontSize: 15)),
-            onPressed: _isSubmitting ? null : () { openPrintWindow(); _submit(); },
+            onPressed: _isSubmitting ? null : () => _submit(),
           ),
         ),
       ],

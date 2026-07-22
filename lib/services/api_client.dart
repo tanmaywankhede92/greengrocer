@@ -46,11 +46,6 @@ class ApiClient {
     ));
   }
 
-  void setEnvironment(Environment env) {
-    ApiConfig.current = env;
-    _initDio();
-  }
-
   void setOnUnauthorized(VoidCallback callback) => _onUnauthorized = callback;
 
   Future<bool> _tryRefreshToken() async {

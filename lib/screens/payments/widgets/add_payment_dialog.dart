@@ -123,7 +123,7 @@ class _AddPaymentDialogState extends ConsumerState<AddPaymentDialog> {
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.check_circle, size: 18),
                     label: Text(_submitting ? 'Recording...' : 'Receive Payment', style: const TextStyle(fontSize: 14)),
-                    onPressed: _submitting ? null : () { openPrintWindow(); _submit(); },
+                    onPressed: _submitting ? null : () => _submit(),
                     style: FilledButton.styleFrom(
                       backgroundColor: AppTheme.primaryRed,
                       padding: const EdgeInsets.symmetric(horizontal: 20),

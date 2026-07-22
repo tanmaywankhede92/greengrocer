@@ -8,6 +8,7 @@ class PaymentToolbar extends StatefulWidget {
   final ValueChanged<String> onFilterChanged;
   final VoidCallback onRefresh;
   final VoidCallback onAddPayment;
+  final VoidCallback onExport;
   final bool isMobile;
 
   const PaymentToolbar({
@@ -18,6 +19,7 @@ class PaymentToolbar extends StatefulWidget {
     required this.onFilterChanged,
     required this.onRefresh,
     required this.onAddPayment,
+    required this.onExport,
     this.isMobile = false,
   });
 
@@ -103,6 +105,12 @@ class _PaymentToolbarState extends State<PaymentToolbar> {
                 onPressed: widget.onRefresh,
               ),
               const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(Icons.table_chart_outlined, size: 20),
+                tooltip: 'Export Excel',
+                onPressed: widget.onExport,
+              ),
+              const SizedBox(width: 4),
             ],
             if (widget.isMobile) ...[
               const SizedBox(width: 4),
@@ -116,6 +124,11 @@ class _PaymentToolbarState extends State<PaymentToolbar> {
                 icon: const Icon(Icons.refresh, size: 20),
                 tooltip: 'Refresh',
                 onPressed: widget.onRefresh,
+              ),
+              IconButton(
+                icon: const Icon(Icons.table_chart_outlined, size: 20),
+                tooltip: 'Export Excel',
+                onPressed: widget.onExport,
               ),
             ],
             FilledButton.icon(

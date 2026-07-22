@@ -16,11 +16,19 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
   DateTime _selectedDate = DateTime.now();
   final Map<String, TextEditingController> _rateControllers = {};
   bool _saving = false;
+  String _search = '';
+  final _searchCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadRates();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   void _loadRates() {
@@ -93,12 +101,33 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            TextField(
+              controller: _searchCtrl,
+              decoration: InputDecoration(
+                hintText: 'Search product...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: _search.isNotEmpty
+                    ? IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: () { _searchCtrl.clear(); setState(() => _search = ''); })
+                    : null,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppTheme.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppTheme.border)),
+              ),
+              onChanged: (v) => setState(() => _search = v.trim().toLowerCase()),
+            ),
+            const SizedBox(height: 16),
             Expanded(
               child: productsAsync.when(
                 loading: () => const LoadingWidget(),
                 error: (e, _) => Center(child: Text('$e')),
                 data: (products) {
-                  final activeProducts = products.where((p) => p.isActive).toList();
+                  final activeProducts = products.where((p) {
+                    if (!p.isActive) return false;
+                    if (_search.isEmpty) return true;
+                    final display = '${p.name} ${p.nameHindi}'.toLowerCase();
+                    return display.contains(_search);
+                  }).toList();
                   if (activeProducts.isEmpty) return const Center(child: Text('No products available', style: TextStyle(color: AppTheme.textSecondary)));
 
                   return ratesAsync.when(

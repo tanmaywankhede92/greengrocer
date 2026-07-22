@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/api_config.dart';
 import '../config/theme.dart';
 import '../providers/settings_provider.dart';
-import '../services/api_client.dart';
 import '../widgets/loading_widget.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -83,46 +81,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Environment', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 12),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('API Server', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                                const SizedBox(height: 4),
-                                Text(ApiConfig.baseUrl, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          SegmentedButton<Environment>(
-                            segments: const [
-                              ButtonSegment(value: Environment.local, label: Text('Local'), icon: Icon(Icons.computer, size: 16)),
-                              ButtonSegment(value: Environment.production, label: Text('Production'), icon: Icon(Icons.cloud, size: 16)),
-                            ],
-                            selected: {ApiConfig.current},
-                            onSelectionChanged: (selected) {
-                              final env = selected.first;
-                              ApiClient().setEnvironment(env);
-                              ref.invalidate(settingsProvider);
-                              setState(() {});
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                content: Text('Switched to ${env.name} server'),
-                                backgroundColor: AppTheme.success,
-                              ));
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
                   Text('Business Information', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 16),
                   TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Business Name *', prefixIcon: Icon(Icons.business, size: 18))),

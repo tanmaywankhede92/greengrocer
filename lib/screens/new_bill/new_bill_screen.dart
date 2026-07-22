@@ -74,7 +74,8 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   }
 
   void _onSearchChanged(String query) async {
-    if (query.isEmpty) {
+    final q = query.trim();
+    if (q.isEmpty) {
       setState(() {
         _searchResults = [];
         _showSearchDropdown = false;
@@ -83,7 +84,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     }
     setState(() => _isSearching = true);
     try {
-      final results = await ref.read(productServiceProvider).getAll(search: query);
+      final results = await ref.read(productServiceProvider).getAll(search: q);
       if (mounted) {
         setState(() {
           _searchResults = results.where((p) => p.isActive).toList();
@@ -98,29 +99,25 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
 
   void _selectProduct(Product product) {
     final defaultRate = _defaultRates[product.id] ?? 0;
-    final existing = _items.where((i) => i.productId == product.id).firstOrNull;
 
     setState(() {
       _editingProduct = product;
-      _editingItem = existing ??
-          LineItem(
-            productId: product.id,
-            productName: product.name,
-            productNameHindi: product.nameHindi,
-            unit: product.unit.value,
-            quantity: 1,
-            defaultRate: defaultRate,
-            appliedRate: defaultRate,
-          );
+      _editingItem = LineItem(
+        productId: product.id,
+        productName: product.name,
+        productNameHindi: product.nameHindi,
+        unit: product.unit.value,
+        quantity: 1,
+        defaultRate: defaultRate,
+        appliedRate: defaultRate,
+      );
       _searchResults = [];
       _showSearchDropdown = false;
       _searchCtrl.clear();
     });
 
-    _qtyCtrl.text = existing?.quantity.toString() ?? '1';
-    _rateCtrl.text = (existing?.appliedRate ?? defaultRate) > 0
-        ? (existing?.appliedRate ?? defaultRate).toStringAsFixed(0)
-        : '';
+    _qtyCtrl.text = '1';
+    _rateCtrl.text = defaultRate > 0 ? defaultRate.toStringAsFixed(0) : '';
     _qtyFocusNode.requestFocus();
     _qtyCtrl.selection =
         TextSelection(baseOffset: 0, extentOffset: _qtyCtrl.text.length);
@@ -139,14 +136,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     setState(() {
       _editingItem!.quantity = qty;
       _editingItem!.appliedRate = rate;
-
-      final existingIdx =
-          _items.indexWhere((i) => i.productId == _editingProduct!.id);
-      if (existingIdx >= 0) {
-        _items[existingIdx] = _editingItem!;
-      } else {
-        _items.add(_editingItem!);
-      }
+      _items.add(_editingItem!);
       _editingProduct = null;
       _editingItem = null;
     });
@@ -174,8 +164,12 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
       nameHindi: item.productNameHindi,
       unit: ProductUnit.fromString(item.unit),
     );
+    final savedUnit = item.unit;
     _selectProduct(product);
-    setState(() => _items.removeAt(index));
+    setState(() {
+      _items.removeAt(index);
+      _editingItem!.unit = savedUnit;
+    });
   }
 
   Future<void> _loadDefaultRates() async {
@@ -333,7 +327,6 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: ProductSearchDropdown(
                       results: _searchResults,
-                      items: _items,
                       defaultRates: _defaultRates,
                       onSelected: _selectProduct,
                     ),

@@ -137,6 +137,8 @@ class ProductRow extends StatelessWidget {
             const SizedBox(height: 6),
             Row(
               children: [
+                _infoChip('Unit', item.unit),
+                const SizedBox(width: 6),
                 _infoChip('Qty', _formattedQty),
                 const SizedBox(width: 6),
                 _infoChip('Rate', '\u20B9${item.appliedRate.toStringAsFixed(0)}'),

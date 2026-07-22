@@ -25,7 +25,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final params = CustomerListParams(search: _searchCtrl.text, page: _page, limit: _limit);
+    final params = CustomerListParams(search: _searchCtrl.text.trim(), page: _page, limit: _limit);
     final customersAsync = ref.watch(customerListProvider(params));
 
     return Scaffold(

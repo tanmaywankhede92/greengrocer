@@ -4,7 +4,15 @@ import '../../../config/theme.dart';
 import '../../../core/utils.dart';
 import '../../../widgets/bill_item_row.dart';
 
-class ProductEditRow extends StatelessWidget {
+const Map<String, List<String>> _subUnitOptions = {
+  'kg': ['kg', '500g', '250g', '100g'],
+  'dozen': ['dozen', 'half-dozen'],
+  'quintal': ['quintal', '50kg', '10kg', '5kg'],
+  'box': ['box', 'half-box'],
+  'bag': ['bag', 'half-bag'],
+};
+
+class ProductEditRow extends StatefulWidget {
   final LineItem item;
   final TextEditingController qtyCtrl;
   final TextEditingController rateCtrl;
@@ -26,18 +34,126 @@ class ProductEditRow extends StatelessWidget {
     required this.isWide,
   });
 
-  String get _displayName {
-    if (item.productNameHindi.isNotEmpty) {
-      return '${item.productName} (${item.productNameHindi})';
-    }
-    return item.productName;
+  @override
+  State<ProductEditRow> createState() => _ProductEditRowState();
+}
+
+class _ProductEditRowState extends State<ProductEditRow> {
+  late TextEditingController _unitCtrl;
+  List<String> _quickUnits = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _unitCtrl = TextEditingController(text: widget.item.unit);
+    _loadQuickUnits();
   }
 
-  double get _amount => item.quantity * item.appliedRate;
+  @override
+  void didUpdateWidget(ProductEditRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item.unit != widget.item.unit && _unitCtrl.text != widget.item.unit) {
+      _unitCtrl.text = widget.item.unit;
+    }
+  }
+
+  void _loadQuickUnits() {
+    final baseUnit = widget.item.unit.toLowerCase();
+    final options = _subUnitOptions[baseUnit];
+    if (options != null) {
+      _quickUnits = options;
+    } else {
+      for (final entry in _subUnitOptions.entries) {
+        if (entry.value.contains(baseUnit)) {
+          _quickUnits = entry.value;
+          break;
+        }
+      }
+    }
+  }
+
+  void _setUnit(String unit) {
+    _unitCtrl.text = unit;
+    widget.item.unit = unit;
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _unitCtrl.dispose();
+    super.dispose();
+  }
+
+  String get _displayName {
+    if (widget.item.productNameHindi.isNotEmpty) {
+      return '${widget.item.productName} (${widget.item.productNameHindi})';
+    }
+    return widget.item.productName;
+  }
+
+  double get _amount => widget.item.quantity * widget.item.appliedRate;
 
   @override
   Widget build(BuildContext context) {
-    return isWide ? _buildWide() : _buildNarrow();
+    return widget.isWide ? _buildWide() : _buildNarrow();
+  }
+
+  Widget _buildUnitChips() {
+    if (_quickUnits.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 32,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _quickUnits.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 6),
+        itemBuilder: (context, index) {
+          final unit = _quickUnits[index];
+          final isActive = _unitCtrl.text.toLowerCase() == unit.toLowerCase();
+          return GestureDetector(
+            onTap: () => _setUnit(unit),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: isActive ? AppTheme.primaryRed : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isActive ? AppTheme.primaryRed : AppTheme.border,
+                ),
+              ),
+              child: Text(
+                unit,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isActive ? Colors.white : AppTheme.textSecondary,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildUnitField({double? width}) {
+    return SizedBox(
+      width: width,
+      child: TextField(
+        controller: _unitCtrl,
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9\-]'))],
+        decoration: const InputDecoration(
+          isDense: true,
+          hintText: 'Unit',
+          labelText: 'Unit',
+          contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+          border: OutlineInputBorder(),
+        ),
+        onChanged: (v) {
+          widget.item.unit = v.trim().isEmpty ? 'kg' : v.trim();
+        },
+      ),
+    );
   }
 
   Widget _buildWide() {
@@ -48,85 +164,95 @@ class ProductEditRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppTheme.primaryRed.withAlpha(40)),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(_displayName, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13), overflow: TextOverflow.ellipsis),
-                Text(item.unit, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-              ],
-            ),
-          ),
-          SizedBox(
-            width: 65,
-            child: TextField(
-              controller: qtyCtrl,
-              focusNode: qtyFocusNode,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              textInputAction: TextInputAction.next,
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              decoration: const InputDecoration(
-                isDense: true,
-                hintText: 'Qty',
-                contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-                border: OutlineInputBorder(),
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_displayName, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13), overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 4),
+                    _buildUnitChips(),
+                  ],
+                ),
               ),
-              onSubmitted: (_) => rateFocusNode.requestFocus(),
-            ),
-          ),
-          const SizedBox(width: 6),
-          SizedBox(
-            width: 75,
-            child: TextField(
-              controller: rateCtrl,
-              focusNode: rateFocusNode,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              textInputAction: TextInputAction.done,
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              decoration: const InputDecoration(
-                isDense: true,
-                hintText: 'Rate',
-                prefixText: '\u20B9 ',
-                contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-                border: OutlineInputBorder(),
+              const SizedBox(width: 6),
+              _buildUnitField(width: 60),
+              const SizedBox(width: 6),
+              SizedBox(
+                width: 65,
+                child: TextField(
+                  controller: widget.qtyCtrl,
+                  focusNode: widget.qtyFocusNode,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.next,
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    hintText: 'Qty',
+                    contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                    border: OutlineInputBorder(),
+                  ),
+                  onSubmitted: (_) => widget.rateFocusNode.requestFocus(),
+                ),
               ),
-              onSubmitted: (_) => onConfirm(),
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 80,
-            child: Text(
-              AppUtils.formatCurrency(_amount),
-              style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-          ),
-          const SizedBox(width: 4),
-          SizedBox(
-            width: 36, height: 36,
-            child: IconButton(
-              icon: const Icon(Icons.check_circle, color: AppTheme.success, size: 22),
-              onPressed: onConfirm,
-              tooltip: 'Save (Enter)',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            ),
-          ),
-          SizedBox(
-            width: 36, height: 36,
-            child: IconButton(
-              icon: Icon(Icons.close, color: Colors.grey.shade400, size: 18),
-              onPressed: onCancel,
-              tooltip: 'Cancel (Esc)',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            ),
+              const SizedBox(width: 6),
+              SizedBox(
+                width: 75,
+                child: TextField(
+                  controller: widget.rateCtrl,
+                  focusNode: widget.rateFocusNode,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.done,
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    hintText: 'Rate',
+                    prefixText: '\u20B9 ',
+                    contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                    border: OutlineInputBorder(),
+                  ),
+                  onSubmitted: (_) => widget.onConfirm(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 80,
+                child: Text(
+                  AppUtils.formatCurrency(_amount),
+                  style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ),
+              const SizedBox(width: 4),
+              SizedBox(
+                width: 36, height: 36,
+                child: IconButton(
+                  icon: const Icon(Icons.check_circle, color: AppTheme.success, size: 22),
+                  onPressed: widget.onConfirm,
+                  tooltip: 'Save (Enter)',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
+              ),
+              SizedBox(
+                width: 36, height: 36,
+                child: IconButton(
+                  icon: Icon(Icons.close, color: Colors.grey.shade400, size: 18),
+                  onPressed: widget.onCancel,
+                  tooltip: 'Cancel (Esc)',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -150,7 +276,6 @@ class ProductEditRow extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(_displayName, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13), overflow: TextOverflow.ellipsis),
-                      Text(item.unit, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -158,20 +283,24 @@ class ProductEditRow extends StatelessWidget {
                   width: 36, height: 36,
                   child: IconButton(
                     icon: const Icon(Icons.close, size: 18),
-                    onPressed: onCancel,
+                    onPressed: widget.onCancel,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            _buildUnitChips(),
+            const SizedBox(height: 8),
+            _buildUnitField(),
             const SizedBox(height: 10),
             Row(
               children: [
                 Expanded(
                   child: TextField(
-                    controller: qtyCtrl,
-                    focusNode: qtyFocusNode,
+                    controller: widget.qtyCtrl,
+                    focusNode: widget.qtyFocusNode,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     textInputAction: TextInputAction.next,
                     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
@@ -181,14 +310,14 @@ class ProductEditRow extends StatelessWidget {
                       labelText: 'Qty',
                       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     ),
-                    onSubmitted: (_) => rateFocusNode.requestFocus(),
+                    onSubmitted: (_) => widget.rateFocusNode.requestFocus(),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: TextField(
-                    controller: rateCtrl,
-                    focusNode: rateFocusNode,
+                    controller: widget.rateCtrl,
+                    focusNode: widget.rateFocusNode,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     textInputAction: TextInputAction.done,
                     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
@@ -199,7 +328,7 @@ class ProductEditRow extends StatelessWidget {
                       prefixText: '\u20B9 ',
                       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     ),
-                    onSubmitted: (_) => onConfirm(),
+                    onSubmitted: (_) => widget.onConfirm(),
                   ),
                 ),
               ],
@@ -215,7 +344,7 @@ class ProductEditRow extends StatelessWidget {
                 ElevatedButton.icon(
                   icon: const Icon(Icons.check, size: 16),
                   label: const Text('Add'),
-                  onPressed: onConfirm,
+                  onPressed: widget.onConfirm,
                   style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
                 ),
               ],

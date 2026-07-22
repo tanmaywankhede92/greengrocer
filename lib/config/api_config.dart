@@ -1,16 +1,8 @@
-enum Environment { local, production }
-
 class ApiConfig {
-  static Environment current = Environment.production;
-
-  static String get baseUrl {
-    switch (current) {
-      case Environment.local:
-        return 'http://localhost:5000/api/v1';
-      case Environment.production:
-        return 'https://greengrocer-903c.onrender.com/api/v1';
-    }
-  }
+  // ── Toggle between local and production ──
+  // Comment one, uncomment the other:
+  // static const String baseUrl = 'http://localhost:5000/api/v1';          // LOCAL
+  static const String baseUrl = 'https://greengrocer-903c.onrender.com/api/v1'; // PRODUCTION
 
   static const Duration connectTimeout = Duration(seconds: 10);
   static const Duration receiveTimeout = Duration(seconds: 15);

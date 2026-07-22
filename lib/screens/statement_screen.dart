@@ -51,7 +51,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                     )
                   : const Icon(Icons.download, size: 18),
               label: Text(_isDownloading ? 'Generating...' : 'Download'),
-              onPressed: _isDownloading ? null : () { openPrintWindow(); _downloadStatement(customerAsync.value); },
+              onPressed: _isDownloading ? null : () => _downloadStatement(customerAsync.value),
             ),
           ),
         ],

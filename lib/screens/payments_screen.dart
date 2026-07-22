@@ -22,6 +22,7 @@ import 'payments/widgets/recent_transactions_cards.dart';
 import 'payments/widgets/payment_details_dialog.dart';
 import 'payments/widgets/statement_dialog.dart';
 import 'payments/widgets/add_payment_dialog.dart';
+import 'payments/widgets/export_excel_dialog.dart';
 
 enum _ViewTab { customers, payments }
 
@@ -57,11 +58,12 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
             child: PaymentToolbar(
               searchQuery: _search,
-              onSearchChanged: (v) => setState(() { _search = v; _customerPage = 1; _paymentPage = 1; }),
+              onSearchChanged: (v) => setState(() { _search = v.trim(); _customerPage = 1; _paymentPage = 1; }),
               activeFilter: _activeFilter,
               onFilterChanged: (v) => setState(() => _activeFilter = v),
               onRefresh: () => setState(() {}),
               onAddPayment: () => context.go('/payments/add'),
+              onExport: () => ExportExcelDialog.show(context),
               isMobile: isMobile,
             ),
           ),
@@ -112,7 +114,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                           loadingAction: _loadingAction,
                           onPay: (c) => AddPaymentDialog.show(context, ref: ref, customer: c, onPaymentRecorded: () => setState(() {})),
                           onStatement: (c) => StatementDownloadDialog.show(context, ref: ref, customer: c),
-                          onInvoice: (c) { openPrintWindow(); _downloadInvoice(c, actionKey: 'inv_${c.id}'); },
+                          onInvoice: (c) => _downloadInvoice(c, actionKey: 'inv_${c.id}'),
                           onViewLedger: (c) => context.go('/customers/${c.id}'),
                         ),
                       ),
@@ -175,10 +177,10 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                             payment: pay,
                             loadingAction: _loadingAction,
                             onView: (p) => PaymentDetailsDialog.show(context, payment: p, loadingAction: _loadingAction,
-                              onPrint: p.customer != null ? () { openPrintWindow(); _downloadInvoice(p.customer!, actionKey: 'dlg_print_${p.customer!.id}'); } : null,
-                              onDownload: p.customer != null ? () { openPrintWindow(); _downloadInvoice(p.customer!, actionKey: 'dlg_dl_${p.customer!.id}'); } : null),
-                            onPrint: cust != null ? (_) { openPrintWindow(); _downloadInvoice(cust, actionKey: invKey); } : (_) {},
-                            onDownload: cust != null ? (_) { openPrintWindow(); _downloadInvoice(cust, actionKey: invKey); } : (_) {},
+                              onPrint: p.customer != null ? () => _downloadInvoice(p.customer!, actionKey: 'dlg_print_${p.customer!.id}') : null,
+                              onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, actionKey: 'dlg_dl_${p.customer!.id}') : null),
+                            onPrint: cust != null ? (_) => _downloadInvoice(cust, actionKey: invKey) : (_) {},
+                            onDownload: cust != null ? (_) => _downloadInvoice(cust, actionKey: invKey) : (_) {},
                           );
                         },
                       ),
@@ -200,10 +202,10 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                       payments: payments,
                       loadingAction: _loadingAction,
                       onView: (p) => PaymentDetailsDialog.show(context, payment: p, loadingAction: _loadingAction,
-                        onPrint: p.customer != null ? () { openPrintWindow(); _downloadInvoice(p.customer!, actionKey: 'dlg_print_${p.customer!.id}'); } : null,
-                        onDownload: p.customer != null ? () { openPrintWindow(); _downloadInvoice(p.customer!, actionKey: 'dlg_dl_${p.customer!.id}'); } : null),
-                      onPrint: (p) { if (p.customer != null) { openPrintWindow(); _downloadInvoice(p.customer!, actionKey: 'inv_${p.customer!.id}'); } },
-                      onDownload: (p) { if (p.customer != null) { openPrintWindow(); _downloadInvoice(p.customer!, actionKey: 'inv_${p.customer!.id}'); } },
+                        onPrint: p.customer != null ? () => _downloadInvoice(p.customer!, actionKey: 'dlg_print_${p.customer!.id}') : null,
+                        onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, actionKey: 'dlg_dl_${p.customer!.id}') : null),
+                      onPrint: (p) => p.customer != null ? _downloadInvoice(p.customer!, actionKey: 'inv_${p.customer!.id}') : null,
+                      onDownload: (p) => p.customer != null ? _downloadInvoice(p.customer!, actionKey: 'inv_${p.customer!.id}') : null,
                     ),
             ),
             if (totalPages > 1) _PaginationBar(
@@ -262,7 +264,6 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
         paidNow: bill.paidNow, items: lineItems, billDate: bill.billDate,
         paymentMode: bill.paymentType, isReprint: true,
       );
-      openPrintWindow();
       await printPdf(pdf, filename: bill.billNumber);
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(

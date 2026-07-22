@@ -6,6 +6,7 @@ import '../core/utils.dart';
 import '../core/enums.dart';
 import '../core/params.dart';
 import '../providers/bill_provider.dart';
+import 'bills/widgets/export_bills_excel_dialog.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/breadcrumb.dart';
@@ -45,7 +46,7 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
   @override
   Widget build(BuildContext context) {
     final params = BillListParams(
-      search: _searchCtrl.text,
+      search: _searchCtrl.text.trim(),
       status: _statusFilter ?? 'all',
       page: _page,
       limit: 50,
@@ -56,6 +57,11 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Bills'), actions: [
+        IconButton(
+          icon: const Icon(Icons.table_chart_outlined, size: 20),
+          tooltip: 'Export Excel',
+          onPressed: () => ExportBillsExcelDialog.show(context),
+        ),
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: TextButton.icon(

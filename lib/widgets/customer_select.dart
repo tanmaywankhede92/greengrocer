@@ -37,11 +37,12 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
   }
 
   void _onSearchChanged(String query) async {
-    if (query.isEmpty) {
+    final q = query.trim();
+    if (q.isEmpty) {
       setState(() { _results = []; _showDropdown = false; });
       return;
     }
-    final result = await ref.read(customerSearchProvider(query).future);
+    final result = await ref.read(customerSearchProvider(q).future);
     if (mounted) setState(() { _results = result; _showDropdown = true; });
   }
 

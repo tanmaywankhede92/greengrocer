@@ -108,7 +108,7 @@ class _StatementDownloadDialogState extends ConsumerState<StatementDownloadDialo
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.download, size: 18),
                   label: Text(_loading ? 'Generating Statement...' : 'Download Statement', style: const TextStyle(fontSize: 14)),
-                  onPressed: _loading ? null : () { openPrintWindow(); _download(); },
+                  onPressed: _loading ? null : () => _download(),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppTheme.info,
                     padding: const EdgeInsets.symmetric(horizontal: 20),

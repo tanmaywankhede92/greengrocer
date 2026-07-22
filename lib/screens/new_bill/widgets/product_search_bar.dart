@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/theme.dart';
 import '../../../models/product.dart';
-import '../../../widgets/bill_item_row.dart';
 
 class ProductSearchBar extends StatelessWidget {
   final TextEditingController controller;
@@ -60,14 +59,12 @@ class ProductSearchBar extends StatelessWidget {
 
 class ProductSearchDropdown extends StatelessWidget {
   final List<Product> results;
-  final List<LineItem> items;
   final Map<String, double> defaultRates;
   final ValueChanged<Product> onSelected;
 
   const ProductSearchDropdown({
     super.key,
     required this.results,
-    required this.items,
     required this.defaultRates,
     required this.onSelected,
   });
@@ -94,28 +91,21 @@ class ProductSearchDropdown extends StatelessWidget {
         itemCount: results.length,
         itemBuilder: (context, index) {
           final p = results[index];
-          final alreadyAdded = items.any((i) => i.productId == p.id);
           return ListTile(
             dense: true,
             leading: Container(
               width: 36, height: 36,
               decoration: BoxDecoration(
-                color: alreadyAdded
-                    ? AppTheme.success.withAlpha(15)
-                    : AppTheme.primaryRed.withAlpha(15),
+                color: AppTheme.primaryRed.withAlpha(15),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                alreadyAdded ? Icons.check : Icons.inventory_2,
-                color: alreadyAdded ? AppTheme.success : AppTheme.primaryRed,
-                size: 18,
-              ),
+              child: const Icon(Icons.inventory_2, color: AppTheme.primaryRed, size: 18),
             ),
             title: Text(
               p.nameHindi.isNotEmpty ? '${p.name} (${p.nameHindi})' : p.name,
               style: TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
             ),
-            subtitle: _buildSubtitle(p, alreadyAdded),
+            subtitle: _buildSubtitle(p),
             onTap: () => onSelected(p),
           );
         },
@@ -123,7 +113,7 @@ class ProductSearchDropdown extends StatelessWidget {
     );
   }
 
-  Widget _buildSubtitle(Product p, bool alreadyAdded) {
+  Widget _buildSubtitle(Product p) {
     return Row(
       children: [
         Text('Unit: ${p.unit.value}', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
@@ -133,10 +123,6 @@ class ProductSearchDropdown extends StatelessWidget {
             'Rate: \u20B9${defaultRates[p.id]!.toStringAsFixed(0)}',
             style: TextStyle(color: AppTheme.primaryRed, fontSize: 12, fontWeight: FontWeight.w500),
           ),
-        ],
-        if (alreadyAdded) ...[
-          Text('  \u2022  ', style: TextStyle(color: AppTheme.textSecondary.withAlpha(100), fontSize: 12)),
-          Text('Added', style: TextStyle(color: AppTheme.success, fontSize: 12, fontWeight: FontWeight.w500)),
         ],
       ],
     );

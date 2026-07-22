@@ -26,12 +26,13 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   }
 
   void _onSearchChanged(String query) async {
-    if (query.isEmpty) {
+    final q = query.trim();
+    if (q.isEmpty) {
       setState(() => _searchResults = null);
       return;
     }
     try {
-      final results = await ref.read(productServiceProvider).getAll(activeOnly: true, search: query);
+      final results = await ref.read(productServiceProvider).getAll(activeOnly: true, search: q);
       if (mounted) setState(() => _searchResults = results);
     } catch (_) {}
   }
