@@ -167,7 +167,7 @@ class BillDetailScreen extends ConsumerWidget {
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.print, size: 18),
                         label: const Text('Print Both Copies'),
-                        onPressed: () => _reprint(context, ref, bill, items),
+                        onPressed: () { openPrintWindow(); _reprint(context, ref, bill, items); },
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
@@ -230,7 +230,6 @@ class BillDetailScreen extends ConsumerWidget {
     List<BillItem> items,
   ) async {
     try {
-      openPrintWindow();
       final settings = await ref.read(settingsProvider.future);
       final lineItems = items.map((i) => LineItem(
         productId: i.productId,
