@@ -5,7 +5,6 @@ const morgan = require('morgan');
 const config = require('./src/config');
 const logger = require('./src/helpers/logger');
 const errorHandler = require('./src/middlewares/errorHandler');
-const { apiLimiter } = require('./src/middlewares/rateLimiter');
 const routes = require('./src/routes');
 
 const app = express();
@@ -24,8 +23,6 @@ if (config.env !== 'test') {
     stream: { write: (message) => logger.info(message.trim()) },
   }));
 }
-
-app.use('/api', apiLimiter);
 
 app.get('/health', (_req, res) => {
   res.json({
