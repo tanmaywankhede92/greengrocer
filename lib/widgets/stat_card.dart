@@ -44,7 +44,7 @@ class StatCard extends StatelessWidget {
                 children: [
                   Flexible(
                     child: Text(title,
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
+                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -62,7 +62,7 @@ class StatCard extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 isCurrency ? AppUtils.formatCurrency(value) : value.toStringAsFixed(0),
-                style: TextStyle(color: AppTheme.textPrimary, fontSize: 28, fontWeight: FontWeight.bold, height: 1.1),
+                style: const TextStyle(color: AppTheme.textPrimary, fontSize: 28, fontWeight: FontWeight.bold, height: 1.1),
               ),
             ],
           ),

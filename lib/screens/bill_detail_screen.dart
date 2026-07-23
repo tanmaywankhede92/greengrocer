@@ -31,7 +31,7 @@ class BillDetailScreen extends ConsumerWidget {
     return detailAsync.when(
       loading: () => const LoadingWidget(),
       error: (e, _) => Center(
-        child: Text('Error: $e', style: TextStyle(color: AppTheme.error)),
+        child: Text('Error: $e', style: const TextStyle(color: AppTheme.error)),
       ),
       data: (detail) {
         final bill = detail.bill;
@@ -88,7 +88,7 @@ class BillDetailScreen extends ConsumerWidget {
                                   decoration: const BoxDecoration(shape: BoxShape.circle, color: AppTheme.success),
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
+                                const Text(
                                   'Active',
                                   style: TextStyle(
                                     color: AppTheme.success,
@@ -115,7 +115,7 @@ class BillDetailScreen extends ConsumerWidget {
                                   decoration: const BoxDecoration(shape: BoxShape.circle, color: AppTheme.error),
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
+                                const Text(
                                   'Cancelled',
                                   style: TextStyle(
                                     color: AppTheme.error,
@@ -145,7 +145,7 @@ class BillDetailScreen extends ConsumerWidget {
               ),
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppTheme.surface,
                   border: Border(top: BorderSide(color: AppTheme.border)),
                 ),
@@ -196,8 +196,8 @@ class BillDetailScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Yes, Cancel'),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
+            child: const Text('Yes, Cancel'),
           ),
         ],
       ),
@@ -291,29 +291,29 @@ class BillDetailScreen extends ConsumerWidget {
           const SizedBox(height: 12),
 
           // ── Header (centered) ──
-          Center(
+          const Center(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text('RATHOD ENTERPRISES',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _red, letterSpacing: 1)),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text('Vegetable, Fruits Supplier & Commission Agent',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _muted)),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text('Green & Fresh  •  Every Day',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 10, color: AppTheme.success, fontStyle: FontStyle.italic)),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 Text('Shop No.95 Kanji House, Mahatma Phule Market,',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 10, color: _muted)),
                 Text('Cotton Market, Nagpur – 440018',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 10, color: _muted)),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text('Nitesh : 8087344819   |   Vicky : 9529031540   |   7030914867',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 9.5, color: AppTheme.textPrimary)),
@@ -392,7 +392,7 @@ class BillDetailScreen extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
                       child: Text(h,
                           textAlign: h == 'Product' ? TextAlign.left : TextAlign.center,
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                     );
                   }).toList(),
                 ),
@@ -480,16 +480,16 @@ class BillDetailScreen extends ConsumerWidget {
           Center(
             child: Column(
               children: [
-                Text('Thank You!  Visit Again',
+                const Text('Thank You!  Visit Again',
                     style: TextStyle(fontSize: 11, color: _muted)),
                 const SizedBox(height: 4),
-                Text('RATHOD ENTERPRISES',
+                const Text('RATHOD ENTERPRISES',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _red, letterSpacing: 1.2)),
                 const SizedBox(height: 8),
                 Container(height: 1, color: Colors.grey.shade400),
                 const SizedBox(height: 8),
                 Text('$copyLabel – $copySuffix',
-                    style: TextStyle(fontSize: 10, color: _muted)),
+                    style: const TextStyle(fontSize: 10, color: _muted)),
               ],
             ),
           ),
@@ -509,10 +509,10 @@ class BillDetailScreen extends ConsumerWidget {
       children: [
         SizedBox(
           width: 72,
-          child: Text(label, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+          child: Text(label, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
         ),
         const Text(':  ', style: TextStyle(fontSize: 10.5)),
-        Expanded(child: Text(value, style: TextStyle(fontSize: 10.5, color: AppTheme.textPrimary))),
+        Expanded(child: Text(value, style: const TextStyle(fontSize: 10.5, color: AppTheme.textPrimary))),
       ],
     );
   }
@@ -523,8 +523,8 @@ class BillDetailScreen extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 11, color: AppTheme.textPrimary)),
-          Text('₹ ${value.toStringAsFixed(0)}', style: TextStyle(fontSize: 11, color: AppTheme.textPrimary)),
+          Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textPrimary)),
+          Text('₹ ${value.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, color: AppTheme.textPrimary)),
         ],
       ),
     );

@@ -53,7 +53,7 @@ class CustomerOutstandingTable extends StatelessWidget {
                       children: [
                         Icon(Icons.people_outline, size: 48, color: AppTheme.textSecondary.withAlpha(80)),
                         const SizedBox(height: 12),
-                        Text('No customers found', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                        const Text('No customers found', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
                       ],
                     ),
                   ),
@@ -107,7 +107,7 @@ class _CustomerRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: isOdd ? const Color(0xFFFAFAFC) : Colors.white,
-        border: Border(bottom: BorderSide(color: const Color(0xFFEEEEF0), width: 0.5)),
+        border: const Border(bottom: BorderSide(color: Color(0xFFEEEEF0), width: 0.5)),
       ),
       child: Row(
         children: [

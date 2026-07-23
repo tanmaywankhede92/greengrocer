@@ -47,9 +47,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: const Icon(Icons.store, color: Colors.white, size: 40),
                 ),
                 const SizedBox(height: 20),
-                Text(AppConstants.appName, style: TextStyle(color: AppTheme.textPrimary, fontSize: 26, fontWeight: FontWeight.bold)),
+                const Text(AppConstants.appName, style: TextStyle(color: AppTheme.textPrimary, fontSize: 26, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text('Vegetable & Fruit Wholesale', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                const Text('Vegetable & Fruit Wholesale', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
                 const SizedBox(height: 40),
                 TextField(
                   controller: _emailCtrl,
@@ -80,9 +80,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.error_outline, color: AppTheme.error, size: 18),
+                        const Icon(Icons.error_outline, color: AppTheme.error, size: 18),
                         const SizedBox(width: 8),
-                        Expanded(child: Text(state.error!, style: TextStyle(color: AppTheme.error, fontSize: 13))),
+                        Expanded(child: Text(state.error!, style: const TextStyle(color: AppTheme.error, fontSize: 13))),
                       ],
                     ),
                   ),

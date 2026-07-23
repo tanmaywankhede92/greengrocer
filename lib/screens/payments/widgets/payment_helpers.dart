@@ -33,7 +33,7 @@ Widget dialogRow(String label, String value, {Color? valueColor}) {
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
         Flexible(child: Text(value, style: TextStyle(
           color: valueColor ?? AppTheme.textPrimary,
           fontWeight: FontWeight.w600,

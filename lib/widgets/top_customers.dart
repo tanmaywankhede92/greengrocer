@@ -23,7 +23,7 @@ class TopCustomers extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Top Customers', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+              const Text('Top Customers', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
               TextButton.icon(
                 icon: const Icon(Icons.arrow_forward, size: 14),
                 label: const Text('View All', style: TextStyle(fontSize: 12)),
@@ -52,16 +52,16 @@ class TopCustomers extends StatelessWidget {
                             radius: 18,
                             backgroundColor: AppTheme.primaryRed.withAlpha(15),
                             child: Text(AppUtils.initials(c.name),
-                              style: TextStyle(color: AppTheme.primaryRed, fontSize: 12, fontWeight: FontWeight.bold)),
+                              style: const TextStyle(color: AppTheme.primaryRed, fontSize: 12, fontWeight: FontWeight.bold)),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(c.name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
+                                Text(c.name, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
                                 const SizedBox(height: 2),
-                                Text(c.mobile, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                                Text(c.mobile, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                               ],
                             ),
                           ),

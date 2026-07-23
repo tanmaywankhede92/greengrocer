@@ -37,7 +37,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _checkAuth() async {
     try {
-      final storage = const FlutterSecureStorage();
+      const storage = FlutterSecureStorage();
       final token = await storage.read(key: AppConstants.accessTokenKey);
       if (token != null) {
         final user = await _authService.getProfile();

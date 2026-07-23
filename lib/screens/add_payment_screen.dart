@@ -14,7 +14,8 @@ import '../providers/payment_provider.dart';
 import '../widgets/breadcrumb.dart';
 import '../widgets/customer_select.dart';
 import '../widgets/payment_mode_select.dart';
-import '../widgets/payment_receipt_pdf.dart';
+import '../widgets/payment_invoice_pdf.dart';
+import '../providers/settings_provider.dart';
 import 'payments/widgets/statement_dialog.dart';
 
 
@@ -48,7 +49,7 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      final result = await ref.read(paymentServiceProvider).create({
+      await ref.read(paymentServiceProvider).create({
         'customerId': _selectedCustomer!.id,
         'amount': amount,
         'mode': _mode.value,
@@ -56,11 +57,12 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
         'notes': _notesCtrl.text,
         'paymentDate': AppUtils.formatDateApi(_paymentDate),
       });
-      final receiptNum = result['receiptNumber'] as String? ?? result['id'] as String;
       if (mounted) {
-        ref.invalidate(customerListProvider(CustomerListParams()));
+        ref.invalidate(customerListProvider(const CustomerListParams()));
+        ref.invalidate(paymentListProvider(const PaymentListParams()));
+        ref.invalidate(paymentListProvider(PaymentListParams(customerId: _selectedCustomer!.id)));
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment recorded'), backgroundColor: AppTheme.success));
-        _showReceipt(receiptNum);
+        _showInvoice(_selectedCustomer!.id, paidNow: amount, paymentMode: _mode.value);
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
@@ -69,23 +71,28 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
     }
   }
 
-  Future<void> _showReceipt(String paymentId) async {
+  Future<void> _showInvoice(String customerId, {required double paidNow, required String paymentMode}) async {
     try {
-      final pdf = await buildPaymentReceiptPdf(
-        receiptNumber: paymentId,
+      final settings = await ref.read(settingsProvider.future);
+      final previousOutstanding = _selectedCustomer!.currentDue + paidNow;
+      final remainingOutstanding = _selectedCustomer!.currentDue;
+      final now = DateTime.now();
+      final receiptNumber = 'RCP-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${now.millisecond}';
+      final pdf = await buildPaymentInvoicePdf(
+        settings: settings,
+        receiptNumber: receiptNumber,
         customer: _selectedCustomer!,
-        amount: double.tryParse(_amountCtrl.text) ?? 0,
-        modeDisplay: _mode.displayName,
-        reference: _refCtrl.text.isNotEmpty ? _refCtrl.text : null,
-        notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
-        paymentDate: _paymentDate,
-        outstandingBefore: _selectedCustomer!.currentDue,
-        outstandingAfter: (_selectedCustomer!.currentDue - (double.tryParse(_amountCtrl.text) ?? 0)).clamp(0, double.infinity),
+        amount: paidNow,
+        paymentMode: paymentMode,
+        previousOutstanding: previousOutstanding,
+        remainingOutstanding: remainingOutstanding,
+        paymentDate: now,
+        remarks: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
       );
-      if (mounted) await printPdf(pdf, filename: 'Receipt-$paymentId');
+      if (mounted) await printPdf(pdf, filename: 'Payment-$receiptNumber');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Receipt error: $e'), backgroundColor: AppTheme.error));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invoice error: $e'), backgroundColor: AppTheme.error));
       }
     }
   }
@@ -104,10 +111,10 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
       final paymentsAsync = ref.watch(paymentListProvider(PaymentListParams(customerId: _selectedCustomer!.id, limit: 20)));
       recentPayments = paymentsAsync.when(
         loading: () => const SizedBox(height: 60, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
-        error: (e, _) => Padding(padding: const EdgeInsets.only(top: 8), child: Text('$e', style: TextStyle(color: AppTheme.error, fontSize: 13))),
+        error: (e, _) => Padding(padding: const EdgeInsets.only(top: 8), child: Text('$e', style: const TextStyle(color: AppTheme.error, fontSize: 13))),
         data: (result) {
           if (result.data.isEmpty) {
-            return Padding(padding: const EdgeInsets.only(top: 16),
+            return const Padding(padding: EdgeInsets.only(top: 16),
               child: Center(child: Text('No payments yet', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13))));
           }
           return _buildRecentPayments(result.data, isMobile);
@@ -162,7 +169,7 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
         children: [
           Row(
             children: [
-              Expanded(child: Text(c.name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold))),
+              Expanded(child: Text(c.name, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold))),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
@@ -175,7 +182,7 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
             ],
           ),
           const SizedBox(height: 4),
-          Text(c.mobile, style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+          Text(c.mobile, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -196,7 +203,7 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
       children: [
         Text(value, style: TextStyle(color: valueColor, fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 2),
-        Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
       ],
     );
   }
@@ -205,10 +212,10 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        const Row(
           children: [
             Icon(Icons.payments, size: 18, color: AppTheme.primaryRed),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Text('Record Payment', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
           ],
         ),
@@ -262,7 +269,7 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
         },
         child: InputDecorator(
           decoration: const InputDecoration(labelText: 'Payment Date', prefixIcon: Icon(Icons.calendar_today, size: 18), isDense: true),
-          child: Text(DateFormat('dd MMM yyyy').format(_paymentDate), style: TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
+          child: Text(DateFormat('dd MMM yyyy').format(_paymentDate), style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
         ),
       ),
     ];
@@ -274,9 +281,9 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
       children: [
         Row(
           children: [
-            Icon(Icons.description_outlined, size: 18, color: AppTheme.primaryRed),
+            const Icon(Icons.description_outlined, size: 18, color: AppTheme.primaryRed),
             const SizedBox(width: 8),
-            Text('Recent Transactions', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+            const Text('Recent Transactions', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
             const Spacer(),
             TextButton.icon(
               icon: const Icon(Icons.download, size: 16),
@@ -293,7 +300,7 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
             border: Border.all(color: AppTheme.border),
           ),
           padding: const EdgeInsets.all(16),
-          child: recentPayments ?? Center(child: Text('Select a customer to view transactions', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
+          child: recentPayments ?? const Center(child: Text('Select a customer to view transactions', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
         ),
       ],
     );
@@ -304,19 +311,19 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
       return Column(
         children: data.take(10).map((p) => Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppTheme.border, width: 0.5))),
+          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppTheme.border, width: 0.5))),
           child: Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('#${p.receiptNumber}', style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
-                    Text(DateFormat('dd MMM yy').format(p.paymentDate), style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                    Text('#${p.receiptNumber}', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
+                    Text(DateFormat('dd MMM yy').format(p.paymentDate), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
                   ],
                 ),
               ),
-              Text(AppUtils.formatCurrency(p.amount), style: TextStyle(color: AppTheme.success, fontSize: 14, fontWeight: FontWeight.w600)),
+              Text(AppUtils.formatCurrency(p.amount), style: const TextStyle(color: AppTheme.success, fontSize: 14, fontWeight: FontWeight.w600)),
             ],
           ),
         )).toList(),
@@ -338,14 +345,14 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
         const SizedBox(height: 4),
         ...data.take(10).map((p) => Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppTheme.border, width: 0.5))),
+          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppTheme.border, width: 0.5))),
           child: Row(
             children: [
-              SizedBox(width: 100, child: Text('#${p.receiptNumber}', style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500))),
-              SizedBox(width: 100, child: Text(DateFormat('dd MMM yy').format(p.paymentDate), style: TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
-              SizedBox(width: 90, child: Text(p.mode.displayName, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
-              SizedBox(width: 120, child: Text(p.reference ?? '', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
-              SizedBox(width: 100, child: Text(AppUtils.formatCurrency(p.amount), style: TextStyle(color: AppTheme.success, fontSize: 14, fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
+              SizedBox(width: 100, child: Text('#${p.receiptNumber}', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500))),
+              SizedBox(width: 100, child: Text(DateFormat('dd MMM yy').format(p.paymentDate), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
+              SizedBox(width: 90, child: Text(p.mode.displayName, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
+              SizedBox(width: 120, child: Text(p.reference ?? '', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
+              SizedBox(width: 100, child: Text(AppUtils.formatCurrency(p.amount), style: const TextStyle(color: AppTheme.success, fontSize: 14, fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
             ],
           ),
         )),

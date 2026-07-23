@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:html' as html;
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -220,7 +219,7 @@ class _ExportBillsExcelDialogState extends ConsumerState<ExportBillsExcelDialog>
                 ],
               ),
               const SizedBox(height: 20),
-              Text('Time Period', style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+              const Text('Time Period', style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -232,7 +231,7 @@ class _ExportBillsExcelDialogState extends ConsumerState<ExportBillsExcelDialog>
                 ],
               ),
               const SizedBox(height: 16),
-              Text('Sheets to export', style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+              const Text('Sheets to export', style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -251,12 +250,12 @@ class _ExportBillsExcelDialogState extends ConsumerState<ExportBillsExcelDialog>
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, size: 16, color: AppTheme.textSecondary),
+                    const Icon(Icons.info_outline, size: 16, color: AppTheme.textSecondary),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Period: $_periodLabel\n${_includeBills && _includeCustomers ? 'Bills + Customers sheets' : _includeBills ? 'Bills sheet only' : 'Customers sheet only'}',
-                        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                       ),
                     ),
                   ],
@@ -314,7 +313,7 @@ class _ExportBillsExcelDialogState extends ConsumerState<ExportBillsExcelDialog>
           activeColor: AppTheme.primaryRed,
           visualDensity: VisualDensity.compact,
         ),
-        Text(label, style: TextStyle(fontSize: 13, color: AppTheme.textPrimary)),
+        Text(label, style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary)),
       ],
     );
   }

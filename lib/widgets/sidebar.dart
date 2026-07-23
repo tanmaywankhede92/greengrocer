@@ -31,7 +31,7 @@ class Sidebar extends ConsumerWidget {
                   child: const Icon(Icons.store, color: Colors.white, size: 24),
                 ),
                 const SizedBox(width: 12),
-                Expanded(
+                const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -47,19 +47,19 @@ class Sidebar extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               children: [
-                _MenuItem(icon: Icons.dashboard, label: 'Dashboard', route: '/dashboard'),
-                _MenuItem(icon: Icons.receipt_long, label: 'Bills', route: '/bills'),
-                _MenuItem(icon: Icons.people, label: 'Customers', route: '/customers'),
-                _MenuItem(icon: Icons.inventory, label: 'Products', route: '/products'),
-                _MenuItem(icon: Icons.trending_up, label: 'Daily Rates', route: '/rates'),
-                _MenuItem(icon: Icons.payments, label: 'Payments', route: '/payments'),
+                const _MenuItem(icon: Icons.dashboard, label: 'Dashboard', route: '/dashboard'),
+                const _MenuItem(icon: Icons.receipt_long, label: 'Bills', route: '/bills'),
+                const _MenuItem(icon: Icons.people, label: 'Customers', route: '/customers'),
+                const _MenuItem(icon: Icons.inventory, label: 'Products', route: '/products'),
+                const _MenuItem(icon: Icons.trending_up, label: 'Daily Rates', route: '/rates'),
+                const _MenuItem(icon: Icons.payments, label: 'Payments', route: '/payments'),
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Divider(color: AppTheme.border.withAlpha(100)),
                 ),
                 const SizedBox(height: 16),
-                _MenuItem(icon: Icons.settings, label: 'Settings', route: '/settings'),
+                const _MenuItem(icon: Icons.settings, label: 'Settings', route: '/settings'),
               ],
             ),
           ),
@@ -123,10 +123,10 @@ class _LogoutButton extends ConsumerWidget {
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        child: Row(
+        child: const Row(
           children: [
             Icon(Icons.logout, color: AppTheme.textSecondary, size: 20),
-            const SizedBox(width: 14),
+            SizedBox(width: 14),
             Text('Logout', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
           ],
         ),

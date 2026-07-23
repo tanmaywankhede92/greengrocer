@@ -58,7 +58,7 @@ class _StatementDownloadDialogState extends ConsumerState<StatementDownloadDialo
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('Download Statement', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-                        Text(c.name, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                        Text(c.name, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
                       ],
                     ),
                   ),
@@ -69,7 +69,7 @@ class _StatementDownloadDialogState extends ConsumerState<StatementDownloadDialo
                 ],
               ),
               const SizedBox(height: 20),
-              Text('Select Date Range', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+              const Text('Select Date Range', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -174,7 +174,7 @@ class _DateField extends StatelessWidget {
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           suffixIcon: const Icon(Icons.calendar_today, size: 16),
         ),
-        child: Text(DateFormat('dd MMM yyyy').format(date), style: TextStyle(fontSize: 13, color: AppTheme.textPrimary)),
+        child: Text(DateFormat('dd MMM yyyy').format(date), style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary)),
       ),
     );
   }
@@ -197,7 +197,7 @@ class _QuickRange extends StatelessWidget {
             border: Border.all(color: AppTheme.border),
             borderRadius: BorderRadius.circular(6),
           ),
-          child: Text(label, style: TextStyle(fontSize: 11, color: AppTheme.textSecondary), textAlign: TextAlign.center),
+          child: Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary), textAlign: TextAlign.center),
         ),
       ),
     );

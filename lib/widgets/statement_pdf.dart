@@ -223,11 +223,11 @@ Future<Uint8List> buildStatementPdf({
     final isPayment = type == 'payment';
 
     final bgColor = isCancel
-        ? PdfColor(1.0, 0.95, 0.88)
+        ? const PdfColor(1.0, 0.95, 0.88)
         : (isAlt ? altRow : null);
 
     final typeColor = isCancel
-        ? PdfColor(0.9, 0.32, 0.0)
+        ? const PdfColor(0.9, 0.32, 0.0)
         : (isPayment ? PdfColors.green700 : (type == 'bill' ? red : textColor));
 
     final dateFormatted = dateStr.isNotEmpty
@@ -250,7 +250,7 @@ Future<Uint8List> buildStatementPdf({
           pw.Expanded(flex: 26, child: pw.Text(debit > 0 ? money(debit) : '-',
             textAlign: pw.TextAlign.right,
             style: pw.TextStyle(font: font, fontSize: 8.5,
-              color: isCancel ? PdfColor(0.9, 0.32, 0.0) : red))),
+              color: isCancel ? const PdfColor(0.9, 0.32, 0.0) : red))),
           pw.Expanded(flex: 26, child: pw.Text(credit > 0 ? money(credit) : '-',
             textAlign: pw.TextAlign.right,
             style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.green700))),
@@ -300,7 +300,7 @@ Future<Uint8List> buildStatementPdf({
                   _summaryRow('Payments (Selected Period)', money(totalCredit), font, fontB, valueColor: PdfColors.green700),
                   pw.Container(
                     padding: const pw.EdgeInsets.symmetric(vertical: 6),
-                    decoration: pw.BoxDecoration(
+                    decoration: const pw.BoxDecoration(
                       border: pw.Border(top: pw.BorderSide(color: lineColor, width: 0.7)),
                     ),
                     child: pw.Row(

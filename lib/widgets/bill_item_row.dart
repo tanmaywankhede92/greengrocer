@@ -105,17 +105,17 @@ class _BillItemRowState extends State<BillItemRow> {
                         color: AppTheme.primaryRed.withAlpha(15),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Center(child: Text('${widget.index + 1}', style: TextStyle(color: AppTheme.primaryRed, fontSize: 11, fontWeight: FontWeight.w600))),
+                      child: Center(child: Text('${widget.index + 1}', style: const TextStyle(color: AppTheme.primaryRed, fontSize: 11, fontWeight: FontWeight.w600))),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(widget.item.productName, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500, fontSize: 14)),
+                          Text(widget.item.productName, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500, fontSize: 14)),
                           if (widget.item.productNameHindi.isNotEmpty)
-                            Text(widget.item.productNameHindi, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                          Text(widget.item.unit, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                            Text(widget.item.productNameHindi, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                          Text(widget.item.unit, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
                         ],
                       ),
                     ),
@@ -151,10 +151,10 @@ class _BillItemRowState extends State<BillItemRow> {
               SizedBox(
                 width: 90,
                 child: Text(AppUtils.formatCurrency(widget.item.amount),
-                    style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
+                    style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
               ),
               IconButton(
-                icon: Icon(Icons.close, color: AppTheme.error, size: 18),
+                icon: const Icon(Icons.close, color: AppTheme.error, size: 18),
                 onPressed: widget.onRemove,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -178,15 +178,15 @@ class _BillItemRowState extends State<BillItemRow> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(widget.item.productName, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
+                      Text(widget.item.productName, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
                       if (widget.item.productNameHindi.isNotEmpty)
-                        Text(widget.item.productNameHindi, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                      Text(widget.item.unit, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                        Text(widget.item.productNameHindi, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                      Text(widget.item.unit, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close, color: AppTheme.error, size: 18),
+                  icon: const Icon(Icons.close, color: AppTheme.error, size: 18),
                   onPressed: widget.onRemove,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -221,7 +221,7 @@ class _BillItemRowState extends State<BillItemRow> {
                 ),
                 const SizedBox(width: 12),
                 Text(AppUtils.formatCurrency(widget.item.amount),
-                    style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
+                    style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
               ],
             ),
           ],

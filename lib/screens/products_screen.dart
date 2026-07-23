@@ -91,9 +91,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     children: [
                       Icon(Icons.error_outline, size: 48, color: AppTheme.error.withAlpha(150)),
                       const SizedBox(height: 16),
-                      Text('Failed to load products', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
+                      const Text('Failed to load products', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
                       const SizedBox(height: 8),
-                      Text('$e', style: TextStyle(color: AppTheme.error, fontSize: 13)),
+                      Text('$e', style: const TextStyle(color: AppTheme.error, fontSize: 13)),
                     ],
                   ),
                 ),
@@ -119,8 +119,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                           ),
                           child: Icon(Icons.inventory_2, color: p.isActive ? AppTheme.primaryRed : AppTheme.textSecondary, size: 22),
                         ),
-                        title: Text(p.nameHindi.isNotEmpty ? '${p.name} (${p.nameHindi})' : p.name, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                        subtitle: Text(p.unit.value, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                        title: Text(p.nameHindi.isNotEmpty ? '${p.name} (${p.nameHindi})' : p.name, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                        subtitle: Text(p.unit.value, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -139,7 +139,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                               },
                             ),
                             IconButton(
-                              icon: Icon(Icons.edit, size: 18, color: AppTheme.textSecondary),
+                              icon: const Icon(Icons.edit, size: 18, color: AppTheme.textSecondary),
                               onPressed: () => _showProductForm(context, ref, p),
                             ),
                           ],
@@ -187,7 +187,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     initialValue: isCustom ? 'custom' : unit,
                     decoration: const InputDecoration(labelText: 'Unit', prefixIcon: Icon(Icons.scale, size: 18)),
                     items: [
-                      ..._commonUnits.map((u) => DropdownMenuItem(value: u, child: Text(u, style: TextStyle(color: AppTheme.textPrimary)))),
+                      ..._commonUnits.map((u) => DropdownMenuItem(value: u, child: Text(u, style: const TextStyle(color: AppTheme.textPrimary)))),
                       const DropdownMenuItem(value: 'custom', child: Text('Custom...', style: TextStyle(color: AppTheme.primaryRed, fontStyle: FontStyle.italic))),
                     ],
                     onChanged: (v) => setDialogState(() {

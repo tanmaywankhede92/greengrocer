@@ -177,7 +177,7 @@ class _ProductEditRowState extends State<ProductEditRow> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(_displayName, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13), overflow: TextOverflow.ellipsis),
+                    Text(_displayName, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13), overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 4),
                     _buildUnitChips(),
                   ],
@@ -229,7 +229,7 @@ class _ProductEditRowState extends State<ProductEditRow> {
                 width: 80,
                 child: Text(
                   AppUtils.formatCurrency(_amount),
-                  style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 14),
                 ),
               ),
               const SizedBox(width: 4),
@@ -276,7 +276,7 @@ class _ProductEditRowState extends State<ProductEditRow> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(_displayName, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13), overflow: TextOverflow.ellipsis),
+                      Text(_displayName, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13), overflow: TextOverflow.ellipsis),
                     ],
                   ),
                 ),
@@ -340,7 +340,7 @@ class _ProductEditRowState extends State<ProductEditRow> {
               children: [
                 Text(
                   AppUtils.formatCurrency(_amount),
-                  style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 18),
+                  style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 18),
                 ),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.check, size: 16),

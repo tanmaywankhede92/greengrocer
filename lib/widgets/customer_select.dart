@@ -101,7 +101,7 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Customer', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+        const Text('Customer', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
         const SizedBox(height: 6),
         TextField(
           controller: _controller,
@@ -138,9 +138,9 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
                       final c = _results[index];
                       return ListTile(
                         dense: true,
-                        title: Text(c.name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
+                        title: Text(c.name, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
                         subtitle: Text('${c.mobile}  •  Due: ${AppUtils.formatCurrency(c.currentDue)}',
-                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                         onTap: () {
                           setState(() {
                             _selected = c;
@@ -154,9 +154,9 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
                   )
                 : ListTile(
                     dense: true,
-                    leading: Icon(Icons.person_add, color: AppTheme.primaryRed),
-                    title: Text('Add new customer', style: TextStyle(color: AppTheme.primaryRed, fontSize: 14)),
-                    subtitle: Text('"${_controller.text}"', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                    leading: const Icon(Icons.person_add, color: AppTheme.primaryRed),
+                    title: const Text('Add new customer', style: TextStyle(color: AppTheme.primaryRed, fontSize: 14)),
+                    subtitle: Text('"${_controller.text}"', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                     onTap: () => _showAddCustomerDialog(),
                   ),
           ),
@@ -170,7 +170,7 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text('Previous Due: ${AppUtils.formatCurrency(_selected!.currentDue)}',
-                  style: TextStyle(color: AppTheme.warning, fontSize: 13, fontWeight: FontWeight.w600)),
+                  style: const TextStyle(color: AppTheme.warning, fontSize: 13, fontWeight: FontWeight.w600)),
             ),
           ),
       ],

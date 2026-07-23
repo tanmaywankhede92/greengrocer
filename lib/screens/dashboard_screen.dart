@@ -24,9 +24,9 @@ class DashboardScreen extends ConsumerWidget {
             children: [
               Icon(Icons.error_outline, size: 48, color: AppTheme.error.withAlpha(150)),
               const SizedBox(height: 16),
-              Text('Failed to load dashboard', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
+              const Text('Failed to load dashboard', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
               const SizedBox(height: 8),
-              Text('$e', style: TextStyle(color: AppTheme.error, fontSize: 13)),
+              Text('$e', style: const TextStyle(color: AppTheme.error, fontSize: 13)),
             ],
           ),
         ),
@@ -38,7 +38,7 @@ class DashboardScreen extends ConsumerWidget {
             final isDesktop = w >= 900;
             final isTablet = w >= 600 && w < 900;
             final cardCount = isDesktop ? 4 : isTablet ? 2 : 1;
-            final cardGap = 16.0;
+            const cardGap = 16.0;
             final cardW = (w - 48 - (cardCount - 1) * cardGap) / cardCount;
 
             return RefreshIndicator(
@@ -52,10 +52,10 @@ class DashboardScreen extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Dashboard', style: TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.bold)),
+                        const Text('Dashboard', style: TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.bold)),
                         if (isDesktop)
                           IconButton(
-                            icon: Icon(Icons.refresh, size: 20, color: AppTheme.textSecondary),
+                            icon: const Icon(Icons.refresh, size: 20, color: AppTheme.textSecondary),
                             onPressed: () => ref.invalidate(dashboardProvider),
                             tooltip: 'Refresh',
                           ),
@@ -76,7 +76,7 @@ class DashboardScreen extends ConsumerWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(flex: 3, child: SizedBox(height: 300, child: SalesChart())),
+                          const Expanded(flex: 3, child: SizedBox(height: 300, child: SalesChart())),
                           const SizedBox(width: 16),
                           Expanded(flex: 2, child: SizedBox(height: 300, child: TopCustomers(customers: stats.topCustomers))),
                         ],
@@ -84,7 +84,7 @@ class DashboardScreen extends ConsumerWidget {
                     else
                       Column(
                         children: [
-                          SizedBox(height: isTablet ? 280 : 260, child: SalesChart()),
+                          SizedBox(height: isTablet ? 280 : 260, child: const SalesChart()),
                           const SizedBox(height: 16),
                           SizedBox(height: 300, child: TopCustomers(customers: stats.topCustomers)),
                         ],

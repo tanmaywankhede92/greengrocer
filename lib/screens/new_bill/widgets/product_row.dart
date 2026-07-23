@@ -56,7 +56,7 @@ class ProductRow extends StatelessWidget {
               child: Center(
                 child: Text(
                   '${index + 1}',
-                  style: TextStyle(color: AppTheme.primaryRed, fontSize: 11, fontWeight: FontWeight.w600),
+                  style: const TextStyle(color: AppTheme.primaryRed, fontSize: 11, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -67,14 +67,14 @@ class ProductRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(_displayName, style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
-                Text(item.unit, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                Text(_displayName, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+                Text(item.unit, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
               ],
             ),
           ),
-          SizedBox(width: 60, child: Text(_formattedQty, style: TextStyle(color: AppTheme.textPrimary, fontSize: 13), textAlign: TextAlign.center)),
-          SizedBox(width: 70, child: Text(item.appliedRate.toStringAsFixed(0), style: TextStyle(color: AppTheme.textPrimary, fontSize: 13), textAlign: TextAlign.center)),
-          SizedBox(width: 90, child: Text(AppUtils.formatCurrency(item.amount), style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 14), textAlign: TextAlign.right)),
+          SizedBox(width: 60, child: Text(_formattedQty, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13), textAlign: TextAlign.center)),
+          SizedBox(width: 70, child: Text(item.appliedRate.toStringAsFixed(0), style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13), textAlign: TextAlign.center)),
+          SizedBox(width: 90, child: Text(AppUtils.formatCurrency(item.amount), style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 14), textAlign: TextAlign.right)),
           SizedBox(
             width: 72,
             child: Row(
@@ -82,12 +82,12 @@ class ProductRow extends StatelessWidget {
               children: [
                 GestureDetector(
                   onTap: onEdit,
-                  child: Icon(Icons.edit, size: 16, color: AppTheme.info),
+                  child: const Icon(Icons.edit, size: 16, color: AppTheme.info),
                 ),
                 const SizedBox(width: 12),
                 GestureDetector(
                   onTap: onRemove,
-                  child: Icon(Icons.delete_outline, size: 16, color: AppTheme.error),
+                  child: const Icon(Icons.delete_outline, size: 16, color: AppTheme.error),
                 ),
               ],
             ),
@@ -116,7 +116,7 @@ class ProductRow extends StatelessWidget {
                   child: Center(
                     child: Text(
                       '${index + 1}',
-                      style: TextStyle(color: AppTheme.primaryRed, fontSize: 10, fontWeight: FontWeight.w600),
+                      style: const TextStyle(color: AppTheme.primaryRed, fontSize: 10, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -124,13 +124,13 @@ class ProductRow extends StatelessWidget {
                 Expanded(
                   child: Text(
                     _displayName,
-                    style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13),
+                    style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Text(
                   AppUtils.formatCurrency(item.amount),
-                  style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 14),
                 ),
               ],
             ),
@@ -151,7 +151,7 @@ class ProductRow extends StatelessWidget {
                       color: AppTheme.info.withAlpha(15),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Icon(Icons.edit, size: 13, color: AppTheme.info),
+                    child: const Icon(Icons.edit, size: 13, color: AppTheme.info),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -163,7 +163,7 @@ class ProductRow extends StatelessWidget {
                       color: AppTheme.error.withAlpha(15),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Icon(Icons.delete_outline, size: 13, color: AppTheme.error),
+                    child: const Icon(Icons.delete_outline, size: 13, color: AppTheme.error),
                   ),
                 ),
               ],
@@ -181,7 +181,7 @@ class ProductRow extends StatelessWidget {
         color: AppTheme.background,
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text('$label: $value', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+      child: Text('$label: $value', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
     );
   }
 }

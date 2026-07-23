@@ -103,7 +103,7 @@ class ProductSearchDropdown extends StatelessWidget {
             ),
             title: Text(
               p.nameHindi.isNotEmpty ? '${p.name} (${p.nameHindi})' : p.name,
-              style: TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
+              style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
             ),
             subtitle: _buildSubtitle(p),
             onTap: () => onSelected(p),
@@ -116,12 +116,12 @@ class ProductSearchDropdown extends StatelessWidget {
   Widget _buildSubtitle(Product p) {
     return Row(
       children: [
-        Text('Unit: ${p.unit.value}', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+        Text('Unit: ${p.unit.value}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
         if (defaultRates.containsKey(p.id)) ...[
           Text('  \u2022  ', style: TextStyle(color: AppTheme.textSecondary.withAlpha(100), fontSize: 12)),
           Text(
             'Rate: \u20B9${defaultRates[p.id]!.toStringAsFixed(0)}',
-            style: TextStyle(color: AppTheme.primaryRed, fontSize: 12, fontWeight: FontWeight.w500),
+            style: const TextStyle(color: AppTheme.primaryRed, fontSize: 12, fontWeight: FontWeight.w500),
           ),
         ],
       ],

@@ -189,7 +189,9 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     if (_selectedCustomer == null) return;
     if (_editingProduct != null) _confirmEdit();
     if (_items.isEmpty ||
-        _items.any((i) => i.productName.isEmpty || i.quantity <= 0)) return;
+        _items.any((i) => i.productName.isEmpty || i.quantity <= 0)) {
+      return;
+    }
 
     Navigator.push(
       context,
@@ -246,7 +248,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
                 ),
                 child: Text(
                   '${_items.length} items  \u2022  ${AppUtils.formatCurrency(_total)}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppTheme.primaryRed,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,

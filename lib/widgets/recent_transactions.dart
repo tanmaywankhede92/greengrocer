@@ -60,7 +60,7 @@ class RecentTransactions extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text('Recent Bills', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+        const Text('Recent Bills', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
         TextButton.icon(
           icon: const Icon(Icons.arrow_forward, size: 14),
           label: const Text('View All', style: TextStyle(fontSize: 12)),
@@ -103,15 +103,15 @@ class RecentTransactions extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: index > 0 ? BoxDecoration(
+        decoration: index > 0 ? const BoxDecoration(
           border: Border(top: BorderSide(color: AppTheme.border, width: 0.5)),
         ) : null,
         child: Row(
           children: [
-            Expanded(flex: 2, child: Text(b.billNumber, style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500))),
-            Expanded(flex: 3, child: Text(b.customer?.name ?? '', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
-            Expanded(flex: 1, child: Text(DateFormat('dd/MM/yy').format(b.billDate), style: TextStyle(color: AppTheme.textSecondary, fontSize: 12))),
-            Expanded(flex: 1, child: Text(AppUtils.formatCurrency(b.total), style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
+            Expanded(flex: 2, child: Text(b.billNumber, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w500))),
+            Expanded(flex: 3, child: Text(b.customer?.name ?? '', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
+            Expanded(flex: 1, child: Text(DateFormat('dd/MM/yy').format(b.billDate), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12))),
+            Expanded(flex: 1, child: Text(AppUtils.formatCurrency(b.total), style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
             Expanded(flex: 1, child: Center(child: _statusBadge(statusLabel, statusColor))),
             Expanded(flex: 0, child: Container(
               padding: const EdgeInsets.only(left: 4),
@@ -137,10 +137,10 @@ class RecentTransactions extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(b.billNumber, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
+                  Text(b.billNumber, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
                   const SizedBox(height: 2),
-                  Text(b.customer?.name ?? '', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                  Text(DateFormat('dd/MM/yy').format(b.billDate), style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                  Text(b.customer?.name ?? '', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                  Text(DateFormat('dd/MM/yy').format(b.billDate), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
                 ],
               ),
             ),
@@ -148,7 +148,7 @@ class RecentTransactions extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(AppUtils.formatCurrency(b.total), style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+                Text(AppUtils.formatCurrency(b.total), style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 4),
                 _statusBadge(statusLabel, statusColor),
               ],

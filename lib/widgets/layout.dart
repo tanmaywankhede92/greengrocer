@@ -38,7 +38,7 @@ class Layout extends StatelessWidget {
         }
 
         return Scaffold(
-          drawer: Drawer(
+          drawer: const Drawer(
             child: Sidebar(),
           ),
           body: Builder(

@@ -71,7 +71,7 @@ class _ExportExcelDialogState extends ConsumerState<ExportExcelDialog> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Excel exported successfully'), backgroundColor: AppTheme.success),
+          const SnackBar(content: Text('Excel exported successfully'), backgroundColor: AppTheme.success),
         );
       }
     } catch (e) {
@@ -212,7 +212,7 @@ class _ExportExcelDialogState extends ConsumerState<ExportExcelDialog> {
                 ],
               ),
               const SizedBox(height: 20),
-              Text('Time Period', style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+              const Text('Time Period', style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -224,7 +224,7 @@ class _ExportExcelDialogState extends ConsumerState<ExportExcelDialog> {
                 ],
               ),
               const SizedBox(height: 16),
-              Text('Sheets to export', style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+              const Text('Sheets to export', style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -243,12 +243,12 @@ class _ExportExcelDialogState extends ConsumerState<ExportExcelDialog> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, size: 16, color: AppTheme.textSecondary),
+                    const Icon(Icons.info_outline, size: 16, color: AppTheme.textSecondary),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Period: $_periodLabel\n${_includePayments && _includeCustomers ? 'Payments + Customers sheets' : _includePayments ? 'Payments sheet only' : 'Customers sheet only'}',
-                        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                       ),
                     ),
                   ],
@@ -306,7 +306,7 @@ class _ExportExcelDialogState extends ConsumerState<ExportExcelDialog> {
           activeColor: AppTheme.primaryRed,
           visualDensity: VisualDensity.compact,
         ),
-        Text(label, style: TextStyle(fontSize: 13, color: AppTheme.textPrimary)),
+        Text(label, style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary)),
       ],
     );
   }

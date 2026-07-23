@@ -24,7 +24,8 @@ class TransactionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = payment;
     final customerName = p.customer?.name ?? 'N/A';
-    final isInvLoading = loadingAction == 'inv_${p.customer?.id}';
+    final isLoadingPrint = loadingAction == 'print_pay_${p.id}';
+    final isLoadingDownload = loadingAction == 'dl_pay_${p.id}';
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
@@ -53,7 +54,7 @@ class TransactionCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('#${p.receiptNumber}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
-                      Text(customerName, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text(customerName, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
                     ],
                   ),
                 ),
@@ -77,9 +78,9 @@ class TransactionCard extends StatelessWidget {
               children: [
                 _CompactAction(Icons.visibility, 'View', false, () => onView(p)),
                 const SizedBox(width: 4),
-                _CompactAction(isInvLoading ? Icons.hourglass_empty : Icons.print, 'Invoice', isInvLoading, isInvLoading ? () {} : () => onPrint(p)),
+                _CompactAction(isLoadingPrint ? Icons.hourglass_empty : Icons.print, 'Invoice', isLoadingPrint, isLoadingPrint ? () {} : () => onPrint(p)),
                 const SizedBox(width: 4),
-                _CompactAction(isInvLoading ? Icons.hourglass_empty : Icons.download, 'Invoice', isInvLoading, isInvLoading ? () {} : () => onDownload(p)),
+                _CompactAction(isLoadingDownload ? Icons.hourglass_empty : Icons.download, 'Invoice', isLoadingDownload, isLoadingDownload ? () {} : () => onDownload(p)),
               ],
             ),
           ],
@@ -107,7 +108,7 @@ class _Chip extends StatelessWidget {
         children: [
           Icon(icon, size: 10, color: AppTheme.textSecondary),
           const SizedBox(width: 3),
-          Text(text, style: TextStyle(color: AppTheme.textSecondary, fontSize: 9)),
+          Text(text, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 9)),
         ],
       ),
     );

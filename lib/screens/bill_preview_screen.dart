@@ -104,7 +104,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
       await printPdf(pdf, filename: billNumber);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Bill saved & printed'), backgroundColor: AppTheme.success),
+          const SnackBar(content: Text('Bill saved & printed'), backgroundColor: AppTheme.success),
         );
         context.go('/bills');
       }
@@ -136,7 +136,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   }
 
   Widget _buildCopy({required bool isCustomerCopy, required double maxWidth}) {
-    final copyLabel = 'ORIGINAL';
+    const copyLabel = 'ORIGINAL';
     final copySuffix = isCustomerCopy ? 'Customer Copy' : 'Office Copy';
     final now = DateTime.now();
     final grandTotal = _total > 0 ? _total : _subtotal;
@@ -154,29 +154,29 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
           const SizedBox(height: 12),
 
           // ── Header (centered) ──
-          Center(
+          const Center(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text('RATHOD ENTERPRISES',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _red, letterSpacing: 1)),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text('Vegetable, Fruits Supplier & Commission Agent',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _muted)),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text('Green & Fresh  •  Every Day',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 10, color: AppTheme.success, fontStyle: FontStyle.italic)),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 Text('Shop No.95 Kanji House, Mahatma Phule Market,',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 10, color: _muted)),
                 Text('Cotton Market, Nagpur – 440018',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 10, color: _muted)),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text('Nitesh : 8087344819   |   Vicky : 9529031540   |   7030914867',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 9.5, color: AppTheme.textPrimary)),
@@ -252,7 +252,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
                       child: Text(h,
                           textAlign: h == 'Product' ? TextAlign.left : TextAlign.center,
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                     );
                   }).toList(),
                 ),
@@ -338,16 +338,16 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
           Center(
             child: Column(
               children: [
-                Text('Thank You!  Visit Again',
+                const Text('Thank You!  Visit Again',
                     style: TextStyle(fontSize: 11, color: _muted)),
                 const SizedBox(height: 4),
-                Text('RATHOD ENTERPRISES',
+                const Text('RATHOD ENTERPRISES',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _red, letterSpacing: 1.2)),
                 const SizedBox(height: 8),
                 Container(height: 1, color: Colors.grey.shade400),
                 const SizedBox(height: 8),
                 Text('$copyLabel – $copySuffix',
-                    style: TextStyle(fontSize: 10, color: _muted)),
+                    style: const TextStyle(fontSize: 10, color: _muted)),
               ],
             ),
           ),
@@ -363,10 +363,10 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
       children: [
         SizedBox(
           width: 72,
-          child: Text(label, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+          child: Text(label, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
         ),
         const Text(':  ', style: TextStyle(fontSize: 10.5)),
-        Expanded(child: Text(value, style: TextStyle(fontSize: 10.5, color: AppTheme.textPrimary))),
+        Expanded(child: Text(value, style: const TextStyle(fontSize: 10.5, color: AppTheme.textPrimary))),
       ],
     );
   }
@@ -377,8 +377,8 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 11, color: AppTheme.textPrimary)),
-          Text('₹ ${value.toStringAsFixed(0)}', style: TextStyle(fontSize: 11, color: AppTheme.textPrimary)),
+          Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textPrimary)),
+          Text('₹ ${value.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, color: AppTheme.textPrimary)),
         ],
       ),
     );
@@ -410,7 +410,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
           ),
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: AppTheme.surface, border: Border(top: BorderSide(color: AppTheme.border))),
+            decoration: const BoxDecoration(color: AppTheme.surface, border: Border(top: BorderSide(color: AppTheme.border))),
             child: Row(
               children: [
                 Expanded(

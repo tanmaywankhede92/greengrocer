@@ -19,7 +19,7 @@ class AppTheme {
   static const Color surfaceNav = Color(0xFFFAFAFA);
 
   static ThemeData get lightTheme {
-    final colorScheme = ColorScheme.light(
+    const colorScheme = ColorScheme.light(
       primary: primaryRed,
       secondary: accentRed,
       surface: surface,
@@ -73,28 +73,28 @@ class AppTheme {
         fillColor: background,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: border),
+          borderSide: const BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: border),
+          borderSide: const BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: primaryRed, width: 2),
+          borderSide: const BorderSide(color: primaryRed, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: error),
+          borderSide: const BorderSide(color: error),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: error, width: 2),
+          borderSide: const BorderSide(color: error, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        labelStyle: TextStyle(color: textSecondary, fontSize: 14),
+        labelStyle: const TextStyle(color: textSecondary, fontSize: 14),
         hintStyle: TextStyle(color: textSecondary.withAlpha(128), fontSize: 14),
-        floatingLabelStyle: TextStyle(color: primaryRed),
+        floatingLabelStyle: const TextStyle(color: primaryRed),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -109,7 +109,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: primaryRed,
-          side: BorderSide(color: primaryRed),
+          side: const BorderSide(color: primaryRed),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           textStyle: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500),
@@ -130,8 +130,8 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: background,
         selectedColor: primaryRed.withAlpha(26),
-        labelStyle: TextStyle(color: textPrimary, fontSize: 13),
-        side: BorderSide(color: border),
+        labelStyle: const TextStyle(color: textPrimary, fontSize: 13),
+        side: const BorderSide(color: border),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       ),
@@ -159,7 +159,7 @@ class AppTheme {
         titleTextStyle: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: textPrimary),
         contentTextStyle: GoogleFonts.inter(fontSize: 14, color: textPrimary),
       ),
-      bottomSheetTheme: BottomSheetThemeData(
+      bottomSheetTheme: const BottomSheetThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       ),
       navigationBarTheme: const NavigationBarThemeData(
@@ -169,7 +169,7 @@ class AppTheme {
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: background,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: border)),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: border)),
         ),
       ),
     );

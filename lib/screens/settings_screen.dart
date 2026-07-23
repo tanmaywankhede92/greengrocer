@@ -72,7 +72,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBar(title: const Text('Settings')),
       body: settingsAsync.when(
         loading: () => const LoadingWidget(),
-        error: (e, _) => Center(child: Text('Error: $e', style: TextStyle(color: AppTheme.error))),
+        error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.error))),
         data: (_) {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -81,7 +81,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Business Information', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
+                  const Text('Business Information', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 16),
                   TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Business Name *', prefixIcon: Icon(Icons.business, size: 18))),
                   const SizedBox(height: 16),
@@ -93,7 +93,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(height: 16),
                   TextField(controller: _gstCtrl, decoration: const InputDecoration(labelText: 'GST Number', prefixIcon: Icon(Icons.numbers, size: 18))),
                   const SizedBox(height: 24),
-                  Text('Invoice Settings', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
+                  const Text('Invoice Settings', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 16),
                   TextField(controller: _prefixCtrl, decoration: const InputDecoration(labelText: 'Invoice Prefix', hintText: 'RE', prefixIcon: Icon(Icons.tag, size: 18))),
                   const SizedBox(height: 16),

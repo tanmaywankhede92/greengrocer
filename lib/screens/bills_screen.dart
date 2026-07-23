@@ -136,7 +136,7 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
           Expanded(
             child: billsAsync.when(
               loading: () => const LoadingWidget(),
-              error: (e, _) => Center(child: Text('Error: $e', style: TextStyle(color: AppTheme.error))),
+              error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.error))),
               data: (result) {
                 if (result.data.isEmpty) return const EmptyState(icon: Icons.receipt_long, title: 'No bills found');
                 return ListView.builder(
@@ -155,13 +155,13 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
                           ),
                           child: Icon(b.status == BillStatus.active ? Icons.check_circle : Icons.cancel, color: b.status == BillStatus.active ? AppTheme.success : AppTheme.error, size: 22),
                         ),
-                        title: Text(b.billNumber, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                        subtitle: Text('${b.customer?.name ?? ''}  •  ${AppUtils.formatDate(b.billDate)}', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                        title: Text(b.billNumber, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                        subtitle: Text('${b.customer?.name ?? ''}  •  ${AppUtils.formatDate(b.billDate)}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                         trailing: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(AppUtils.formatCurrency(b.total), style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                            Text(AppUtils.formatCurrency(b.total), style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
                             Text(b.status == BillStatus.active ? 'Active' : 'Cancelled', style: TextStyle(color: b.status == BillStatus.active ? AppTheme.success : AppTheme.error, fontSize: 11)),
                           ],
                         ),

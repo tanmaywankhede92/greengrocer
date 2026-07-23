@@ -36,7 +36,7 @@ class PaymentSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Payment', style: TextStyle(color: AppTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
+          const Text('Payment', style: TextStyle(color: AppTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
           TextField(
             keyboardType: TextInputType.number,
@@ -57,7 +57,7 @@ class PaymentSection extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Balance', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                const Text('Balance', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
                 Text(
                   isPaid ? 'Paid \u2713' : 'Due: ${AppUtils.formatCurrency(balance)}',
                   style: TextStyle(

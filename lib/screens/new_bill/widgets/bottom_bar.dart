@@ -24,7 +24,7 @@ class BottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: AppTheme.border)),
       ),
@@ -53,7 +53,7 @@ class BottomBar extends StatelessWidget {
   Widget _summary() {
     return Text(
       '$itemCount item${itemCount == 1 ? '' : 's'}  •  Total ${AppUtils.formatCurrency(total)}',
-      style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13),
+      style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13),
     );
   }
 

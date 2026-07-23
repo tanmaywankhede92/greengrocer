@@ -26,7 +26,7 @@ class Header extends ConsumerWidget {
               onTap: onMenuTap,
               child: Container(
                 padding: const EdgeInsets.all(8),
-                child: Icon(Icons.menu, color: AppTheme.textSecondary, size: 24),
+                child: const Icon(Icons.menu, color: AppTheme.textSecondary, size: 24),
               ),
             ),
           if (!isDesktop) const SizedBox(width: 8),
@@ -35,7 +35,7 @@ class Header extends ConsumerWidget {
               '${DateTime.now().day.toString().padLeft(2, '0')} '
               '${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][DateTime.now().month - 1]} '
               '${DateTime.now().year}',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
             ),
           ),
           if (authState.user != null) ...[
@@ -48,7 +48,7 @@ class Header extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 10),
-            Text(authState.user!.fullName, style: TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
+            Text(authState.user!.fullName, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
             const SizedBox(width: 16),
           ],
         ],

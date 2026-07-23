@@ -57,8 +57,8 @@ class PaymentDetailsDialog extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Payment Details', style: TextStyle(color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.w700)),
-                        Text('#${p.receiptNumber}', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                        const Text('Payment Details', style: TextStyle(color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.w700)),
+                        Text('#${p.receiptNumber}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -79,7 +79,7 @@ class PaymentDetailsDialog extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    Text('Amount Received', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                    const Text('Amount Received', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                     const SizedBox(height: 4),
                     Text(AppUtils.formatCurrency(p.amount), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppTheme.success)),
                   ],

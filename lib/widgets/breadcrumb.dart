@@ -19,17 +19,17 @@ class Breadcrumb extends StatelessWidget {
       child: Row(
         children: [
           for (int i = 0; i < crumbs.length; i++) ...[
-            if (i > 0) Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
+            if (i > 0) const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 6),
               child: Icon(Icons.chevron_right, size: 16, color: AppTheme.textSecondary),
             ),
             if (crumbs[i].route != null)
               GestureDetector(
                 onTap: () => context.go(crumbs[i].route!),
-                child: Text(crumbs[i].label, style: TextStyle(color: AppTheme.primaryRed, fontSize: 13)),
+                child: Text(crumbs[i].label, style: const TextStyle(color: AppTheme.primaryRed, fontSize: 13)),
               )
             else
-              Text(crumbs[i].label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+              Text(crumbs[i].label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
           ],
         ],
       ),

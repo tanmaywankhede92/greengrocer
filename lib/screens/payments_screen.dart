@@ -8,11 +8,9 @@ import '../models/customer.dart';
 import '../models/payment.dart';
 import '../providers/customer_provider.dart';
 import '../providers/payment_provider.dart';
-import '../providers/bill_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/breadcrumb.dart';
-import '../widgets/bill_pdf.dart';
-import '../widgets/bill_item_row.dart';
+import '../widgets/payment_invoice_pdf.dart';
 import 'payments/widgets/summary_cards.dart';
 import 'payments/widgets/payment_toolbar.dart';
 import 'payments/widgets/customer_outstanding_table.dart';
@@ -77,9 +75,9 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
             ),
           ),
           const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: const SummaryCards(),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: SummaryCards(),
           ),
           const SizedBox(height: 6),
           Expanded(
@@ -105,7 +103,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
             children: [
               Expanded(
                 child: filtered.isEmpty
-                    ? _EmptyView(icon: Icons.people_outline, title: 'No customers found', subtitle: 'Try adjusting your search')
+                    ? const _EmptyView(icon: Icons.people_outline, title: 'No customers found', subtitle: 'Try adjusting your search')
                     : ListView.builder(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                         itemCount: filtered.length,
@@ -131,7 +129,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
           children: [
             Expanded(
               child: filtered.isEmpty
-                  ? _EmptyView(icon: Icons.people_outline, title: 'No customers found', subtitle: 'Try adjusting your search')
+                  ? const _EmptyView(icon: Icons.people_outline, title: 'No customers found', subtitle: 'Try adjusting your search')
                   : CustomerOutstandingTable(
                       customers: filtered,
                       loadingAction: _loadingAction,
@@ -165,22 +163,21 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
             children: [
               Expanded(
                 child: payments.isEmpty
-                    ? _EmptyView(icon: Icons.receipt_long, title: 'No transactions found', subtitle: 'Payments will appear here')
+                    ? const _EmptyView(icon: Icons.receipt_long, title: 'No transactions found', subtitle: 'Payments will appear here')
                     : ListView.builder(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                         itemCount: payments.length,
                         itemBuilder: (_, i) {
                           final pay = payments[i];
                           final cust = pay.customer;
-                          final invKey = cust != null ? 'inv_${cust.id}' : null;
                           return TransactionCard(
                             payment: pay,
                             loadingAction: _loadingAction,
                             onView: (p) => PaymentDetailsDialog.show(context, payment: p, loadingAction: _loadingAction,
-                              onPrint: p.customer != null ? () => _downloadInvoice(p.customer!, actionKey: 'dlg_print_${p.customer!.id}') : null,
-                              onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, actionKey: 'dlg_dl_${p.customer!.id}') : null),
-                            onPrint: cust != null ? (_) => _downloadInvoice(cust, actionKey: invKey) : (_) {},
-                            onDownload: cust != null ? (_) => _downloadInvoice(cust, actionKey: invKey) : (_) {},
+                              onPrint: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'print_pay_${p.id}') : null,
+                              onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'dl_pay_${p.id}') : null),
+                            onPrint: cust != null ? (_) => _downloadInvoice(cust, payment: pay, actionKey: 'print_pay_${pay.id}') : (_) {},
+                            onDownload: cust != null ? (_) => _downloadInvoice(cust, payment: pay, actionKey: 'dl_pay_${pay.id}') : (_) {},
                           );
                         },
                       ),
@@ -197,15 +194,15 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
           children: [
             Expanded(
               child: payments.isEmpty
-                  ? _EmptyView(icon: Icons.receipt_long, title: 'No transactions found', subtitle: 'Payments will appear here')
+                  ? const _EmptyView(icon: Icons.receipt_long, title: 'No transactions found', subtitle: 'Payments will appear here')
                   : RecentTransactionsTable(
                       payments: payments,
                       loadingAction: _loadingAction,
                       onView: (p) => PaymentDetailsDialog.show(context, payment: p, loadingAction: _loadingAction,
-                        onPrint: p.customer != null ? () => _downloadInvoice(p.customer!, actionKey: 'dlg_print_${p.customer!.id}') : null,
-                        onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, actionKey: 'dlg_dl_${p.customer!.id}') : null),
-                      onPrint: (p) => p.customer != null ? _downloadInvoice(p.customer!, actionKey: 'inv_${p.customer!.id}') : null,
-                      onDownload: (p) => p.customer != null ? _downloadInvoice(p.customer!, actionKey: 'inv_${p.customer!.id}') : null,
+                        onPrint: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'print_pay_${p.id}') : null,
+                        onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'dl_pay_${p.id}') : null),
+                      onPrint: (p) => p.customer != null ? _downloadInvoice(p.customer!, payment: p, actionKey: 'print_pay_${p.id}') : null,
+                      onDownload: (p) => p.customer != null ? _downloadInvoice(p.customer!, payment: p, actionKey: 'dl_pay_${p.id}') : null,
                     ),
             ),
             if (totalPages > 1) _PaginationBar(
@@ -237,38 +234,51 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     }
   }
 
-  Future<void> _downloadInvoice(Customer customer, {String? actionKey}) async {
+  Future<void> _downloadInvoice(Customer customer, {Payment? payment, String? actionKey}) async {
     if (actionKey != null) setState(() => _loadingAction = actionKey);
     try {
-      final billService = ref.read(billServiceProvider);
-      final result = await billService.getAll(search: customer.name, status: 'active', limit: 1);
-      if (result.data.isEmpty) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No active bills found for ${customer.name}'), backgroundColor: AppTheme.error),
-        );
-        return;
+      Payment? pay = payment;
+      if (pay == null) {
+        final paymentService = ref.read(paymentServiceProvider);
+        final result = await paymentService.getAll(customerId: customer.id, limit: 1);
+        if (result.data.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('No payments found for ${customer.name}'), backgroundColor: AppTheme.error),
+            );
+          }
+          return;
+        }
+        pay = result.data.first;
       }
-      final bill = result.data.first;
-      final billDetail = await billService.getById(bill.id);
+
       final settings = await ref.read(settingsProvider.future);
-      final lineItems = billDetail.items.map((i) => LineItem(
-        productId: i.productId, productName: i.productName, productNameHindi: i.productNameHindi,
-        unit: i.unit, quantity: i.quantity, defaultRate: i.defaultRate, appliedRate: i.appliedRate,
-      )).toList();
-      final pdf = await buildBillPdf(
-        settings: settings, billNumber: bill.billNumber,
-        customerName: bill.customer?.name ?? customer.name,
-        customerMobile: bill.customer?.mobile ?? customer.mobile,
-        customerAddress: bill.customer?.address ?? customer.address,
-        subtotal: bill.subtotal, total: bill.total, deliveryCharge: bill.deliveryCharge,
-        paidNow: bill.paidNow, items: lineItems, billDate: bill.billDate,
-        paymentMode: bill.paymentType, isReprint: true,
+      final previousOutstanding = customer.currentDue + pay.amount;
+      final remainingOutstanding = customer.currentDue;
+
+      final pdf = await buildPaymentInvoicePdf(
+        settings: settings,
+        receiptNumber: pay.receiptNumber,
+        customer: pay.customer ?? customer,
+        amount: pay.amount,
+        paymentMode: pay.mode.displayName,
+        previousOutstanding: previousOutstanding,
+        remainingOutstanding: remainingOutstanding,
+        paymentDate: pay.paymentDate,
+        remarks: pay.notes,
       );
-      await printPdf(pdf, filename: bill.billNumber);
+      if (mounted) {
+        await printPdf(pdf, filename: 'Invoice-${pay.receiptNumber}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invoice downloaded'), backgroundColor: AppTheme.success),
+        );
+      }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Invoice error: $e'), backgroundColor: AppTheme.error),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Invoice error: $e'), backgroundColor: AppTheme.error),
+        );
+      }
     } finally {
       if (mounted && actionKey != null) setState(() => _loadingAction = null);
     }
@@ -382,7 +392,7 @@ class _PaginationBar extends StatelessWidget {
             color: onPrev != null ? AppTheme.primaryRed : Colors.grey.shade300,
           ),
           const SizedBox(width: 8),
-          Text('Page $page of $totalPages', style: TextStyle(
+          Text('Page $page of $totalPages', style: const TextStyle(
             color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w500,
           )),
           const SizedBox(width: 8),
@@ -413,10 +423,10 @@ class _EmptyView extends StatelessWidget {
           children: [
             Icon(icon, size: 56, color: AppTheme.textSecondary.withAlpha(80)),
             const SizedBox(height: 16),
-            Text(title, style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+            Text(title, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
             if (subtitle != null) ...[
               const SizedBox(height: 6),
-              Text(subtitle!, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13), textAlign: TextAlign.center),
+              Text(subtitle!, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13), textAlign: TextAlign.center),
             ],
           ],
         ),
@@ -446,9 +456,9 @@ class _ErrorCard extends StatelessWidget {
           children: [
             const Icon(Icons.error_outline, size: 48, color: AppTheme.error),
             const SizedBox(height: 12),
-            Text('Something went wrong', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+            const Text('Something went wrong', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
-            Text(message, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13), textAlign: TextAlign.center),
+            Text(message, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13), textAlign: TextAlign.center),
             const SizedBox(height: 16),
             FilledButton.icon(
               icon: const Icon(Icons.refresh, size: 16),

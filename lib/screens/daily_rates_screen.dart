@@ -85,7 +85,7 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
                       onPressed: () => setState(() { _selectedDate = _selectedDate.subtract(const Duration(days: 1)); _loadRates(); }),
                     ),
                     const SizedBox(width: 12),
-                    Text(AppUtils.formatDate(_selectedDate), style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                    Text(AppUtils.formatDate(_selectedDate), style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
                     const SizedBox(width: 12),
                     IconButton(
                       icon: const Icon(Icons.chevron_right),
@@ -111,8 +111,8 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
                     : null,
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppTheme.border)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppTheme.border)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppTheme.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppTheme.border)),
               ),
               onChanged: (v) => setState(() => _search = v.trim().toLowerCase()),
             ),
@@ -159,12 +159,12 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(p.nameHindi.isNotEmpty ? '${p.name} (${p.nameHindi})' : p.name, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
+                                        Text(p.nameHindi.isNotEmpty ? '${p.name} (${p.nameHindi})' : p.name, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
                                       ],
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(p.unit.value, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                                  Text(p.unit.value, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                                   const SizedBox(width: 8),
                                   ConstrainedBox(
                                     constraints: const BoxConstraints(minWidth: 80, maxWidth: 120),

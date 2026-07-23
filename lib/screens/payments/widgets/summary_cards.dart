@@ -39,7 +39,7 @@ class SummaryCards extends ConsumerWidget {
                 _SummaryCardData(Icons.today, 'Today\'s Collection', todayCollection, AppTheme.success, 'collected today'),
                 _SummaryCardData(Icons.calendar_month, 'Monthly Collection', monthCollection, AppTheme.info, 'this month'),
                 _SummaryCardData(Icons.account_balance_wallet, 'Outstanding', outstanding, AppTheme.error, 'total pending'),
-                _SummaryCardData(Icons.receipt_long, 'Total Payments', payments.length.toDouble(), AppTheme.primaryRed, '${pendingCount} pending'),
+                _SummaryCardData(Icons.receipt_long, 'Total Payments', payments.length.toDouble(), AppTheme.primaryRed, '$pendingCount pending'),
               ];
               if (isWide) {
                 return Row(
@@ -104,14 +104,14 @@ class _SummaryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(data.title, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11, fontWeight: FontWeight.w500)),
+                Text(data.title, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 2),
                 Text(
                   isCurrency ? AppUtils.formatCurrency(data.value) : data.value.toInt().toString(),
-                  style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold),
+                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold),
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                 ),
-                Text(data.subtitle, style: TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
+                Text(data.subtitle, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
               ],
             ),
           ),

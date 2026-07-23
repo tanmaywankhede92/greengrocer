@@ -45,7 +45,7 @@ class CustomerOutstandingCard extends StatelessWidget {
                   backgroundColor: AppTheme.primaryRed.withAlpha(25),
                   child: Text(
                     AppUtils.initials(c.name),
-                    style: TextStyle(color: AppTheme.primaryRed, fontSize: 11, fontWeight: FontWeight.w700),
+                    style: const TextStyle(color: AppTheme.primaryRed, fontSize: 11, fontWeight: FontWeight.w700),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -54,7 +54,7 @@ class CustomerOutstandingCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(c.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                      Text(c.mobile, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                      Text(c.mobile, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -103,7 +103,7 @@ class _CompactAmt extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
+        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
         Text(AppUtils.formatCurrency(amount), style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
       ],
     );

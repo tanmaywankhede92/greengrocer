@@ -9,7 +9,8 @@ import '../../../models/customer.dart';
 import '../../../providers/customer_provider.dart';
 import '../../../providers/payment_provider.dart';
 import '../../../widgets/payment_mode_select.dart';
-import '../../../widgets/payment_receipt_pdf.dart';
+import '../../../widgets/payment_invoice_pdf.dart';
+import '../../../providers/settings_provider.dart';
 import 'payment_helpers.dart';
 
 class AddPaymentDialog extends ConsumerStatefulWidget {
@@ -74,7 +75,7 @@ class _AddPaymentDialogState extends ConsumerState<AddPaymentDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text('Record Payment', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-                          Text(c.name, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                          Text(c.name, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
                         ],
                       ),
                     ),
@@ -142,16 +143,18 @@ class _AddPaymentDialogState extends ConsumerState<AddPaymentDialog> {
   Future<void> _submit() async {
     final amount = double.tryParse(_amountCtrl.text);
     if (amount == null || amount <= 0) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid amount'), backgroundColor: AppTheme.error),
       );
+      }
       return;
     }
 
     setState(() => _submitting = true);
     final c = widget.customer;
     try {
-      final result = await ref.read(paymentServiceProvider).create({
+      await ref.read(paymentServiceProvider).create({
         'customerId': c.id,
         'amount': amount,
         'mode': _mode.value,
@@ -159,12 +162,13 @@ class _AddPaymentDialogState extends ConsumerState<AddPaymentDialog> {
         'notes': _notesCtrl.text,
         'paymentDate': AppUtils.formatDateApi(DateTime.now()),
       });
-      final receiptNum = result['receiptNumber'] as String? ?? result['id'] as String;
       if (mounted) Navigator.pop(context);
       if (mounted) {
         ref.invalidate(customerListProvider(const CustomerListParams()));
+        ref.invalidate(paymentListProvider(const PaymentListParams()));
+        ref.invalidate(paymentListProvider(PaymentListParams(customerId: c.id)));
         widget.onPaymentRecorded?.call();
-        _showReceipt(receiptNum, amount, c);
+        _showInvoice(c, paidNow: amount, paymentMode: _mode.value);
       }
     } catch (e) {
       if (mounted) {
@@ -174,23 +178,28 @@ class _AddPaymentDialogState extends ConsumerState<AddPaymentDialog> {
     }
   }
 
-  Future<void> _showReceipt(String paymentId, double amount, Customer customer) async {
+  Future<void> _showInvoice(Customer customer, {required double paidNow, required String paymentMode}) async {
     try {
-      final pdf = await buildPaymentReceiptPdf(
-        receiptNumber: paymentId,
+      final settings = await ref.read(settingsProvider.future);
+      final previousOutstanding = customer.currentDue + paidNow;
+      final remainingOutstanding = customer.currentDue;
+      final now = DateTime.now();
+      final receiptNumber = 'RCP-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${now.millisecond}';
+      final pdf = await buildPaymentInvoicePdf(
+        settings: settings,
+        receiptNumber: receiptNumber,
         customer: customer,
-        amount: amount,
-        modeDisplay: _mode.displayName,
-        reference: _refCtrl.text.isNotEmpty ? _refCtrl.text : null,
-        notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
-        paymentDate: DateTime.now(),
-        outstandingBefore: customer.currentDue,
-        outstandingAfter: (customer.currentDue - amount).clamp(0, double.infinity),
+        amount: paidNow,
+        paymentMode: paymentMode,
+        previousOutstanding: previousOutstanding,
+        remainingOutstanding: remainingOutstanding,
+        paymentDate: now,
+        remarks: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
       );
-      if (mounted) await printPdf(pdf, filename: 'Receipt-$paymentId');
+      if (mounted) await printPdf(pdf, filename: 'Payment-$receiptNumber');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Receipt error: $e'), backgroundColor: AppTheme.error));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invoice error: $e'), backgroundColor: AppTheme.error));
       }
     }
   }

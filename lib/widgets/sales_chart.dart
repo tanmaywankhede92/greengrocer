@@ -99,9 +99,9 @@ class _SalesChartState extends ConsumerState<SalesChart> {
           const SizedBox(height: 12),
           Expanded(
             child: _loading
-                ? Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryRed))
+                ? const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryRed))
                 : _yearTotal == 0
-                    ? Center(child: Text('No sales data for $_selectedYear', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)))
+                    ? Center(child: Text('No sales data for $_selectedYear', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)))
                     : _buildChart(),
           ),
         ],
@@ -112,9 +112,9 @@ class _SalesChartState extends ConsumerState<SalesChart> {
   Widget _buildHeader() {
     return Row(
       children: [
-        Icon(Icons.bar_chart, size: 20, color: AppTheme.primaryRed),
+        const Icon(Icons.bar_chart, size: 20, color: AppTheme.primaryRed),
         const SizedBox(width: 8),
-        Text('Sales', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+        const Text('Sales', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
         const Spacer(),
         Container(
           height: 36,
@@ -128,8 +128,8 @@ class _SalesChartState extends ConsumerState<SalesChart> {
             child: DropdownButton<int>(
               value: _selectedYear,
               isDense: true,
-              style: TextStyle(color: AppTheme.primaryRed, fontSize: 13, fontWeight: FontWeight.w600),
-              icon: Icon(Icons.keyboard_arrow_down, size: 18, color: AppTheme.primaryRed),
+              style: const TextStyle(color: AppTheme.primaryRed, fontSize: 13, fontWeight: FontWeight.w600),
+              icon: const Icon(Icons.keyboard_arrow_down, size: 18, color: AppTheme.primaryRed),
               items: _availableYears.map((y) => DropdownMenuItem(
                 value: y,
                 child: Text(y.toString()),
@@ -167,12 +167,12 @@ class _SalesChartState extends ConsumerState<SalesChart> {
       ),
       child: Row(
         children: [
-          Icon(Icons.date_range, size: 14, color: AppTheme.textSecondary),
+          const Icon(Icons.date_range, size: 14, color: AppTheme.textSecondary),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               periodText,
-              style: TextStyle(color: AppTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.w500),
+              style: const TextStyle(color: AppTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -200,15 +200,15 @@ class _SalesChartState extends ConsumerState<SalesChart> {
                 final m = _monthlyData[groupIndex];
                 return BarTooltipItem(
                   '${m.month} $_selectedYear\n${AppUtils.formatCurrency(m.sales)}',
-                  TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                  const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
                 );
               },
             ),
           ),
           titlesData: FlTitlesData(
-            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             bottomTitles: AxisTitles(sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 30,

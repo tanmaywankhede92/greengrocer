@@ -85,7 +85,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                             child: Center(
                               child: Text(
                                 AppUtils.initials(customer.name),
-                                style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.w700, fontSize: 14),
+                                style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.w700, fontSize: 14),
                               ),
                             ),
                           ),
@@ -94,8 +94,8 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(customer.name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
-                                Text(customer.mobile, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                                Text(customer.name, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                                Text(customer.mobile, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                               ],
                             ),
                           ),
@@ -220,7 +220,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
         decoration: InputDecoration(labelText: label, isDense: true),
         child: Text(
           AppUtils.formatDate(date),
-          style: TextStyle(color: AppTheme.textPrimary),
+          style: const TextStyle(color: AppTheme.textPrimary),
         ),
       ),
     );
@@ -271,7 +271,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
         Text(AppUtils.formatCurrency(amount), style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
       ],
     );
@@ -280,7 +280,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
   Widget _summaryStat(String label, double amount, [Color? color]) {
     return Column(
       children: [
-        Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
         const SizedBox(height: 4),
         Text(
           AppUtils.formatCurrency(amount),
@@ -389,7 +389,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           child: Text(
             dateKey,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppTheme.primaryRed,
               fontWeight: FontWeight.w700,
               fontSize: 12,
@@ -460,7 +460,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
             child: Text(
               credit > 0 ? AppUtils.formatCurrency(credit.toDouble()) : '-',
               textAlign: TextAlign.right,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 color: AppTheme.success,
                 fontWeight: FontWeight.w500,
@@ -499,8 +499,8 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Opening Balance', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w500)),
-                Text(AppUtils.formatCurrency(openingBalance), style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
+                const Text('Opening Balance', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w500)),
+                Text(AppUtils.formatCurrency(openingBalance), style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
               ],
             ),
           );
@@ -517,7 +517,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
               padding: const EdgeInsets.only(top: 8, bottom: 4),
               child: Text(
                 dateKey,
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppTheme.primaryRed,
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
@@ -555,7 +555,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                         ),
                         Text(
                           AppUtils.formatCurrency(balance.toDouble()),
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
                         ),
                       ],
                     ),
@@ -565,13 +565,13 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                           if (debit > 0)
                             Text(
                               'Bill: ${AppUtils.formatCurrency(debit.toDouble())}',
-                              style: TextStyle(fontSize: 11, color: AppTheme.error, fontWeight: FontWeight.w500),
+                              style: const TextStyle(fontSize: 11, color: AppTheme.error, fontWeight: FontWeight.w500),
                             ),
                           if (debit > 0 && credit > 0) const SizedBox(width: 12),
                           if (credit > 0)
                             Text(
                               'Paid: ${AppUtils.formatCurrency(credit.toDouble())}',
-                              style: TextStyle(fontSize: 11, color: AppTheme.success, fontWeight: FontWeight.w500),
+                              style: const TextStyle(fontSize: 11, color: AppTheme.success, fontWeight: FontWeight.w500),
                             ),
                         ],
                       ),

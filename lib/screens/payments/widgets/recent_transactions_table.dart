@@ -52,7 +52,7 @@ class RecentTransactionsTable extends StatelessWidget {
                       children: [
                         Icon(Icons.receipt_long, size: 48, color: AppTheme.textSecondary.withAlpha(80)),
                         const SizedBox(height: 12),
-                        Text('No transactions found', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                        const Text('No transactions found', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
                       ],
                     ),
                   ),
@@ -99,15 +99,15 @@ class _TransactionRow extends StatelessWidget {
     final dateStr = DateFormat('dd MMM yy').format(p.paymentDate);
     final timeStr = DateFormat('hh:mm a').format(p.paymentDate);
 
-    final isLoadingPrint = loadingAction == 'inv_${p.customer?.id}';
-    final isLoadingDownload = loadingAction == 'inv_${p.customer?.id}';
+    final isLoadingPrint = loadingAction == 'print_pay_${p.id}';
+    final isLoadingDownload = loadingAction == 'dl_pay_${p.id}';
     final isInvLoading = isLoadingPrint || isLoadingDownload;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: isOdd ? const Color(0xFFFAFAFC) : Colors.white,
-        border: Border(bottom: BorderSide(color: const Color(0xFFEEEEF0), width: 0.5)),
+        border: const Border(bottom: BorderSide(color: Color(0xFFEEEEF0), width: 0.5)),
       ),
       child: Row(
         children: [
