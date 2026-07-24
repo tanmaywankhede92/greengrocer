@@ -11,5 +11,6 @@ router.get('/', productController.list);
 router.post('/', validate(createProductSchema), productController.create);
 router.put('/:id', validate(updateProductSchema), productController.update);
 router.patch('/:id/toggle', validate(toggleProductSchema), productController.toggle);
+router.delete('/:id', productController.remove);
 
 module.exports = router;

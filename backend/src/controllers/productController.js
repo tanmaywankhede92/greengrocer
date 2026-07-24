@@ -26,4 +26,9 @@ const toggle = asyncHandler(async (req, res) => {
   ApiResponse.success(res, null, messages.PRODUCT.UPDATED);
 });
 
-module.exports = { list, create, update, toggle };
+const remove = asyncHandler(async (req, res) => {
+  await productService.deleteProduct(req.params.id);
+  ApiResponse.success(res, null, messages.PRODUCT.DELETED);
+});
+
+module.exports = { list, create, update, toggle, remove };

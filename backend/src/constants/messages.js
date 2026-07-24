@@ -21,6 +21,7 @@ module.exports = {
   PRODUCT: {
     CREATED: 'Product created successfully',
     UPDATED: 'Product updated successfully',
+    DELETED: 'Product deleted successfully',
     NOT_FOUND: 'Product not found',
   },
   RATE: {

@@ -138,9 +138,20 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                                 }
                               },
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.edit, size: 18, color: AppTheme.textSecondary),
-                              onPressed: () => _showProductForm(context, ref, p),
+                            PopupMenuButton<String>(
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(Icons.more_vert, size: 18, color: AppTheme.textSecondary),
+                              onSelected: (v) {
+                                if (v == 'edit') {
+                                  _showProductForm(context, ref, p);
+                                } else if (v == 'delete') {
+                                  _confirmDelete(context, ref, p);
+                                }
+                              },
+                              itemBuilder: (_) => [
+                                const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Edit')])),
+                                const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline, size: 18, color: AppTheme.error), SizedBox(width: 8), Text('Delete', style: TextStyle(color: AppTheme.error))])),
+                              ],
                             ),
                           ],
                         ),
@@ -232,6 +243,48 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             }, child: const Text('Save')),
           ],
         ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref, Product p) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_rounded, color: AppTheme.error, size: 40),
+        title: const Text('Delete Product'),
+        content: Text(
+          'Are you sure you want to delete "${p.name}"?\n\nThis action cannot be undone.',
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error, foregroundColor: Colors.white),
+            onPressed: () async {
+              try {
+                await ref.read(productServiceProvider).delete(p.id);
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('"${p.name}" deleted successfully'), backgroundColor: AppTheme.success),
+                  );
+                }
+                ref.invalidate(allProductsProvider);
+                ref.invalidate(productListProvider);
+              } catch (e) {
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+                  );
+                }
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }

@@ -24,4 +24,8 @@ class ProductService {
   Future<void> toggleActive(String id, bool isActive) async {
     await _client.patch('/products/$id/toggle', data: {'isActive': isActive});
   }
+
+  Future<void> delete(String id) async {
+    await _client.delete('/products/$id');
+  }
 }

@@ -26,8 +26,8 @@ class BillPreviewScreen extends ConsumerStatefulWidget {
     required this.customer,
     required this.items,
     this.deliveryCharge = 0,
-    required this.paymentAmount,
-    required this.paymentMode,
+    this.paymentAmount = 0,
+    this.paymentMode = PaymentMode.cash,
   });
 
   @override

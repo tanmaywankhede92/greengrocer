@@ -28,10 +28,15 @@ const toggleActive = async (id, isActive) => {
   return Product.findByIdAndUpdate(id, { isActive }, { new: true });
 };
 
+const softDelete = async (id) => {
+  return Product.findByIdAndUpdate(id, { isDeleted: true }, { new: true });
+};
+
 module.exports = {
   findProducts,
   findById,
   createProduct,
   updateProduct,
   toggleActive,
+  softDelete,
 };

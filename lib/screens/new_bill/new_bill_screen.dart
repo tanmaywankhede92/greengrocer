@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/theme.dart';
@@ -19,7 +18,6 @@ import 'widgets/product_list.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/bottom_bar.dart';
 import 'widgets/summary_card.dart';
-import 'widgets/payment_section.dart';
 import '../bill_preview_screen.dart';
 
 class NewBillScreen extends ConsumerStatefulWidget {
@@ -31,8 +29,6 @@ class NewBillScreen extends ConsumerStatefulWidget {
 class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   Customer? _selectedCustomer;
   final List<LineItem> _items = [];
-  double _paymentAmount = 0;
-  PaymentMode _paymentMode = PaymentMode.cash;
   double _deliveryCharge = 0;
   Map<String, double> _defaultRates = {};
 
@@ -43,7 +39,6 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   final _rateCtrl = TextEditingController();
   final _rateFocusNode = FocusNode();
   final _deliveryChargeCtrl = TextEditingController();
-  final _paymentCtrl = TextEditingController();
 
   List<Product> _searchResults = [];
   bool _showSearchDropdown = false;
@@ -69,7 +64,6 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     _rateCtrl.dispose();
     _rateFocusNode.dispose();
     _deliveryChargeCtrl.dispose();
-    _paymentCtrl.dispose();
     super.dispose();
   }
 
@@ -88,7 +82,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
       if (mounted) {
         setState(() {
           _searchResults = results.where((p) => p.isActive).toList();
-          _showSearchDropdown = _searchResults.isNotEmpty;
+          _showSearchDropdown = true;
           _isSearching = false;
         });
       }
@@ -185,6 +179,16 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     } catch (_) {}
   }
 
+  Future<void> _addProduct() async {
+    final newProduct = await AddProductDialog.show(
+      context,
+      initialName: _searchCtrl.text.trim(),
+    );
+    if (newProduct != null && mounted) {
+      _selectProduct(newProduct);
+    }
+  }
+
   void _goToPreview() {
     if (_selectedCustomer == null) return;
     if (_editingProduct != null) _confirmEdit();
@@ -200,8 +204,6 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
           customer: _selectedCustomer!,
           items: List.from(_items),
           deliveryCharge: _deliveryCharge,
-          paymentAmount: _paymentAmount,
-          paymentMode: _paymentMode,
         ),
       ),
     );
@@ -219,9 +221,14 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= AppConstants.tabletBreakpoint;
-        return Scaffold(
-          appBar: _buildAppBar(),
-          body: _buildBody(isWide),
+        return GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          behavior: HitTestBehavior.translucent,
+          child: Scaffold(
+            appBar: _buildAppBar(),
+            body: _buildBody(isWide),
+            resizeToAvoidBottomInset: true,
+          ),
         );
       },
     );
@@ -320,7 +327,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
                     isWide: isWide,
                   ),
                 ),
-              if (_showSearchDropdown && _searchResults.isNotEmpty)
+              if (_showSearchDropdown)
                 Positioned(
                   top: 0,
                   left: 0,
@@ -331,6 +338,8 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
                       results: _searchResults,
                       defaultRates: _defaultRates,
                       onSelected: _selectProduct,
+                      onAddProduct: _addProduct,
+                      searchQuery: _searchCtrl.text.trim(),
                     ),
                   ),
                 ),
@@ -343,14 +352,6 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
           deliveryCharge: _deliveryCharge,
           onDeliveryChanged: (v) => setState(() => _deliveryCharge = v),
           total: _total,
-        ),
-        PaymentSection(
-          total: _total,
-          paymentAmount: _paymentAmount,
-          onAmountChanged: (v) => setState(() => _paymentAmount = v),
-          paymentMode: _paymentMode,
-          onModeChanged: (v) =>
-              setState(() => _paymentMode = v ?? PaymentMode.cash),
         ),
         BottomBar(
           itemCount: _items.length,

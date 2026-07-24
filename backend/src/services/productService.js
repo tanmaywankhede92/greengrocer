@@ -28,4 +28,14 @@ const toggleProduct = async (id, isActive) => {
   return product;
 };
 
-module.exports = { listProducts, createProduct, updateProduct, toggleProduct };
+const deleteProduct = async (id) => {
+  const product = await productRepository.softDelete(id);
+  if (!product) {
+    const error = new Error('Product not found');
+    error.statusCode = 404;
+    throw error;
+  }
+  return product;
+};
+
+module.exports = { listProducts, createProduct, updateProduct, toggleProduct, deleteProduct };

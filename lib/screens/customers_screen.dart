@@ -8,6 +8,7 @@ import '../providers/customer_provider.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/breadcrumb.dart';
+import '../models/customer.dart';
 
 class CustomersScreen extends ConsumerStatefulWidget {
   const CustomersScreen({super.key});
@@ -74,12 +75,40 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                             child: ListTile(
                               title: Text(c.name, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
                               subtitle: Text('${c.mobile}  •  ${c.address ?? ""}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                              trailing: Column(
+                              trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text(AppUtils.formatCurrency(c.currentDue), style: TextStyle(color: c.currentDue > 0 ? AppTheme.warning : AppTheme.success, fontWeight: FontWeight.w600)),
-                                  Text('${c.billCount} bills', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(AppUtils.formatCurrency(c.currentDue), style: TextStyle(color: c.currentDue > 0 ? AppTheme.warning : AppTheme.success, fontWeight: FontWeight.w600)),
+                                      Text('${c.billCount} bills', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                                    ],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  PopupMenuButton<String>(
+                                    padding: EdgeInsets.zero,
+                                    icon: const Icon(Icons.more_vert, size: 20, color: AppTheme.textSecondary),
+                                    onSelected: (v) {
+                                      if (v == 'edit') {
+                                        _showCustomerForm(context, {
+                                          'id': c.id,
+                                          'name': c.name,
+                                          'mobile': c.mobile,
+                                          'address': c.address ?? '',
+                                          'gstNumber': c.gstNumber ?? '',
+                                          'openingBalance': c.openingBalance,
+                                        });
+                                      } else if (v == 'delete') {
+                                        _confirmDelete(context, c);
+                                      }
+                                    },
+                                    itemBuilder: (_) => [
+                                      const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Edit')])),
+                                      const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline, size: 18, color: AppTheme.error), SizedBox(width: 8), Text('Delete', style: TextStyle(color: AppTheme.error))])),
+                                    ],
+                                  ),
                                 ],
                               ),
                               onTap: () => context.go('/customers/${c.id}'),
@@ -149,15 +178,65 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
             try {
               if (initial == null) {
                 await ref.read(customerServiceProvider).create(data);
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Customer created successfully'), backgroundColor: AppTheme.success),
+                  );
+                }
               } else {
                 await ref.read(customerServiceProvider).update(initial['id'], data);
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Customer updated successfully'), backgroundColor: AppTheme.success),
+                  );
+                }
               }
-              if (ctx.mounted) Navigator.pop(ctx);
               ref.invalidate(customerListProvider);
             } catch (e) {
               if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
             }
           }, child: const Text('Save')),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, Customer c) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_rounded, color: AppTheme.error, size: 40),
+        title: const Text('Delete Customer'),
+        content: Text(
+          'Are you sure you want to delete "${c.name}"?\n\nThis action cannot be undone.',
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error, foregroundColor: Colors.white),
+            onPressed: () async {
+              try {
+                await ref.read(customerServiceProvider).delete(c.id);
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('"${c.name}" deleted successfully'), backgroundColor: AppTheme.success),
+                  );
+                }
+                ref.invalidate(customerListProvider);
+              } catch (e) {
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+                );
+              }
+            },
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
