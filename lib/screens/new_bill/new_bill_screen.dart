@@ -18,7 +18,6 @@ import 'widgets/product_list.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/bottom_bar.dart';
 import 'widgets/summary_card.dart';
-import '../bill_preview_screen.dart';
 
 class NewBillScreen extends ConsumerStatefulWidget {
   const NewBillScreen({super.key});
@@ -259,16 +258,11 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
       return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => BillPreviewScreen(
-          customer: _selectedCustomer!,
-          items: List.from(_items),
-          deliveryCharge: _deliveryCharge,
-        ),
-      ),
-    );
+    context.push('/bills/preview', extra: {
+      'customer': _selectedCustomer!,
+      'items': List.from(_items),
+      'deliveryCharge': _deliveryCharge,
+    });
   }
 
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.amount);
