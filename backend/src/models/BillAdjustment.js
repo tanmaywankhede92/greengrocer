@@ -12,6 +12,20 @@ const billAdjustmentSchema = new mongoose.Schema({
     ref: 'Customer',
     required: true,
   },
+  billItemId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'BillItem',
+    default: null,
+    index: true,
+  },
+  originalQuantity: {
+    type: Number,
+    default: null,
+  },
+  adjustedQuantity: {
+    type: Number,
+    default: null,
+  },
   amount: {
     type: Number,
     required: true,

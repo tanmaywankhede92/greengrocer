@@ -120,6 +120,9 @@ Future<Uint8List> buildBillPdf({
       final productName = item.productNameHindi.isNotEmpty
           ? '${item.productName} (${item.productNameHindi})'
           : item.productName;
+      final isAdjusted = item.adjustedQuantity != null;
+      final displayQty = item.adjustedQuantity ?? item.quantity;
+      final qtyStr = displayQty == displayQty.roundToDouble() ? displayQty.toStringAsFixed(0) : displayQty.toStringAsFixed(1);
 
       result.add(
         pw.Padding(
@@ -143,7 +146,17 @@ Future<Uint8List> buildBillPdf({
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                    child: pw.Text(productName, style: pw.TextStyle(font: pickFont(productName, bold: false), fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(productName, style: pw.TextStyle(font: pickFont(productName, bold: false), fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                        if (isAdjusted)
+                          pw.Text(
+                            '${item.quantity.toStringAsFixed(0)} → $qtyStr (${item.adjustmentReason ?? "Adjusted"})',
+                            style: pw.TextStyle(font: font, fontSize: 8, color: const PdfColor(0.9, 0.5, 0.0)),
+                          ),
+                      ],
+                    ),
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 6),
@@ -151,10 +164,9 @@ Future<Uint8List> buildBillPdf({
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                    child: pw.Text(
-                      item.quantity == item.quantity.roundToDouble() ? item.quantity.toStringAsFixed(0) : item.quantity.toStringAsFixed(1),
+                    child: pw.Text(qtyStr,
                       textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(font: font, fontSize: 10),
+                      style: pw.TextStyle(font: font, fontSize: 10, color: isAdjusted ? const PdfColor(0.9, 0.5, 0.0) : null),
                     ),
                   ),
                   pw.Padding(
@@ -163,7 +175,7 @@ Future<Uint8List> buildBillPdf({
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                    child: pw.Text(money(item.amount), textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 10)),
+                    child: pw.Text(money(item.amount), textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 10, color: isAdjusted ? const PdfColor(0.9, 0.5, 0.0) : null)),
                   ),
                 ],
               ),

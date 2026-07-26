@@ -188,7 +188,7 @@ const REASON_LABELS = {
   other: 'Other',
 };
 
-const adjustBill = async (billId, { amount, reason, note }, userId) => {
+const adjustBill = async (billId, { items }, userId) => {
   const result = await billRepository.findById(billId);
   if (!result || !result.bill) {
     const error = new Error('Bill not found');
@@ -203,40 +203,69 @@ const adjustBill = async (billId, { amount, reason, note }, userId) => {
   }
 
   const { bill } = result;
-  const totalAdjusted = result.adjustments.reduce((sum, a) => sum + a.amount, 0);
-  const remaining = bill.total - totalAdjusted;
+  const created = [];
 
-  if (amount > remaining) {
-    const error = new Error(`Adjustment exceeds bill amount. Maximum adjustable: ${remaining}`);
+  for (const entry of items) {
+    const billItem = result.items.find((i) => i.id.toString() === entry.billItemId);
+    if (!billItem) {
+      const error = new Error(`Bill item not found: ${entry.billItemId}`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const existingForItem = result.adjustments.filter(
+      (a) => a.billItemId && a.billItemId.toString() === billItem.id.toString(),
+    );
+    const alreadyAdjustedQty = existingForItem.length > 0
+      ? existingForItem[existingForItem.length - 1].adjustedQuantity
+      : billItem.quantity;
+
+    if (entry.adjustedQuantity > alreadyAdjustedQty) {
+      const error = new Error(`Adjusted quantity for ${billItem.productName} cannot exceed current quantity (${alreadyAdjustedQty})`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const credit = (alreadyAdjustedQty - entry.adjustedQuantity) * billItem.appliedRate;
+    if (credit <= 0) continue;
+
+    const reasonLabel = REASON_LABELS[entry.reason] || entry.reason || 'Other';
+    const description = `Adjustment for ${bill.billNumber}: ${billItem.productName}${entry.note ? ` - ${entry.note}` : ''}`;
+
+    const adjustment = await BillAdjustment.create({
+      billId: bill._id,
+      customerId: bill.customerId,
+      billItemId: billItem._id,
+      originalQuantity: alreadyAdjustedQty,
+      adjustedQuantity: entry.adjustedQuantity,
+      amount: credit,
+      reason: entry.reason || 'other',
+      note: entry.note || '',
+      adjustmentDate: new Date(),
+      createdBy: userId,
+    });
+
+    await LedgerEntry.create({
+      customerId: bill.customerId,
+      entryType: 'adjustment',
+      entryDate: new Date(),
+      description,
+      debit: 0,
+      credit,
+      referenceId: bill._id,
+      createdBy: userId,
+    });
+
+    created.push({ id: adjustment._id, billItemId: billItem._id, amount: credit, reason: entry.reason, note: entry.note || '' });
+  }
+
+  if (created.length === 0) {
+    const error = new Error('No valid adjustments to apply');
     error.statusCode = 400;
     throw error;
   }
 
-  const reasonLabel = REASON_LABELS[reason] || reason;
-  const description = `Adjustment for ${bill.billNumber}: ${reasonLabel}${note ? ` - ${note}` : ''}`;
-
-  const adjustment = await BillAdjustment.create({
-    billId: bill._id,
-    customerId: bill.customerId,
-    amount,
-    reason,
-    note: note || '',
-    adjustmentDate: new Date(),
-    createdBy: userId,
-  });
-
-  await LedgerEntry.create({
-    customerId: bill.customerId,
-    entryType: 'adjustment',
-    entryDate: new Date(),
-    description,
-    debit: 0,
-    credit: amount,
-    referenceId: bill._id,
-    createdBy: userId,
-  });
-
-  return { id: adjustment._id, amount, reason, note: note || '' };
+  return { adjustments: created };
 };
 
 module.exports = { listBills, getBill, createBill, cancelBill, adjustBill };

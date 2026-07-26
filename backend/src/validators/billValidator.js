@@ -25,11 +25,15 @@ const createBillSchema = Joi.object({
   paymentMode: Joi.string().valid(...PAYMENT_MODES).default('cash'),
 });
 
-const adjustBillSchema = Joi.object({
-  amount: Joi.number().positive().required()
-    .messages({ 'number.positive': 'Adjustment amount must be greater than 0' }),
-  reason: Joi.string().valid('damaged', 'missing', 'short_supply', 'rate_diff', 'other').required(),
+const adjustBillItemSchema = Joi.object({
+  billItemId: Joi.string().required(),
+  adjustedQuantity: Joi.number().min(0).required(),
+  reason: Joi.string().valid('damaged', 'missing', 'short_supply', 'rate_diff', 'other').allow(null, '').default(null),
   note: Joi.string().trim().max(300).allow('').default(''),
+});
+
+const adjustBillSchema = Joi.object({
+  items: Joi.array().items(adjustBillItemSchema).min(1).required(),
 });
 
 module.exports = { createBillSchema, adjustBillSchema };

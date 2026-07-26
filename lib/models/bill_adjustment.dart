@@ -4,6 +4,9 @@ class BillAdjustment extends Equatable {
   final String id;
   final String billId;
   final String customerId;
+  final String? billItemId;
+  final double? originalQuantity;
+  final double? adjustedQuantity;
   final double amount;
   final String reason;
   final String note;
@@ -14,6 +17,9 @@ class BillAdjustment extends Equatable {
     required this.id,
     required this.billId,
     required this.customerId,
+    this.billItemId,
+    this.originalQuantity,
+    this.adjustedQuantity,
     required this.amount,
     required this.reason,
     this.note = '',
@@ -25,6 +31,9 @@ class BillAdjustment extends Equatable {
     id: json['_id'] ?? json['id'] ?? '',
     billId: json['billId'] ?? '',
     customerId: json['customerId'] ?? '',
+    billItemId: json['billItemId'],
+    originalQuantity: json['originalQuantity'] != null ? (json['originalQuantity']).toDouble() : null,
+    adjustedQuantity: json['adjustedQuantity'] != null ? (json['adjustedQuantity']).toDouble() : null,
     amount: (json['amount'] ?? 0).toDouble(),
     reason: json['reason'] ?? 'other',
     note: json['note'] ?? '',
@@ -48,5 +57,5 @@ class BillAdjustment extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, billId, amount, reason, note];
+  List<Object?> get props => [id, billId, billItemId, amount, reason, note];
 }

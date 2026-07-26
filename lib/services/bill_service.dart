@@ -40,11 +40,9 @@ class BillService {
     await _client.post('/bills/$id/cancel');
   }
 
-  Future<Map<String, dynamic>> adjust(String id, {required double amount, required String reason, String note = ''}) async {
+  Future<Map<String, dynamic>> adjust(String id, {required List<Map<String, dynamic>> items}) async {
     final response = await _client.put('/bills/$id/adjust', data: {
-      'amount': amount,
-      'reason': reason,
-      'note': note,
+      'items': items,
     });
     return response.data['data'] as Map<String, dynamic>;
   }

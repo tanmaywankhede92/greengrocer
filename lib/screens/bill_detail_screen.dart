@@ -44,7 +44,6 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
         final items = detail.items;
         final adjustments = detail.adjustments;
         final isActive = bill.status == BillStatus.active;
-        final totalAdjusted = adjustments.fold<double>(0, (sum, a) => sum + a.amount);
 
         return Scaffold(
           appBar: AppBar(
@@ -54,16 +53,6 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
             ),
             title: Text(bill.billNumber, style: const TextStyle(fontWeight: FontWeight.w600)),
             actions: [
-              if (isActive)
-                Container(
-                  margin: const EdgeInsets.only(right: 4),
-                  child: TextButton.icon(
-                    icon: const Icon(Icons.edit_note, size: 18, color: AppTheme.primaryRed),
-                    label: const Text('Adjust', style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.w500)),
-                    onPressed: () => _adjustBill(bill, totalAdjusted),
-                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12)),
-                  ),
-                ),
               if (isActive)
                 Container(
                   margin: const EdgeInsets.only(right: 4),
@@ -149,6 +138,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                           bill: bill,
                           items: items,
                           adjustments: adjustments,
+                          isActive: isActive,
                         ),
                         const SizedBox(height: 24),
                         _buildCopy(
@@ -157,6 +147,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                           bill: bill,
                           items: items,
                           adjustments: adjustments,
+                          isActive: isActive,
                         ),
                       ],
                     ),
@@ -203,41 +194,56 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
     );
   }
 
-  Future<void> _adjustBill(Bill bill, double currentTotalAdjusted) async {
-    final amountCtrl = TextEditingController();
+  double _currentQuantity(BillItem item, List<BillAdjustment> adjustments) {
+    final itemAdj = adjustments.where((a) => a.billItemId == item.id).toList();
+    if (itemAdj.isEmpty) return item.quantity;
+    itemAdj.sort((a, b) => a.adjustmentDate.compareTo(b.adjustmentDate));
+    return itemAdj.last.adjustedQuantity ?? item.quantity;
+  }
+
+  double _currentAmount(BillItem item, List<BillAdjustment> adjustments) {
+    return _currentQuantity(item, adjustments) * item.appliedRate;
+  }
+
+  Future<void> _adjustProduct(BillItem item, List<BillAdjustment> adjustments, Bill bill) async {
+    final currentQty = _currentQuantity(item, adjustments);
+    final qtyCtrl = TextEditingController(text: currentQty.toStringAsFixed(currentQty == currentQty.roundToDouble() ? 0 : 1));
     final noteCtrl = TextEditingController();
     String reason = 'damaged';
     bool saving = false;
-
-    final remaining = bill.total - currentTotalAdjusted;
 
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Adjust Bill'),
+          title: Text('Adjust ${item.productName}'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Original Amount: ₹${bill.total.toStringAsFixed(0)}',
+                  'Current Quantity: ${currentQty.toStringAsFixed(currentQty == currentQty.roundToDouble() ? 0 : 1)} ${item.unit}',
                   style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
                 ),
-                if (currentTotalAdjusted > 0)
-                  Text(
-                    'Already Adjusted: -₹${currentTotalAdjusted.toStringAsFixed(0)}',
-                    style: const TextStyle(fontSize: 13, color: Colors.orange),
-                  ),
                 Text(
-                  'Max Adjustable: ₹${remaining.toStringAsFixed(0)}',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                  'Rate: ₹${item.appliedRate.toStringAsFixed(0)} / ${item.unit}',
+                  style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
                 ),
                 const SizedBox(height: 16),
+                TextField(
+                  controller: qtyCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'New Quantity (${item.unit})',
+                    hintText: 'Max: ${currentQty.toStringAsFixed(0)}',
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: reason,
-                  decoration: const InputDecoration(labelText: 'Reason', isDense: true),
+                  decoration: const InputDecoration(labelText: 'Reason (optional)', isDense: true),
                   items: const [
                     DropdownMenuItem(value: 'damaged', child: Text('Damaged')),
                     DropdownMenuItem(value: 'missing', child: Text('Missing')),
@@ -249,21 +255,11 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                 ),
                 const SizedBox(height: 12),
                 TextField(
-                  controller: amountCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: 'Adjustment Amount (₹)',
-                    hintText: 'Max: ${remaining.toStringAsFixed(0)}',
-                    isDense: true,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
                   controller: noteCtrl,
                   maxLines: 2,
                   decoration: const InputDecoration(
                     labelText: 'Note (optional)',
-                    hintText: 'e.g., 2 kg tomatoes were rotten',
+                    hintText: 'e.g., 5 kg were rotten',
                     isDense: true,
                   ),
                 ),
@@ -277,16 +273,22 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
             ),
             ElevatedButton(
               onPressed: saving ? null : () async {
-                final amount = double.tryParse(amountCtrl.text.trim());
-                if (amount == null || amount <= 0) {
+                final newQty = double.tryParse(qtyCtrl.text.trim());
+                if (newQty == null || newQty < 0) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('Enter a valid amount'), backgroundColor: AppTheme.error),
+                    const SnackBar(content: Text('Enter a valid quantity'), backgroundColor: AppTheme.error),
                   );
                   return;
                 }
-                if (amount > remaining) {
+                if (newQty > currentQty) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(content: Text('Amount exceeds max adjustable (₹${remaining.toStringAsFixed(0)})'), backgroundColor: AppTheme.error),
+                    SnackBar(content: Text('New quantity cannot exceed current (${currentQty.toStringAsFixed(0)})'), backgroundColor: AppTheme.error),
+                  );
+                  return;
+                }
+                if (newQty == currentQty) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Quantity unchanged'), backgroundColor: AppTheme.error),
                   );
                   return;
                 }
@@ -294,9 +296,12 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                 try {
                   await ref.read(billServiceProvider).adjust(
                     bill.id,
-                    amount: amount,
-                    reason: reason,
-                    note: noteCtrl.text.trim(),
+                    items: [{
+                      'billItemId': item.id,
+                      'adjustedQuantity': newQty,
+                      'reason': reason,
+                      'note': noteCtrl.text.trim(),
+                    }],
                   );
                   if (ctx.mounted) Navigator.pop(ctx, true);
                 } catch (e) {
@@ -310,7 +315,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
               },
               child: saving
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Save Adjustment'),
+                  : const Text('Save'),
             ),
           ],
         ),
@@ -321,7 +326,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
       ref.invalidate(billDetailProvider(widget.id));
       ref.invalidate(billListProvider);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bill adjusted'), backgroundColor: AppTheme.success),
+        const SnackBar(content: Text('Product adjusted'), backgroundColor: AppTheme.success),
       );
     }
   }
@@ -369,15 +374,22 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
   Future<void> _reprint(Bill bill, List<BillItem> items, List<BillAdjustment> adjustments) async {
     try {
       final settings = await ref.read(settingsProvider.future);
-      final lineItems = items.map((i) => LineItem(
-        productId: i.productId,
-        productName: i.productName,
-        productNameHindi: i.productNameHindi,
-        unit: i.unit,
-        quantity: i.quantity,
-        defaultRate: i.defaultRate,
-        appliedRate: i.appliedRate,
-      )).toList();
+      final lineItems = items.map((i) {
+        final curQty = _currentQuantity(i, adjustments);
+        final itemAdj = adjustments.where((a) => a.billItemId == i.id).toList();
+        final reason = itemAdj.isNotEmpty ? itemAdj.last.reasonLabel : null;
+        return LineItem(
+          productId: i.productId,
+          productName: i.productName,
+          productNameHindi: i.productNameHindi,
+          unit: i.unit,
+          quantity: i.quantity,
+          defaultRate: i.defaultRate,
+          appliedRate: i.appliedRate,
+          adjustedQuantity: curQty != i.quantity ? curQty : null,
+          adjustmentReason: reason,
+        );
+      }).toList();
       final totalAdjusted = adjustments.fold<double>(0, (sum, a) => sum + a.amount);
       final pdf = await buildBillPdf(
         settings: settings,
@@ -412,6 +424,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
     required Bill bill,
     required List<BillItem> items,
     required List<BillAdjustment> adjustments,
+    bool isActive = false,
   }) {
     const copyLabel = 'ORIGINAL';
     final copySuffix = isCustomerCopy ? 'Customer Copy' : 'Office Copy';
@@ -514,19 +527,23 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Table(
-              columnWidths: const {
-                0: FlexColumnWidth(0.55),
-                1: FlexColumnWidth(2.25),
-                2: FlexColumnWidth(1.0),
-                3: FlexColumnWidth(0.85),
-                4: FlexColumnWidth(1.0),
-                5: FlexColumnWidth(1.15),
+              columnWidths: {
+                0: const FlexColumnWidth(0.55),
+                1: const FlexColumnWidth(2.25),
+                2: const FlexColumnWidth(0.85),
+                3: const FlexColumnWidth(0.85),
+                4: const FlexColumnWidth(1.0),
+                5: const FlexColumnWidth(1.15),
+                if (isActive) 6: const FlexColumnWidth(0.6),
               },
               border: TableBorder.all(color: _line, width: 0.7),
               children: [
                 TableRow(
                   decoration: const BoxDecoration(color: Color(0xFFF5F5F5)),
-                  children: ['Sr.', 'Product', 'Unit', 'Qty', 'Rate (₹)', 'Amount (₹)'].map((h) {
+                  children: [
+                    'Sr.', 'Product', 'Unit', 'Qty', 'Rate (₹)', 'Amount (₹)',
+                    if (isActive) '',
+                  ].map((h) {
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
                       child: Text(h,
@@ -542,6 +559,13 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                       ? '${item.productName} (${item.productNameHindi})'
                       : item.productName;
 
+                  final itemAdj = adjustments.where((a) => a.billItemId == item.id).toList();
+                  final isAdjusted = itemAdj.isNotEmpty;
+                  final curQty = _currentQuantity(item, adjustments);
+                  final curAmt = _currentAmount(item, adjustments);
+                  final qtyStr = curQty.toStringAsFixed(curQty == curQty.roundToDouble() ? 0 : 1);
+                  final origQtyStr = item.quantity.toStringAsFixed(item.quantity == item.quantity.roundToDouble() ? 0 : 1);
+
                   return TableRow(
                     children: [
                       Padding(
@@ -550,7 +574,19 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text(productName, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(productName, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                            if (isAdjusted) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                '$origQtyStr → $qtyStr (${itemAdj.last.reasonLabel})',
+                                style: TextStyle(fontSize: 8.5, color: Colors.orange.shade800, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
@@ -558,7 +594,11 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text(item.quantity.toStringAsFixed(item.quantity == item.quantity.roundToDouble() ? 0 : 1), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
+                        child: Text(qtyStr, textAlign: TextAlign.center, style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: isAdjusted ? FontWeight.w700 : FontWeight.w400,
+                          color: isAdjusted ? Colors.orange.shade800 : null,
+                        )),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
@@ -566,8 +606,22 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text(item.amount.toStringAsFixed(2), textAlign: TextAlign.right, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                        child: Text(curAmt.toStringAsFixed(2), textAlign: TextAlign.right, style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: isAdjusted ? Colors.orange.shade800 : null,
+                        )),
                       ),
+                      if (isActive)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                          child: Center(
+                            child: GestureDetector(
+                              onTap: () => _adjustProduct(item, adjustments, bill),
+                              child: Icon(Icons.edit_note, size: 16, color: AppTheme.primaryRed),
+                            ),
+                          ),
+                        ),
                     ],
                   );
                 }),
@@ -590,8 +644,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                     _amountRow('Delivery Charge', bill.deliveryCharge),
                   _amountRow('Grand Total', grandTotal),
                   if (totalAdjusted > 0) ...[
-                    for (final a in adjustments)
-                      _amountRow('Adjustment (${a.reasonLabel})', -a.amount, isAdjustment: true),
+                    _amountRow('Total Adjustment', -totalAdjusted, isAdjustment: true),
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       decoration: const BoxDecoration(

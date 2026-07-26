@@ -11,6 +11,8 @@ class LineItem {
   double quantity;
   double defaultRate;
   double appliedRate;
+  double? adjustedQuantity;
+  String? adjustmentReason;
 
   LineItem({
     this.productId,
@@ -20,9 +22,12 @@ class LineItem {
     this.quantity = 1,
     this.defaultRate = 0,
     this.appliedRate = 0,
+    this.adjustedQuantity,
+    this.adjustmentReason,
   });
 
-  double get amount => quantity * appliedRate;
+  double get amount => (adjustedQuantity ?? quantity) * appliedRate;
+  double get originalAmount => quantity * appliedRate;
 
   Map<String, dynamic> toJson() => {
     if (productId != null) 'productId': productId,
