@@ -50,7 +50,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           final extra = state.extra as Map<String, dynamic>;
           return BillPreviewScreen(
             customer: extra['customer'] as Customer,
-            items: extra['items'] as List<LineItem>,
+            items: List<LineItem>.from(extra['items'] as List),
             deliveryCharge: extra['deliveryCharge'] as double? ?? 0,
           );
         },
