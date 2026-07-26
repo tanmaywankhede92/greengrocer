@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
 import '../core/utils.dart';
 import '../providers/rate_provider.dart';
+import '../services/api_client.dart';
 import '../providers/product_provider.dart';
 
 
@@ -119,7 +120,7 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
             const SizedBox(height: 16),
             productsAsync.when(
               loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
-              error: (e, _) => SizedBox(height: 200, child: Center(child: Text('$e'))),
+              error: (e, _) => SizedBox(height: 200, child: Center(child: Text(ApiClient.humanizeError(e)))),
               data: (products) {
                 final activeProducts = products.where((p) {
                   if (!p.isActive) return false;
@@ -184,7 +185,7 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
                                           await _saveRate(p.id, rate);
                                           if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rate saved'), duration: Duration(seconds: 1)));
                                         } catch (e) {
-                                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));
                                         }
                                       }
                                     },

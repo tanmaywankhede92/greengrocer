@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
 import '../providers/dashboard_provider.dart';
+import '../services/api_client.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/sales_chart.dart';
 import '../widgets/recent_transactions.dart';
@@ -26,7 +27,7 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               const Text('Failed to load dashboard', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
               const SizedBox(height: 8),
-              Text('$e', style: const TextStyle(color: AppTheme.error, fontSize: 13)),
+              Text(ApiClient.humanizeError(e), style: const TextStyle(color: AppTheme.error, fontSize: 13)),
             ],
           ),
         ),

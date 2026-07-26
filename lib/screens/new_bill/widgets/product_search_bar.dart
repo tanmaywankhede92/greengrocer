@@ -3,6 +3,7 @@ import '../../../config/theme.dart';
 import '../../../core/enums.dart';
 import '../../../models/product.dart';
 import '../../../services/product_service.dart';
+import '../../../services/api_client.dart';
 
 class ProductSearchBar extends StatelessWidget {
   final TextEditingController controller;
@@ -209,7 +210,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+          SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
         );
       }
     } finally {

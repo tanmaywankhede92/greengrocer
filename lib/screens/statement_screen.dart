@@ -8,6 +8,7 @@ import '../core/print_pdf.dart';
 import '../providers/customer_provider.dart';
 import '../providers/statement_provider.dart';
 import '../widgets/breadcrumb.dart';
+import '../services/api_client.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/statement_pdf.dart';
 
@@ -58,7 +59,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
       ),
       body: customerAsync.when(
         loading: () => const LoadingWidget(),
-        error: (e, _) => Center(child: Text('$e')),
+        error: (e, _) => Center(child: Text(ApiClient.humanizeError(e))),
         data: (customer) {
           return Column(
             children: [
@@ -130,7 +131,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
               Expanded(
                 child: statementAsync.when(
                   loading: () => const LoadingWidget(),
-                  error: (e, _) => Center(child: Text('$e')),
+                  error: (e, _) => Center(child: Text(ApiClient.humanizeError(e))),
                   data: (data) {
                     final rows = data['rows'] as List<dynamic>? ?? [];
                     final openingBalance = (data['openingBalance'] ?? 0).toDouble();
@@ -197,7 +198,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+          SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
         );
       }
     } finally {

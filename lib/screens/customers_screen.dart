@@ -5,6 +5,7 @@ import '../config/theme.dart';
 import '../core/utils.dart';
 import '../core/params.dart';
 import '../providers/customer_provider.dart';
+import '../services/api_client.dart';
 
 import '../widgets/empty_state.dart';
 import '../widgets/breadcrumb.dart';
@@ -57,7 +58,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
             ),
             customersAsync.when(
               loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
-              error: (e, _) => SizedBox(height: 200, child: Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.error)))),
+              error: (e, _) => SizedBox(height: 200, child: Center(child: Text(ApiClient.humanizeError(e), style: const TextStyle(color: AppTheme.error)))),
               data: (result) {
                 if (result.data.isEmpty) {
                   return const Padding(
@@ -199,7 +200,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
               }
               ref.invalidate(customerListProvider);
             } catch (e) {
-              if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+              if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));
             }
           }, child: const Text('Save')),
         ],
@@ -235,7 +236,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
               } catch (e) {
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+                  SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
                 );
               }
             },

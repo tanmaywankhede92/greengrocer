@@ -8,6 +8,7 @@ import '../../../core/params.dart';
 import '../../../models/customer.dart';
 import '../../../providers/customer_provider.dart';
 import '../../../providers/payment_provider.dart';
+import '../../../services/api_client.dart';
 import '../../../widgets/payment_mode_select.dart';
 import '../../../widgets/payment_invoice_pdf.dart';
 import '../../../providers/settings_provider.dart';
@@ -173,7 +174,7 @@ class _AddPaymentDialogState extends ConsumerState<AddPaymentDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _submitting = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));
       }
     }
   }
@@ -199,7 +200,7 @@ class _AddPaymentDialogState extends ConsumerState<AddPaymentDialog> {
       if (mounted) await printPdf(pdf, filename: 'Payment-$receiptNumber');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invoice error: $e'), backgroundColor: AppTheme.error));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));
       }
     }
   }

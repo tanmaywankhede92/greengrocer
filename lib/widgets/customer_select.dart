@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
 import '../models/customer.dart';
+import '../services/api_client.dart';
 import '../providers/customer_provider.dart';
 import '../core/utils.dart';
 import '../services/customer_service.dart';
@@ -203,7 +204,7 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
               } catch (e) {
                 if (ctx.mounted) {
                   ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-                      content: Text('Error: $e'),
+                      content: Text(ApiClient.humanizeError(e)),
                       backgroundColor: AppTheme.error));
                 }
               }

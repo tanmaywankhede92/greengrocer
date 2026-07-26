@@ -8,6 +8,7 @@ import '../models/customer.dart';
 import '../models/payment.dart';
 import '../providers/customer_provider.dart';
 import '../providers/payment_provider.dart';
+import '../services/api_client.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/breadcrumb.dart';
 import '../widgets/payment_invoice_pdf.dart';
@@ -93,7 +94,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   Widget _buildCustomersView(AsyncValue<({List<Customer> data, Map<String, dynamic>? meta})> async, bool isMobile) {
     return async.when(
       loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryRed)),
-      error: (e, _) => _ErrorCard(message: '$e', onRetry: () => setState(() {})),
+      error: (e, _) => _ErrorCard(message: ApiClient.humanizeError(e), onRetry: () => setState(() {})),
       data: (result) {
         final filtered = _applyCustomerFilter(result.data);
         final meta = result.meta;
@@ -153,7 +154,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   Widget _buildPaymentsView(AsyncValue<({List<Payment> data, Map<String, dynamic>? meta})> async, bool isMobile) {
     return async.when(
       loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryRed)),
-      error: (e, _) => _ErrorCard(message: '$e', onRetry: () => setState(() {})),
+      error: (e, _) => _ErrorCard(message: ApiClient.humanizeError(e), onRetry: () => setState(() {})),
       data: (result) {
         final payments = _applyPaymentFilter(result.data);
         final meta = result.meta;
@@ -276,7 +277,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Invoice error: $e'), backgroundColor: AppTheme.error),
+          SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
         );
       }
     } finally {

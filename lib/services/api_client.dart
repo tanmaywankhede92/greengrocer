@@ -1,3 +1,4 @@
+import 'dart:developer' as dev;
 import 'dart:ui';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -9,6 +10,7 @@ class ApiClient {
   factory ApiClient() => _instance;
 
   late Dio _dio;
+  late Dio _refreshDio;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   VoidCallback? _onUnauthorized;
 
@@ -18,6 +20,13 @@ class ApiClient {
 
   void _initDio() {
     _dio = Dio(BaseOptions(
+      baseUrl: ApiConfig.baseUrl,
+      connectTimeout: ApiConfig.connectTimeout,
+      receiveTimeout: ApiConfig.receiveTimeout,
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+    ));
+
+    _refreshDio = Dio(BaseOptions(
       baseUrl: ApiConfig.baseUrl,
       connectTimeout: ApiConfig.connectTimeout,
       receiveTimeout: ApiConfig.receiveTimeout,
@@ -52,7 +61,7 @@ class ApiClient {
     try {
       final refreshToken = await _storage.read(key: AppConstants.refreshTokenKey);
       if (refreshToken == null) return false;
-      final response = await Dio(BaseOptions(baseUrl: ApiConfig.baseUrl)).post(
+      final response = await _refreshDio.post(
         '/auth/refresh',
         data: {'refreshToken': refreshToken},
       );
@@ -60,7 +69,8 @@ class ApiClient {
       await _storage.write(key: AppConstants.accessTokenKey, value: data['accessToken']);
       await _storage.write(key: AppConstants.refreshTokenKey, value: data['refreshToken']);
       return true;
-    } catch (_) {
+    } catch (e) {
+      dev.log('Token refresh failed: $e', name: 'ApiClient');
       return false;
     }
   }
@@ -97,5 +107,59 @@ class ApiClient {
     await _storage.delete(key: AppConstants.accessTokenKey);
     await _storage.delete(key: AppConstants.refreshTokenKey);
     await _storage.delete(key: AppConstants.userKey);
+  }
+
+  static String humanizeError(Object error) {
+    if (error is DioException) {
+      switch (error.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
+          return 'Server is not responding. Please try again.';
+        case DioExceptionType.connectionError:
+          return 'Cannot reach the server. Please check your connection.';
+        case DioExceptionType.badCertificate:
+          return 'Security certificate error. Please contact support.';
+        case DioExceptionType.cancel:
+          return 'Request was cancelled.';
+        case DioExceptionType.badResponse:
+          return _humanizeBadResponse(error.response);
+        default:
+          return 'Something went wrong. Please try again.';
+      }
+    }
+    return 'Something went wrong. Please try again.';
+  }
+
+  static String _humanizeBadResponse(Response? response) {
+    if (response == null) return 'Something went wrong. Please try again.';
+    final body = response.data;
+    if (body is Map && body['message'] != null) {
+      return body['message'] as String;
+    }
+    switch (response.statusCode) {
+      case 400:
+        return 'Invalid request. Please check your input.';
+      case 401:
+        return 'Session expired. Please log in again.';
+      case 403:
+        return 'You do not have permission for this action.';
+      case 404:
+        return 'Requested resource not found.';
+      case 409:
+        return 'This item already exists.';
+      case 500:
+        return 'Server error. Please try again later.';
+      default:
+        return 'Something went wrong. Please try again.';
+    }
+  }
+
+  static bool isNetworkError(Object error) {
+    return error is DioException &&
+        (error.type == DioExceptionType.connectionTimeout ||
+         error.type == DioExceptionType.sendTimeout ||
+         error.type == DioExceptionType.receiveTimeout ||
+         error.type == DioExceptionType.connectionError);
   }
 }

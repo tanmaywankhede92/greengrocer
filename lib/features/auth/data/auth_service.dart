@@ -39,9 +39,6 @@ class AuthService {
   }
 
   Future<void> logout() async {
-    try {
-      await _client.post('/auth/logout');
-    } catch (_) {}
     await _client.clearTokens();
   }
 

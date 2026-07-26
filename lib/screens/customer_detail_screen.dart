@@ -5,6 +5,7 @@ import '../config/theme.dart';
 import '../core/utils.dart';
 import '../core/params.dart';
 import '../providers/customer_provider.dart';
+import '../services/api_client.dart';
 import '../providers/ledger_provider.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/breadcrumb.dart';
@@ -20,7 +21,7 @@ class CustomerDetailScreen extends ConsumerWidget {
 
     return customerAsync.when(
       loading: () => const LoadingWidget(),
-      error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.error))),
+      error: (e, _) => Center(child: Text(ApiClient.humanizeError(e), style: const TextStyle(color: AppTheme.error))),
       data: (customer) {
         return Scaffold(
           appBar: AppBar(
@@ -82,7 +83,7 @@ class CustomerDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 12),
                 ledgerAsync.when(
                   loading: () => const LoadingWidget(),
-                  error: (e, _) => Center(child: Text('Error: $e')),
+                  error: (e, _) => Center(child: Text(ApiClient.humanizeError(e))),
                   data: (entries) {
                     if (entries.isEmpty) return const Center(child: Text('No ledger entries', style: TextStyle(color: AppTheme.textSecondary)));
                     return Card(

@@ -6,6 +6,7 @@ import '../core/utils.dart';
 import '../core/enums.dart';
 import '../core/params.dart';
 import '../providers/bill_provider.dart';
+import '../services/api_client.dart';
 import 'bills/widgets/export_bills_excel_dialog.dart';
 
 import '../widgets/empty_state.dart';
@@ -136,7 +137,7 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
             ),
             billsAsync.when(
               loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
-              error: (e, _) => SizedBox(height: 200, child: Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.error)))),
+              error: (e, _) => SizedBox(height: 200, child: Center(child: Text(ApiClient.humanizeError(e), style: const TextStyle(color: AppTheme.error)))),
               data: (result) {
                 if (result.data.isEmpty) return const Padding(padding: EdgeInsets.all(32), child: EmptyState(icon: Icons.receipt_long, title: 'No bills found'));
                 return Column(

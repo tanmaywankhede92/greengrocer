@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
 import '../providers/settings_provider.dart';
+import '../services/api_client.dart';
 import '../widgets/loading_widget.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -57,7 +58,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ref.invalidate(settingsProvider);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings saved'), backgroundColor: AppTheme.success));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -72,7 +73,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBar(title: const Text('Settings')),
       body: settingsAsync.when(
         loading: () => const LoadingWidget(),
-        error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.error))),
+        error: (e, _) => Center(child: Text(ApiClient.humanizeError(e), style: const TextStyle(color: AppTheme.error))),
         data: (_) {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),

@@ -8,6 +8,7 @@ import '../core/utils.dart';
 import '../core/params.dart';
 import '../core/enums.dart';
 import '../models/customer.dart';
+import '../services/api_client.dart';
 import '../models/payment.dart';
 import '../providers/customer_provider.dart';
 import '../providers/payment_provider.dart';
@@ -65,7 +66,7 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
         _showInvoice(_selectedCustomer!.id, paidNow: amount, paymentMode: _mode.value);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -92,7 +93,7 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
       if (mounted) await printPdf(pdf, filename: 'Payment-$receiptNumber');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invoice error: $e'), backgroundColor: AppTheme.error));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));
       }
     }
   }
@@ -111,7 +112,7 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
       final paymentsAsync = ref.watch(paymentListProvider(PaymentListParams(customerId: _selectedCustomer!.id, limit: 20)));
       recentPayments = paymentsAsync.when(
         loading: () => const SizedBox(height: 60, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
-        error: (e, _) => Padding(padding: const EdgeInsets.only(top: 8), child: Text('$e', style: const TextStyle(color: AppTheme.error, fontSize: 13))),
+        error: (e, _) => Padding(padding: const EdgeInsets.only(top: 8), child: Text(ApiClient.humanizeError(e), style: const TextStyle(color: AppTheme.error, fontSize: 13))),
         data: (result) {
           if (result.data.isEmpty) {
             return const Padding(padding: EdgeInsets.only(top: 16),

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/constants.dart';
 import '../../../../models/user.dart';
+import '../../../../services/api_client.dart';
 import '../../data/auth_service.dart';
 
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
@@ -11,20 +12,23 @@ class AuthState {
   final bool isAuthenticated;
   final User? user;
   final String? error;
+  final bool serverReachable;
 
   const AuthState({
     this.isLoading = false,
     this.isAuthenticated = false,
     this.user,
     this.error,
+    this.serverReachable = true,
   });
 
-  AuthState copyWith({bool? isLoading, bool? isAuthenticated, User? user, String? error}) =>
+  AuthState copyWith({bool? isLoading, bool? isAuthenticated, User? user, String? error, bool? serverReachable}) =>
       AuthState(
         isLoading: isLoading ?? this.isLoading,
         isAuthenticated: isAuthenticated ?? this.isAuthenticated,
         user: user ?? this.user,
         error: error,
+        serverReachable: serverReachable ?? this.serverReachable,
       );
 }
 
@@ -43,7 +47,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final user = await _authService.getProfile();
         state = AuthState(isAuthenticated: true, user: user);
       }
-    } catch (_) {
+    } catch (e) {
+      if (ApiClient.isNetworkError(e)) {
+        state = state.copyWith(serverReachable: false);
+        return;
+      }
       await _authService.logout();
     }
   }
@@ -55,7 +63,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = AuthState(isAuthenticated: true, user: result.user);
       return null;
     } catch (e) {
-      final msg = _extractError(e);
+      final msg = ApiClient.humanizeError(e);
       state = state.copyWith(isLoading: false, error: msg);
       return msg;
     }
@@ -68,7 +76,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = AuthState(isAuthenticated: true, user: result.user);
       return null;
     } catch (e) {
-      final msg = _extractError(e);
+      final msg = ApiClient.humanizeError(e);
       state = state.copyWith(isLoading: false, error: msg);
       return msg;
     }
@@ -80,19 +88,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   void clearError() => state = state.copyWith(error: null);
-
-  String _extractError(Object e) {
-    if (e is Exception) {
-      final s = e.toString();
-      if (s.contains('message')) {
-        try {
-          final json = s.split('message: ').last.replaceAll('}', '').trim();
-          return json;
-        } catch (_) {}
-      }
-    }
-    return 'Something went wrong';
-  }
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {

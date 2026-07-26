@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
 import '../models/product.dart';
 import '../providers/product_provider.dart';
+import '../services/api_client.dart';
 
 import '../widgets/empty_state.dart';
 
@@ -93,7 +94,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                       const SizedBox(height: 16),
                       const Text('Failed to load products', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
                       const SizedBox(height: 8),
-                      Text('$e', style: const TextStyle(color: AppTheme.error, fontSize: 13)),
+                      Text(ApiClient.humanizeError(e), style: const TextStyle(color: AppTheme.error, fontSize: 13)),
                     ],
                   ),
                 ),
@@ -138,7 +139,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                                   ref.invalidate(productListProvider);
                                 } catch (e) {
                                   if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));
                                   }
                                 }
                               },
@@ -242,7 +243,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 ref.invalidate(productListProvider);
               } catch (e) {
                 if (ctx.mounted) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));
                 }
               }
             }, child: const Text('Save')),
@@ -282,7 +283,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+                    SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
                   );
                 }
               }

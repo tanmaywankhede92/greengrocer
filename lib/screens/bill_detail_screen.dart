@@ -10,6 +10,7 @@ import '../models/bill.dart';
 import '../models/bill_item.dart';
 import '../models/bill_adjustment.dart';
 import '../providers/bill_provider.dart';
+import '../services/api_client.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/breadcrumb.dart';
@@ -36,7 +37,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
     return detailAsync.when(
       loading: () => const LoadingWidget(),
       error: (e, _) => Center(
-        child: Text('Error: $e', style: const TextStyle(color: AppTheme.error)),
+        child: Text(ApiClient.humanizeError(e), style: const TextStyle(color: AppTheme.error)),
       ),
       data: (detail) {
         final bill = detail.bill;
@@ -302,7 +303,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                   setDialogState(() => saving = false);
                   if (ctx.mounted) {
                     ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+                      SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
                     );
                   }
                 }

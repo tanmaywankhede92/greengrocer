@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../core/print_pdf.dart';
 import 'package:dio/dio.dart';
 import '../config/theme.dart';
+import '../services/api_client.dart';
 import '../core/utils.dart';
 import '../models/customer.dart';
 import '../core/enums.dart';
@@ -118,7 +119,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+          SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
         );
       }
     } finally {

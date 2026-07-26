@@ -169,9 +169,13 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     _removeDropdown();
     _qtyCtrl.text = '1';
     _rateCtrl.text = defaultRate > 0 ? defaultRate.toStringAsFixed(0) : '';
-    _qtyFocusNode.requestFocus();
-    _qtyCtrl.selection =
-        TextSelection(baseOffset: 0, extentOffset: _qtyCtrl.text.length);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _qtyFocusNode.requestFocus();
+        _qtyCtrl.selection =
+            TextSelection(baseOffset: 0, extentOffset: _qtyCtrl.text.length);
+      }
+    });
   }
 
   void _confirmEdit() {

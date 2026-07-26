@@ -6,6 +6,7 @@ import '../../../core/print_pdf.dart';
 import '../../../core/utils.dart';
 import '../../../models/customer.dart';
 import '../../../providers/statement_provider.dart';
+import '../../../services/api_client.dart';
 import '../../../widgets/statement_pdf.dart';
 
 class StatementDownloadDialog extends ConsumerStatefulWidget {
@@ -147,7 +148,7 @@ class _StatementDownloadDialogState extends ConsumerState<StatementDownloadDialo
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));
       }
     }
   }

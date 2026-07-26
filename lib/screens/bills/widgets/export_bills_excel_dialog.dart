@@ -8,6 +8,7 @@ import 'package:excel/excel.dart' hide Border;
 import '../../../config/theme.dart';
 import '../../../core/enums.dart';
 import '../../../providers/bill_provider.dart';
+import '../../../services/api_client.dart';
 import '../../../providers/customer_provider.dart';
 
 class ExportBillsExcelDialog extends ConsumerStatefulWidget {
@@ -78,7 +79,7 @@ class _ExportBillsExcelDialogState extends ConsumerState<ExportBillsExcelDialog>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e'), backgroundColor: AppTheme.error),
+          SnackBar(content: Text('Export failed: ${ApiClient.humanizeError(e)}'), backgroundColor: AppTheme.error),
         );
       }
     } finally {
