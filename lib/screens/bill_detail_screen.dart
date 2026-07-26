@@ -364,7 +364,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+          SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
           );
         }
       }
@@ -575,6 +575,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(productName, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
