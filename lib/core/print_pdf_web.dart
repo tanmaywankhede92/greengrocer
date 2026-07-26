@@ -2,18 +2,13 @@ import 'dart:async';
 import 'dart:html' as html;
 import 'dart:typed_data';
 
+import 'pdf_viewer_overlay.dart';
+
 Future<void> webPrintPdf(Uint8List pdfBytes, {required String filename}) async {
   final blob = html.Blob([pdfBytes], 'application/pdf');
   final pdfUrl = html.Url.createObjectUrlFromBlob(blob);
 
-  final anchor = html.AnchorElement(href: pdfUrl)
-    ..target = '_blank'
-    ..style.display = 'none';
-  html.document.body!.append(anchor);
-  anchor.click();
-  anchor.remove();
+  await showPdfViewer(pdfUrl, filename);
 
-  Timer(const Duration(seconds: 60), () {
-    html.Url.revokeObjectUrl(pdfUrl);
-  });
+  html.Url.revokeObjectUrl(pdfUrl);
 }
