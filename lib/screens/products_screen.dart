@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
 import '../models/product.dart';
 import '../providers/product_provider.dart';
-import '../widgets/loading_widget.dart';
+
 import '../widgets/empty_state.dart';
 
 class ProductsScreen extends ConsumerStatefulWidget {
@@ -54,35 +54,35 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: TextField(
-              controller: _searchCtrl,
-              focusNode: _searchFocusNode,
-              onChanged: _onSearchChanged,
-              decoration: InputDecoration(
-                hintText: 'Search by name...',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _searchCtrl.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          _searchFocusNode.requestFocus();
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: TextField(
+                controller: _searchCtrl,
+                focusNode: _searchFocusNode,
+                onChanged: _onSearchChanged,
+                decoration: InputDecoration(
+                  hintText: 'Search by name...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  suffixIcon: _searchCtrl.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            _searchFocusNode.requestFocus();
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: productsAsync.when(
-              loading: () => const LoadingWidget(),
+            const SizedBox(height: 8),
+            productsAsync.when(
+              loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
               error: (e, _) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
@@ -101,9 +101,14 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
               data: (products) {
                 final display = _searchResults ?? products;
                 if (display.isEmpty) {
-                  return const EmptyState(icon: Icons.inventory_outlined, title: 'No products', subtitle: 'Add your first product');
+                  return const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: EmptyState(icon: Icons.inventory_outlined, title: 'No products', subtitle: 'Add your first product'),
+                  );
                 }
                 return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   itemCount: display.length,
                   itemBuilder: (context, index) {
@@ -161,8 +166,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 );
               },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

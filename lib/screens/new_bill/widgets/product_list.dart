@@ -7,6 +7,8 @@ class ProductList extends StatelessWidget {
   final ValueChanged<int> onEdit;
   final ValueChanged<int> onRemove;
   final bool isWide;
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
 
   const ProductList({
     super.key,
@@ -14,6 +16,8 @@ class ProductList extends StatelessWidget {
     required this.onEdit,
     required this.onRemove,
     required this.isWide,
+    this.shrinkWrap = false,
+    this.physics,
   });
 
   @override
@@ -25,6 +29,8 @@ class ProductList extends StatelessWidget {
   Widget _buildWide() {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      shrinkWrap: shrinkWrap,
+      physics: physics,
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -91,6 +97,8 @@ class ProductList extends StatelessWidget {
   Widget _buildNarrow() {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      shrinkWrap: shrinkWrap,
+      physics: physics,
       itemCount: items.length,
       itemBuilder: (context, index) => ProductRow(
         item: items[index],

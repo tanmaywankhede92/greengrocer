@@ -413,14 +413,14 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
     final dateStr = r['date']?.toString() ?? '';
     final dateFormatted = dateStr.isNotEmpty ? AppUtils.formatDateShort(DateTime.parse(dateStr)) : '-';
 
-    final isCancel = type == 'adjustment' && desc.toLowerCase().contains('cancel');
+    final isAdjustment = type == 'adjustment';
     final isPayment = type == 'payment';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 1),
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
       decoration: BoxDecoration(
-        color: isCancel ? const Color(0xFFFFF3E0) : (type == 'opening_balance' ? const Color(0xFFF5F5F5) : Colors.white),
+        color: isAdjustment ? const Color(0xFFFFF3E0) : (type == 'opening_balance' ? const Color(0xFFF5F5F5) : Colors.white),
       ),
       child: Row(
         children: [
@@ -432,7 +432,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: isCancel ? Colors.orange.shade800 : (isPayment ? AppTheme.success : AppTheme.textPrimary),
+                color: isAdjustment ? Colors.orange.shade800 : (isPayment ? AppTheme.success : AppTheme.textPrimary),
               ),
             ),
           ),
@@ -450,7 +450,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
               textAlign: TextAlign.right,
               style: TextStyle(
                 fontSize: 12,
-                color: isCancel ? Colors.orange.shade800 : AppTheme.error,
+                color: isAdjustment ? Colors.orange.shade800 : AppTheme.error,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -460,9 +460,9 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
             child: Text(
               credit > 0 ? AppUtils.formatCurrency(credit.toDouble()) : '-',
               textAlign: TextAlign.right,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: AppTheme.success,
+                color: isAdjustment ? Colors.orange.shade800 : AppTheme.success,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -532,11 +532,11 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
               final balance = (r['balance'] ?? 0) as num;
               final billNo = _extractBillNumber(desc);
               final label = _typeLabel(type);
-              final isCancel = type == 'adjustment' && desc.toLowerCase().contains('cancel');
+              final isAdjustment = type == 'adjustment';
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 4),
-                color: isCancel ? const Color(0xFFFFF3E0) : null,
+                color: isAdjustment ? const Color(0xFFFFF3E0) : null,
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
@@ -549,7 +549,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: isCancel ? Colors.orange.shade800 : AppTheme.textPrimary,
+                              color: isAdjustment ? Colors.orange.shade800 : AppTheme.textPrimary,
                             ),
                           ),
                         ),
@@ -568,10 +568,15 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                               style: const TextStyle(fontSize: 11, color: AppTheme.error, fontWeight: FontWeight.w500),
                             ),
                           if (debit > 0 && credit > 0) const SizedBox(width: 12),
-                          if (credit > 0)
+                          if (credit > 0 && !isAdjustment)
                             Text(
                               'Paid: ${AppUtils.formatCurrency(credit.toDouble())}',
                               style: const TextStyle(fontSize: 11, color: AppTheme.success, fontWeight: FontWeight.w500),
+                            ),
+                          if (isAdjustment)
+                            Text(
+                              'Adjustment: ${AppUtils.formatCurrency(credit.toDouble())}',
+                              style: TextStyle(fontSize: 11, color: Colors.orange.shade800, fontWeight: FontWeight.w500),
                             ),
                         ],
                       ),

@@ -7,7 +7,7 @@ import '../core/enums.dart';
 import '../core/params.dart';
 import '../providers/bill_provider.dart';
 import 'bills/widgets/export_bills_excel_dialog.dart';
-import '../widgets/loading_widget.dart';
+
 import '../widgets/empty_state.dart';
 import '../widgets/breadcrumb.dart';
 
@@ -71,109 +71,151 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
           ),
         ),
       ]),
-      body: Column(
-        children: [
-          const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Bills')]),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: TextField(
-              controller: _searchCtrl,
-              decoration: const InputDecoration(hintText: 'Search by bill no. or customer name...', prefixIcon: Icon(Icons.search), isDense: true),
-              onChanged: (_) => setState(() => _page = 1),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Bills')]),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: TextField(
+                controller: _searchCtrl,
+                decoration: const InputDecoration(hintText: 'Search by bill no. or customer name...', prefixIcon: Icon(Icons.search), isDense: true),
+                onChanged: (_) => setState(() => _page = 1),
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Row(
-              children: [
-                _filterChip('Today', _periodFilter == 'today', () => _setPeriod('today')),
-                const SizedBox(width: 8),
-                _filterChip('All', _periodFilter == 'all' || _periodFilter == null, () => _setPeriod('all')),
-                const Spacer(),
-                _filterChip('Active', _statusFilter == 'active', () => setState(() { _statusFilter = _statusFilter == 'active' ? null : 'active'; _page = 1; })),
-                const SizedBox(width: 8),
-                _filterChip('Cancelled', _statusFilter == 'cancelled', () => setState(() { _statusFilter = _statusFilter == 'cancelled' ? null : 'cancelled'; _page = 1; })),
-              ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
+                children: [
+                  _filterChip('Today', _periodFilter == 'today', () => _setPeriod('today')),
+                  const SizedBox(width: 8),
+                  _filterChip('All', _periodFilter == 'all' || _periodFilter == null, () => _setPeriod('all')),
+                  const Spacer(),
+                  _filterChip('Active', _statusFilter == 'active', () => setState(() { _statusFilter = _statusFilter == 'active' ? null : 'active'; _page = 1; })),
+                  const SizedBox(width: 8),
+                  _filterChip('Cancelled', _statusFilter == 'cancelled', () => setState(() { _statusFilter = _statusFilter == 'cancelled' ? null : 'cancelled'; _page = 1; })),
+                ],
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () async {
-                      final picked = await showDatePicker(context: context, initialDate: _fromDate ?? DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime.now());
-                      if (picked != null) setState(() { _fromDate = picked; _periodFilter = null; _page = 1; });
-                    },
-                    child: InputDecorator(
-                      decoration: const InputDecoration(labelText: 'From', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-                      child: Text(_fromDate != null ? AppUtils.formatDate(_fromDate!) : 'From date', style: TextStyle(color: _fromDate != null ? AppTheme.textPrimary : AppTheme.textSecondary, fontSize: 13)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: InkWell(
-                    onTap: () async {
-                      final picked = await showDatePicker(context: context, initialDate: _toDate ?? DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime.now());
-                      if (picked != null) setState(() { _toDate = picked; _periodFilter = null; _page = 1; });
-                    },
-                    child: InputDecorator(
-                      decoration: const InputDecoration(labelText: 'To', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-                      child: Text(_toDate != null ? AppUtils.formatDate(_toDate!) : 'To date', style: TextStyle(color: _toDate != null ? AppTheme.textPrimary : AppTheme.textSecondary, fontSize: 13)),
-                    ),
-                  ),
-                ),
-                if (_fromDate != null || _toDate != null)
-                  IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
-                    onPressed: () => setState(() { _fromDate = null; _toDate = null; _periodFilter = null; _page = 1; }),
-                  ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: billsAsync.when(
-              loading: () => const LoadingWidget(),
-              error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.error))),
-              data: (result) {
-                if (result.data.isEmpty) return const EmptyState(icon: Icons.receipt_long, title: 'No bills found');
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: result.data.length,
-                  itemBuilder: (context, index) {
-                    final b = result.data[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: Container(
-                          width: 44, height: 44,
-                          decoration: BoxDecoration(
-                            color: b.status == BillStatus.active ? AppTheme.success.withAlpha(20) : AppTheme.error.withAlpha(20),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(b.status == BillStatus.active ? Icons.check_circle : Icons.cancel, color: b.status == BillStatus.active ? AppTheme.success : AppTheme.error, size: 22),
-                        ),
-                        title: Text(b.billNumber, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                        subtitle: Text('${b.customer?.name ?? ''}  •  ${AppUtils.formatDate(b.billDate)}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                        trailing: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(AppUtils.formatCurrency(b.total), style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-                            Text(b.status == BillStatus.active ? 'Active' : 'Cancelled', style: TextStyle(color: b.status == BillStatus.active ? AppTheme.success : AppTheme.error, fontSize: 11)),
-                          ],
-                        ),
-                        onTap: () => context.go('/bills/${b.id}'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(context: context, initialDate: _fromDate ?? DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime.now());
+                        if (picked != null) setState(() { _fromDate = picked; _periodFilter = null; _page = 1; });
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(labelText: 'From', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                        child: Text(_fromDate != null ? AppUtils.formatDate(_fromDate!) : 'From date', style: TextStyle(color: _fromDate != null ? AppTheme.textPrimary : AppTheme.textSecondary, fontSize: 13)),
                       ),
-                    );
-                  },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(context: context, initialDate: _toDate ?? DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime.now());
+                        if (picked != null) setState(() { _toDate = picked; _periodFilter = null; _page = 1; });
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(labelText: 'To', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                        child: Text(_toDate != null ? AppUtils.formatDate(_toDate!) : 'To date', style: TextStyle(color: _toDate != null ? AppTheme.textPrimary : AppTheme.textSecondary, fontSize: 13)),
+                      ),
+                    ),
+                  ),
+                  if (_fromDate != null || _toDate != null)
+                    IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () => setState(() { _fromDate = null; _toDate = null; _periodFilter = null; _page = 1; }),
+                    ),
+                ],
+              ),
+            ),
+            billsAsync.when(
+              loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+              error: (e, _) => SizedBox(height: 200, child: Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.error)))),
+              data: (result) {
+                if (result.data.isEmpty) return const Padding(padding: EdgeInsets.all(32), child: EmptyState(icon: Icons.receipt_long, title: 'No bills found'));
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: result.data.length,
+                      itemBuilder: (context, index) {
+                        final b = result.data[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            leading: Container(
+                              width: 44, height: 44,
+                              decoration: BoxDecoration(
+                                color: b.status == BillStatus.active ? AppTheme.success.withAlpha(20) : AppTheme.error.withAlpha(20),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(b.status == BillStatus.active ? Icons.check_circle : Icons.cancel, color: b.status == BillStatus.active ? AppTheme.success : AppTheme.error, size: 22),
+                            ),
+                            title: Text(b.customer?.name ?? '', style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                            subtitle: Row(
+                              children: [
+                                Text(b.billNumber, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                                const SizedBox(width: 8),
+                                Text(AppUtils.formatDate(b.billDate), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                              ],
+                            ),
+                            isThreeLine: true,
+                            trailing: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.topRight,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    AppUtils.formatCurrency(b.adjustedTotal > 0 ? b.adjustedTotal : b.total),
+                                    style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+                                  ),
+                                  if (b.totalAdjusted > 0)
+                                    Text(
+                                      'Adj: -${AppUtils.formatCurrency(b.totalAdjusted)}',
+                                      style: const TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.w500),
+                                    ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: b.status == BillStatus.active
+                                          ? AppTheme.success.withAlpha(20)
+                                          : AppTheme.error.withAlpha(20),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      b.status == BillStatus.active ? 'Active' : 'Cancelled',
+                                      style: TextStyle(
+                                        color: b.status == BillStatus.active ? AppTheme.success : AppTheme.error,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            onTap: () => context.go('/bills/${b.id}'),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 );
               },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -1,12 +1,18 @@
 const mongoose = require('mongoose');
 const LedgerEntry = require('../models/LedgerEntry');
 
+const toEndOfDay = (dateStr) => {
+  const d = new Date(dateStr);
+  d.setUTCHours(23, 59, 59, 999);
+  return d;
+};
+
 const findByCustomer = async (customerId, range = {}) => {
   const match = { customerId: new mongoose.Types.ObjectId(customerId) };
   if (range.from || range.to) {
     match.entryDate = {};
     if (range.from) match.entryDate.$gte = new Date(range.from);
-    if (range.to) match.entryDate.$lte = new Date(range.to);
+    if (range.to) match.entryDate.$lte = toEndOfDay(range.to);
   }
   return LedgerEntry.find(match).sort({ entryDate: 1, createdAt: 1 }).lean();
 };

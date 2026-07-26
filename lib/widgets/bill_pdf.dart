@@ -21,6 +21,8 @@ Future<Uint8List> buildBillPdf({
   required DateTime billDate,
   String? paymentMode,
   required bool isReprint,
+  double adjustmentAmount = 0,
+  String adjustmentNote = '',
 }) async {
   final font = await PdfGoogleFonts.nunitoRegular();
   final fontB = await PdfGoogleFonts.nunitoBold();
@@ -174,6 +176,7 @@ Future<Uint8List> buildBillPdf({
   }
 
   pw.Widget buildSummary() {
+    final adjustedTotal = grandTotal - adjustmentAmount;
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
@@ -188,22 +191,56 @@ Future<Uint8List> buildBillPdf({
               children: [
                 amountRow('Subtotal', subtotal),
                 if (deliveryCharge > 0) amountRow('Delivery Charge', deliveryCharge),
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 6),
-                  decoration: const pw.BoxDecoration(
-                    border: pw.Border(
-                      top: pw.BorderSide(color: lineC, width: 0.7),
-                      bottom: pw.BorderSide(color: lineC, width: 0.7),
+                amountRow('Grand Total', grandTotal),
+                if (adjustmentAmount > 0) ...[
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 2),
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text('Adjustment', style: pw.TextStyle(font: font, fontSize: 11, color: const PdfColor(0.9, 0.5, 0.0))),
+                        pw.Text('- ${money(adjustmentAmount)}', style: pw.TextStyle(font: font, fontSize: 11, color: const PdfColor(0.9, 0.5, 0.0))),
+                      ],
                     ),
                   ),
-                  child: pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text('Grand Total', style: pw.TextStyle(font: fontB, fontSize: 13, color: textPrimary)),
-                      pw.Text(money(grandTotal), style: pw.TextStyle(font: fontB, fontSize: 13, color: textPrimary)),
-                    ],
+                  if (adjustmentNote.isNotEmpty)
+                    pw.Container(
+                      padding: const pw.EdgeInsets.only(bottom: 4),
+                      child: pw.Text(adjustmentNote, style: pw.TextStyle(font: fontI, fontSize: 8.5, color: muted)),
+                    ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 6),
+                    decoration: const pw.BoxDecoration(
+                      border: pw.Border(
+                        top: pw.BorderSide(color: lineC, width: 0.7),
+                        bottom: pw.BorderSide(color: lineC, width: 0.7),
+                      ),
+                    ),
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text('Final Amount', style: pw.TextStyle(font: fontB, fontSize: 13, color: red)),
+                        pw.Text(money(adjustedTotal), style: pw.TextStyle(font: fontB, fontSize: 13, color: red)),
+                      ],
+                    ),
                   ),
-                ),
+                ] else
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 6),
+                    decoration: const pw.BoxDecoration(
+                      border: pw.Border(
+                        top: pw.BorderSide(color: lineC, width: 0.7),
+                        bottom: pw.BorderSide(color: lineC, width: 0.7),
+                      ),
+                    ),
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text('Grand Total', style: pw.TextStyle(font: fontB, fontSize: 13, color: textPrimary)),
+                        pw.Text(money(grandTotal), style: pw.TextStyle(font: fontB, fontSize: 13, color: textPrimary)),
+                      ],
+                    ),
+                  ),
                 if (paidNow > 0) amountRow('Paid', paidNow),
               ],
             ),

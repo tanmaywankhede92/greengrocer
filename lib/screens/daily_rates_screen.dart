@@ -4,7 +4,7 @@ import '../config/theme.dart';
 import '../core/utils.dart';
 import '../providers/rate_provider.dart';
 import '../providers/product_provider.dart';
-import '../widgets/loading_widget.dart';
+
 
 class DailyRatesScreen extends ConsumerStatefulWidget {
   const DailyRatesScreen({super.key});
@@ -70,7 +70,7 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Daily Rates')),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
@@ -117,88 +117,88 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
               onChanged: (v) => setState(() => _search = v.trim().toLowerCase()),
             ),
             const SizedBox(height: 16),
-            Expanded(
-              child: productsAsync.when(
-                loading: () => const LoadingWidget(),
-                error: (e, _) => Center(child: Text('$e')),
-                data: (products) {
-                  final activeProducts = products.where((p) {
-                    if (!p.isActive) return false;
-                    if (_search.isEmpty) return true;
-                    final display = '${p.name} ${p.nameHindi}'.toLowerCase();
-                    return display.contains(_search);
-                  }).toList();
-                  if (activeProducts.isEmpty) return const Center(child: Text('No products available', style: TextStyle(color: AppTheme.textSecondary)));
+            productsAsync.when(
+              loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+              error: (e, _) => SizedBox(height: 200, child: Center(child: Text('$e'))),
+              data: (products) {
+                final activeProducts = products.where((p) {
+                  if (!p.isActive) return false;
+                  if (_search.isEmpty) return true;
+                  final display = '${p.name} ${p.nameHindi}'.toLowerCase();
+                  return display.contains(_search);
+                }).toList();
+                if (activeProducts.isEmpty) return const Padding(padding: EdgeInsets.all(32), child: Center(child: Text('No products available', style: TextStyle(color: AppTheme.textSecondary))));
 
-                  return ratesAsync.when(
-                    loading: () => const LoadingWidget(),
-                    error: (_, __) => const SizedBox(),
-                    data: (rates) {
-                      for (final p in activeProducts) {
-                        if (!_rateControllers.containsKey(p.id)) {
-                          final existingRate = rates[p.id];
-                          _rateControllers[p.id] = TextEditingController(
-                            text: existingRate?.rate.toStringAsFixed(0) ?? '',
-                          );
-                        }
+                return ratesAsync.when(
+                  loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+                  error: (_, __) => const SizedBox(height: 200),
+                  data: (rates) {
+                    for (final p in activeProducts) {
+                      if (!_rateControllers.containsKey(p.id)) {
+                        final existingRate = rates[p.id];
+                        _rateControllers[p.id] = TextEditingController(
+                          text: existingRate?.rate.toStringAsFixed(0) ?? '',
+                        );
                       }
-                      return Card(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: activeProducts.length,
-                          itemBuilder: (context, index) {
-                            final p = activeProducts[index];
-                            final ctrl = _rateControllers[p.id]!;
-                            final existingRate = rates[p.id];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    flex: 2,
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(p.nameHindi.isNotEmpty ? '${p.name} (${p.nameHindi})' : p.name, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
-                                      ],
-                                    ),
+                    }
+                    return Card(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(16),
+                        itemCount: activeProducts.length,
+                        itemBuilder: (context, index) {
+                          final p = activeProducts[index];
+                          final ctrl = _rateControllers[p.id]!;
+                          final existingRate = rates[p.id];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(p.nameHindi.isNotEmpty ? '${p.name} (${p.nameHindi})' : p.name, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
+                                    ],
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(p.unit.value, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                                  const SizedBox(width: 8),
-                                  ConstrainedBox(
-                                    constraints: const BoxConstraints(minWidth: 80, maxWidth: 120),
-                                    child: TextField(
-                                      controller: ctrl,
-                                      keyboardType: TextInputType.number,
-                                      decoration: InputDecoration(
-                                        hintText: existingRate != null ? existingRate.rate.toStringAsFixed(0) : 'Rate',
-                                        isDense: true,
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                      ),
-                                      onSubmitted: (v) async {
-                                        final rate = double.tryParse(v);
-                                        if (rate != null) {
-                                          try {
-                                            await _saveRate(p.id, rate);
-                                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rate saved'), duration: Duration(seconds: 1)));
-                                          } catch (e) {
-                                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-                                          }
+                                ),
+                                const SizedBox(width: 8),
+                                Text(p.unit.value, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                                const SizedBox(width: 8),
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(minWidth: 80, maxWidth: 120),
+                                  child: TextField(
+                                    controller: ctrl,
+                                    keyboardType: TextInputType.number,
+                                    decoration: InputDecoration(
+                                      hintText: existingRate != null ? existingRate.rate.toStringAsFixed(0) : 'Rate',
+                                      isDense: true,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    ),
+                                    onSubmitted: (v) async {
+                                      final rate = double.tryParse(v);
+                                      if (rate != null) {
+                                        try {
+                                          await _saveRate(p.id, rate);
+                                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rate saved'), duration: Duration(seconds: 1)));
+                                        } catch (e) {
+                                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
                                         }
-                                      },
-                                    ),
+                                      }
+                                    },
                                   ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ],
         ),

@@ -34,6 +34,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
 
   final _searchCtrl = TextEditingController();
   final _searchFocusNode = FocusNode();
+  final _searchFieldKey = GlobalKey();
   final _qtyCtrl = TextEditingController();
   final _qtyFocusNode = FocusNode();
   final _rateCtrl = TextEditingController();
@@ -41,11 +42,12 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   final _deliveryChargeCtrl = TextEditingController();
 
   List<Product> _searchResults = [];
-  bool _showSearchDropdown = false;
   bool _isSearching = false;
 
   Product? _editingProduct;
   LineItem? _editingItem;
+
+  OverlayEntry? _dropdownOverlay;
 
   @override
   void initState() {
@@ -57,6 +59,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
 
   @override
   void dispose() {
+    _removeDropdown();
     _searchCtrl.dispose();
     _searchFocusNode.dispose();
     _qtyCtrl.dispose();
@@ -67,13 +70,63 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     super.dispose();
   }
 
+  void _showDropdown() {
+    _removeDropdown();
+    final RenderBox? renderBox =
+        _searchFieldKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.attached) return;
+    final position = renderBox.localToGlobal(Offset.zero);
+    final size = renderBox.size;
+
+    _dropdownOverlay = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _removeDropdown,
+              behavior: HitTestBehavior.translucent,
+            ),
+          ),
+          Positioned(
+            left: position.dx,
+            top: position.dy + size.height + 4,
+            width: size.width,
+            child: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(10),
+              child: ProductSearchDropdown(
+                results: _searchResults,
+                defaultRates: _defaultRates,
+                onSelected: (p) {
+                  _selectProduct(p);
+                  _removeDropdown();
+                },
+                onAddProduct: () {
+                  _removeDropdown();
+                  _addProduct();
+                },
+                searchQuery: _searchCtrl.text.trim(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    Overlay.of(context).insert(_dropdownOverlay!);
+  }
+
+  void _removeDropdown() {
+    _dropdownOverlay?.remove();
+    _dropdownOverlay = null;
+  }
+
   void _onSearchChanged(String query) async {
     final q = query.trim();
     if (q.isEmpty) {
       setState(() {
         _searchResults = [];
-        _showSearchDropdown = false;
       });
+      _removeDropdown();
       return;
     }
     setState(() => _isSearching = true);
@@ -82,9 +135,13 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
       if (mounted) {
         setState(() {
           _searchResults = results.where((p) => p.isActive).toList();
-          _showSearchDropdown = true;
           _isSearching = false;
         });
+        if (_searchResults.isNotEmpty || q.isNotEmpty) {
+          _showDropdown();
+        } else {
+          _removeDropdown();
+        }
       }
     } catch (_) {
       if (mounted) setState(() => _isSearching = false);
@@ -106,10 +163,10 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
         appliedRate: defaultRate,
       );
       _searchResults = [];
-      _showSearchDropdown = false;
       _searchCtrl.clear();
     });
 
+    _removeDropdown();
     _qtyCtrl.text = '1';
     _rateCtrl.text = defaultRate > 0 ? defaultRate.toStringAsFixed(0) : '';
     _qtyFocusNode.requestFocus();
@@ -139,6 +196,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   }
 
   void _cancelEdit() {
+    _removeDropdown();
     setState(() {
       _editingProduct = null;
       _editingItem = null;
@@ -285,6 +343,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
           onCleared: () => setState(() => _selectedCustomer = null),
         ),
         Padding(
+          key: _searchFieldKey,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: ProductSearchBar(
             controller: _searchCtrl,
@@ -313,45 +372,35 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
             ),
           ),
         Expanded(
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              if (_items.isEmpty && _editingProduct == null && !_showSearchDropdown)
-                EmptyState(isWide: isWide),
-              if (_items.isNotEmpty || _editingProduct != null)
-                Positioned.fill(
-                  child: ProductList(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_items.isEmpty && _editingProduct == null)
+                  EmptyState(isWide: isWide),
+                if (_items.isNotEmpty || _editingProduct != null)
+                  ProductList(
                     items: _items,
                     onEdit: _editExistingItem,
                     onRemove: _removeItem,
                     isWide: isWide,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
                   ),
+                SummaryCard(
+                  itemCount: _items.length,
+                  subtotal: _subtotal,
+                  deliveryCharge: _deliveryCharge,
+                  onDeliveryChanged: (v) =>
+                      setState(() => _deliveryCharge = v),
+                  total: _total,
                 ),
-              if (_showSearchDropdown)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: ProductSearchDropdown(
-                      results: _searchResults,
-                      defaultRates: _defaultRates,
-                      onSelected: _selectProduct,
-                      onAddProduct: _addProduct,
-                      searchQuery: _searchCtrl.text.trim(),
-                    ),
-                  ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
-        SummaryCard(
-          itemCount: _items.length,
-          subtotal: _subtotal,
-          deliveryCharge: _deliveryCharge,
-          onDeliveryChanged: (v) => setState(() => _deliveryCharge = v),
-          total: _total,
         ),
         BottomBar(
           itemCount: _items.length,

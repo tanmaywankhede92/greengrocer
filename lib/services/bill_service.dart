@@ -1,6 +1,7 @@
 import 'api_client.dart';
 import '../models/bill.dart';
 import '../models/bill_item.dart';
+import '../models/bill_adjustment.dart';
 
 class BillService {
   final ApiClient _client = ApiClient();
@@ -21,12 +22,13 @@ class BillService {
     return (data: list, meta: body['meta'] as Map<String, dynamic>?);
   }
 
-  Future<({Bill bill, List<BillItem> items})> getById(String id) async {
+  Future<({Bill bill, List<BillItem> items, List<BillAdjustment> adjustments})> getById(String id) async {
     final response = await _client.get('/bills/$id');
     final data = response.data['data'];
     final bill = Bill.fromJson(data['bill']);
     final items = (data['items'] as List).map((e) => BillItem.fromJson(e)).toList();
-    return (bill: bill, items: items);
+    final adjustments = (data['adjustments'] as List).map((e) => BillAdjustment.fromJson(e)).toList();
+    return (bill: bill, items: items, adjustments: adjustments);
   }
 
   Future<Map<String, dynamic>> create(Map<String, dynamic> data) async {
@@ -36,5 +38,14 @@ class BillService {
 
   Future<void> cancel(String id) async {
     await _client.post('/bills/$id/cancel');
+  }
+
+  Future<Map<String, dynamic>> adjust(String id, {required double amount, required String reason, String note = ''}) async {
+    final response = await _client.put('/bills/$id/adjust', data: {
+      'amount': amount,
+      'reason': reason,
+      'note': note,
+    });
+    return response.data['data'] as Map<String, dynamic>;
   }
 }

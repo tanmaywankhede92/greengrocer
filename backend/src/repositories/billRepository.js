@@ -1,5 +1,6 @@
 const Bill = require('../models/Bill');
 const BillItem = require('../models/BillItem');
+const BillAdjustment = require('../models/BillAdjustment');
 const Customer = require('../models/Customer');
 
 const findBills = async (filters, { page, limit, skip, sort }) => {
@@ -32,21 +33,34 @@ const findBills = async (filters, { page, limit, skip, sort }) => {
     Bill.countDocuments(query),
   ]);
 
-  const mapped = bills.map((b) => ({
-    id: b._id,
-    billNumber: b.billNumber,
-    customerId: b.customerId?._id,
-    customer: b.customerId || null,
-    billDate: b.billDate,
-    subtotal: b.subtotal,
-    deliveryCharge: b.deliveryCharge ?? 0,
-    total: b.total,
-    paidNow: b.paidNow,
-    paymentType: b.paymentType,
-    notes: b.notes,
-    status: b.status,
-    createdAt: b.createdAt,
-  }));
+  const billIds = bills.map((b) => b._id);
+  const adjustments = await BillAdjustment.aggregate([
+    { $match: { billId: { $in: billIds } } },
+    { $group: { _id: '$billId', totalAdjusted: { $sum: '$amount' } } },
+  ]);
+  const adjustmentMap = Object.fromEntries(adjustments.map((a) => [a._id.toString(), a.totalAdjusted]));
+
+  const mapped = bills.map((b) => {
+    const id = b._id.toString();
+    const totalAdjusted = adjustmentMap[id] || 0;
+    return {
+      id: b._id,
+      billNumber: b.billNumber,
+      customerId: b.customerId?._id,
+      customer: b.customerId || null,
+      billDate: b.billDate,
+      subtotal: b.subtotal,
+      deliveryCharge: b.deliveryCharge ?? 0,
+      total: b.total,
+      totalAdjusted,
+      adjustedTotal: b.total - totalAdjusted,
+      paidNow: b.paidNow,
+      paymentType: b.paymentType,
+      notes: b.notes,
+      status: b.status,
+      createdAt: b.createdAt,
+    };
+  });
 
   return { bills: mapped, total };
 };
@@ -55,7 +69,10 @@ const findById = async (id) => {
   const bill = await Bill.findById(id).populate('customerId').lean();
   if (!bill) return null;
 
-  const items = await BillItem.find({ billId: id }).lean();
+  const [items, adjustments] = await Promise.all([
+    BillItem.find({ billId: id }).lean(),
+    BillAdjustment.find({ billId: id }).sort({ createdAt: -1 }).lean(),
+  ]);
 
   return {
     bill: {
@@ -65,6 +82,7 @@ const findById = async (id) => {
       deliveryCharge: bill.deliveryCharge ?? 0,
     },
     items: items.map((i) => ({ ...i, id: i._id })),
+    adjustments: adjustments.map((a) => ({ ...a, id: a._id })),
   };
 };
 

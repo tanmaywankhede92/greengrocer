@@ -30,6 +30,7 @@ module.exports = {
   BILL: {
     CREATED: 'Bill generated successfully',
     CANCELLED: 'Bill cancelled successfully',
+    ADJUSTED: 'Bill adjusted successfully',
     NOT_FOUND: 'Bill not found',
     ALREADY_CANCELLED: 'Bill is already cancelled',
     NO_ITEMS: 'At least one item is required',

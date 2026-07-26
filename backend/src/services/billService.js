@@ -7,6 +7,7 @@ const customerRepository = require('../repositories/customerRepository');
 const { generateBillNumber, generateReceiptNumber } = require('../helpers/sequenceGenerator');
 const Bill = require('../models/Bill');
 const BillItem = require('../models/BillItem');
+const BillAdjustment = require('../models/BillAdjustment');
 const Payment = require('../models/Payment');
 const LedgerEntry = require('../models/LedgerEntry');
 
@@ -178,4 +179,64 @@ const cancelBill = async (billId, userId) => {
     throw error;
   }
 };
-module.exports = { listBills, getBill, createBill, cancelBill };
+
+const REASON_LABELS = {
+  damaged: 'Damaged',
+  missing: 'Missing',
+  short_supply: 'Short Supply',
+  rate_diff: 'Rate Difference',
+  other: 'Other',
+};
+
+const adjustBill = async (billId, { amount, reason, note }, userId) => {
+  const result = await billRepository.findById(billId);
+  if (!result || !result.bill) {
+    const error = new Error('Bill not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (result.bill.status === 'cancelled') {
+    const error = new Error('Cannot adjust a cancelled bill');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const { bill } = result;
+  const totalAdjusted = result.adjustments.reduce((sum, a) => sum + a.amount, 0);
+  const remaining = bill.total - totalAdjusted;
+
+  if (amount > remaining) {
+    const error = new Error(`Adjustment exceeds bill amount. Maximum adjustable: ${remaining}`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const reasonLabel = REASON_LABELS[reason] || reason;
+  const description = `Adjustment for ${bill.billNumber}: ${reasonLabel}${note ? ` - ${note}` : ''}`;
+
+  const adjustment = await BillAdjustment.create({
+    billId: bill._id,
+    customerId: bill.customerId,
+    amount,
+    reason,
+    note: note || '',
+    adjustmentDate: new Date(),
+    createdBy: userId,
+  });
+
+  await LedgerEntry.create({
+    customerId: bill.customerId,
+    entryType: 'adjustment',
+    entryDate: new Date(),
+    description,
+    debit: 0,
+    credit: amount,
+    referenceId: bill._id,
+    createdBy: userId,
+  });
+
+  return { id: adjustment._id, amount, reason, note: note || '' };
+};
+
+module.exports = { listBills, getBill, createBill, cancelBill, adjustBill };

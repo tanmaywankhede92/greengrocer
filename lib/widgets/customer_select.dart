@@ -17,9 +17,10 @@ class CustomerSelect extends ConsumerStatefulWidget {
 
 class _CustomerSelectState extends ConsumerState<CustomerSelect> {
   final _controller = TextEditingController();
+  final _fieldKey = GlobalKey();
   List<Customer> _results = [];
   Customer? _selected;
-  bool _showDropdown = false;
+  OverlayEntry? _dropdownOverlay;
 
   @override
   void initState() {
@@ -32,18 +33,115 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
 
   @override
   void dispose() {
+    _removeDropdown();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _showDropdown() {
+    _removeDropdown();
+    final RenderBox? renderBox =
+        _fieldKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.attached) return;
+    final position = renderBox.localToGlobal(Offset.zero);
+    final size = renderBox.size;
+
+    _dropdownOverlay = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _removeDropdown,
+              behavior: HitTestBehavior.translucent,
+            ),
+          ),
+          Positioned(
+            left: position.dx,
+            top: position.dy + size.height + 4,
+            width: size.width,
+            child: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                constraints: const BoxConstraints(maxHeight: 240),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.border),
+                ),
+                child: _results.isNotEmpty
+                    ? ListView.builder(
+                        shrinkWrap: true,
+                        padding: EdgeInsets.zero,
+                        itemCount: _results.length,
+                        itemBuilder: (context, index) {
+                          final c = _results[index];
+                          return ListTile(
+                            dense: true,
+                            title: Text(c.name,
+                                style: const TextStyle(
+                                    color: AppTheme.textPrimary, fontSize: 14)),
+                            subtitle: Text(
+                                '${c.mobile}  \u2022  Due: ${AppUtils.formatCurrency(c.currentDue)}',
+                                style: const TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 12)),
+                            onTap: () {
+                              setState(() {
+                                _selected = c;
+                                _controller.text = c.name;
+                              });
+                              widget.onSelected(c);
+                              _removeDropdown();
+                            },
+                          );
+                        },
+                      )
+                    : ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.person_add,
+                            color: AppTheme.primaryRed),
+                        title: const Text('Add new customer',
+                            style: TextStyle(
+                                color: AppTheme.primaryRed, fontSize: 14)),
+                        subtitle: Text('"${_controller.text}"',
+                            style: const TextStyle(
+                                color: AppTheme.textSecondary, fontSize: 12)),
+                        onTap: () {
+                          _removeDropdown();
+                          _showAddCustomerDialog();
+                        },
+                      ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    Overlay.of(context).insert(_dropdownOverlay!);
+  }
+
+  void _removeDropdown() {
+    _dropdownOverlay?.remove();
+    _dropdownOverlay = null;
   }
 
   void _onSearchChanged(String query) async {
     final q = query.trim();
     if (q.isEmpty) {
-      setState(() { _results = []; _showDropdown = false; });
+      setState(() {
+        _results = [];
+      });
+      _removeDropdown();
       return;
     }
     final result = await ref.read(customerSearchProvider(q).future);
-    if (mounted) setState(() { _results = result; _showDropdown = true; });
+    if (mounted) {
+      setState(() {
+        _results = result;
+      });
+      _showDropdown();
+    }
   }
 
   Future<void> _showAddCustomerDialog() async {
@@ -59,25 +157,55 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name *')),
+              TextField(
+                  controller: nameCtrl,
+                  decoration:
+                      const InputDecoration(labelText: 'Name *')),
               const SizedBox(height: 12),
-              TextField(controller: mobileCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Mobile *')),
+              TextField(
+                  controller: mobileCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration:
+                      const InputDecoration(labelText: 'Mobile *')),
               const SizedBox(height: 12),
-              TextField(controller: addrCtrl, decoration: const InputDecoration(labelText: 'Address'), maxLines: 2),
+              TextField(
+                  controller: addrCtrl,
+                  decoration:
+                      const InputDecoration(labelText: 'Address'),
+                  maxLines: 2),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
-              if (nameCtrl.text.isEmpty || mobileCtrl.text.isEmpty) return;
+              if (nameCtrl.text.isEmpty || mobileCtrl.text.isEmpty) {
+                return;
+              }
               try {
                 final service = CustomerService();
-                createdId = await service.create({'name': nameCtrl.text, 'mobile': mobileCtrl.text, 'address': addrCtrl.text});
-                if (ctx.mounted) Navigator.pop(ctx, {'id': createdId!, 'name': nameCtrl.text, 'mobile': mobileCtrl.text, 'address': addrCtrl.text});
+                createdId = await service.create({
+                  'name': nameCtrl.text,
+                  'mobile': mobileCtrl.text,
+                  'address': addrCtrl.text
+                });
+                if (ctx.mounted) {
+                  Navigator.pop(ctx, {
+                    'id': createdId!,
+                    'name': nameCtrl.text,
+                    'mobile': mobileCtrl.text,
+                    'address': addrCtrl.text
+                  });
+                }
               } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error));
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: AppTheme.error));
+                }
               }
             },
             child: const Text('Save'),
@@ -86,11 +214,14 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
       ),
     );
     if (saved != null && mounted) {
-      final newCustomer = Customer(id: saved['id']!, name: saved['name']!, mobile: saved['mobile']!, address: saved['address']);
+      final newCustomer = Customer(
+          id: saved['id']!,
+          name: saved['name']!,
+          mobile: saved['mobile']!,
+          address: saved['address']);
       setState(() {
         _selected = newCustomer;
         _controller.text = newCustomer.name;
-        _showDropdown = false;
       });
       widget.onSelected(newCustomer);
     }
@@ -101,9 +232,12 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Customer', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+        const Text('Customer',
+            style: TextStyle(
+                color: AppTheme.textSecondary, fontSize: 13)),
         const SizedBox(height: 6),
         TextField(
+          key: _fieldKey,
           controller: _controller,
           onChanged: _onSearchChanged,
           decoration: InputDecoration(
@@ -114,63 +248,32 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
                     icon: const Icon(Icons.clear, size: 18),
                     onPressed: () {
                       _controller.clear();
-                      setState(() { _selected = null; _results = []; _showDropdown = false; });
+                      setState(() {
+                        _selected = null;
+                        _results = [];
+                      });
+                      _removeDropdown();
                     },
                   )
                 : null,
           ),
         ),
-        if (_showDropdown)
-          Container(
-            margin: const EdgeInsets.only(top: 4),
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppTheme.border),
-              boxShadow: [BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 8, offset: const Offset(0, 4))],
-            ),
-            constraints: const BoxConstraints(maxHeight: 240),
-            child: _results.isNotEmpty
-                ? ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: _results.length,
-                    itemBuilder: (context, index) {
-                      final c = _results[index];
-                      return ListTile(
-                        dense: true,
-                        title: Text(c.name, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
-                        subtitle: Text('${c.mobile}  •  Due: ${AppUtils.formatCurrency(c.currentDue)}',
-                            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                        onTap: () {
-                          setState(() {
-                            _selected = c;
-                            _controller.text = c.name;
-                            _showDropdown = false;
-                          });
-                          widget.onSelected(c);
-                        },
-                      );
-                    },
-                  )
-                : ListTile(
-                    dense: true,
-                    leading: const Icon(Icons.person_add, color: AppTheme.primaryRed),
-                    title: const Text('Add new customer', style: TextStyle(color: AppTheme.primaryRed, fontSize: 14)),
-                    subtitle: Text('"${_controller.text}"', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                    onTap: () => _showAddCustomerDialog(),
-                  ),
-          ),
         if (_selected != null && _selected!.currentDue > 0)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: AppTheme.warning.withAlpha(15),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text('Previous Due: ${AppUtils.formatCurrency(_selected!.currentDue)}',
-                  style: const TextStyle(color: AppTheme.warning, fontSize: 13, fontWeight: FontWeight.w600)),
+              child: Text(
+                  'Previous Due: ${AppUtils.formatCurrency(_selected!.currentDue)}',
+                  style: const TextStyle(
+                      color: AppTheme.warning,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600)),
             ),
           ),
       ],

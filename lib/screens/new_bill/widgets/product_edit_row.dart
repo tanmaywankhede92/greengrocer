@@ -4,15 +4,6 @@ import '../../../config/theme.dart';
 import '../../../core/utils.dart';
 import '../../../widgets/bill_item_row.dart';
 
-const Map<String, List<String>> _subUnitOptions = {
-  'kg': ['kg', '500g', '250g', '100g'],
-  'dozen': ['dozen', 'half-dozen'],
-  'quintal': ['quintal', '50kg', '10kg', '5kg'],
-  'box': ['box', 'half-box'],
-  'bag': ['bag', 'half-bag'],
-  'bunch': ['bunch', 'half-bunch'],
-};
-
 class ProductEditRow extends StatefulWidget {
   final LineItem item;
   final TextEditingController qtyCtrl;
@@ -40,51 +31,6 @@ class ProductEditRow extends StatefulWidget {
 }
 
 class _ProductEditRowState extends State<ProductEditRow> {
-  late TextEditingController _unitCtrl;
-  List<String> _quickUnits = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _unitCtrl = TextEditingController(text: widget.item.unit);
-    _loadQuickUnits();
-  }
-
-  @override
-  void didUpdateWidget(ProductEditRow oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.item.unit != widget.item.unit && _unitCtrl.text != widget.item.unit) {
-      _unitCtrl.text = widget.item.unit;
-    }
-  }
-
-  void _loadQuickUnits() {
-    final baseUnit = widget.item.unit.toLowerCase();
-    final options = _subUnitOptions[baseUnit];
-    if (options != null) {
-      _quickUnits = options;
-    } else {
-      for (final entry in _subUnitOptions.entries) {
-        if (entry.value.contains(baseUnit)) {
-          _quickUnits = entry.value;
-          break;
-        }
-      }
-    }
-  }
-
-  void _setUnit(String unit) {
-    _unitCtrl.text = unit;
-    widget.item.unit = unit;
-    setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _unitCtrl.dispose();
-    super.dispose();
-  }
-
   String get _displayName {
     if (widget.item.productNameHindi.isNotEmpty) {
       return '${widget.item.productName} (${widget.item.productNameHindi})';
@@ -99,67 +45,9 @@ class _ProductEditRowState extends State<ProductEditRow> {
     return widget.isWide ? _buildWide() : _buildNarrow();
   }
 
-  Widget _buildUnitChips() {
-    if (_quickUnits.isEmpty) return const SizedBox.shrink();
-    return SizedBox(
-      height: 32,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _quickUnits.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 6),
-        itemBuilder: (context, index) {
-          final unit = _quickUnits[index];
-          final isActive = _unitCtrl.text.toLowerCase() == unit.toLowerCase();
-          return GestureDetector(
-            onTap: () => _setUnit(unit),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: isActive ? AppTheme.primaryRed : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isActive ? AppTheme.primaryRed : AppTheme.border,
-                ),
-              ),
-              child: Text(
-                unit,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isActive ? Colors.white : AppTheme.textSecondary,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildUnitField({double? width}) {
-    return SizedBox(
-      width: width,
-      child: TextField(
-        controller: _unitCtrl,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9\-]'))],
-        decoration: const InputDecoration(
-          isDense: true,
-          hintText: 'Unit',
-          labelText: 'Unit',
-          contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-          border: OutlineInputBorder(),
-        ),
-        onChanged: (v) {
-          widget.item.unit = v.trim().isEmpty ? 'kg' : v.trim();
-        },
-      ),
-    );
-  }
-
   Widget _buildWide() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppTheme.primaryRed.withAlpha(8),
         borderRadius: BorderRadius.circular(10),
@@ -177,17 +65,29 @@ class _ProductEditRowState extends State<ProductEditRow> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(_displayName, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13), overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 4),
-                    _buildUnitChips(),
+                    Text(
+                      _displayName,
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Unit: ${widget.item.unit}',
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(width: 6),
-              _buildUnitField(width: 60),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               SizedBox(
-                width: 65,
+                width: 70,
                 child: TextField(
                   controller: widget.qtyCtrl,
                   focusNode: widget.qtyFocusNode,
@@ -204,9 +104,9 @@ class _ProductEditRowState extends State<ProductEditRow> {
                   onSubmitted: (_) => widget.rateFocusNode.requestFocus(),
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               SizedBox(
-                width: 75,
+                width: 85,
                 child: TextField(
                   controller: widget.rateCtrl,
                   focusNode: widget.rateFocusNode,
@@ -229,26 +129,32 @@ class _ProductEditRowState extends State<ProductEditRow> {
                 width: 80,
                 child: Text(
                   AppUtils.formatCurrency(_amount),
-                  style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(
+                    color: AppTheme.primaryRed,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
               ),
               const SizedBox(width: 4),
               SizedBox(
-                width: 36, height: 36,
+                width: 36,
+                height: 36,
                 child: IconButton(
                   icon: const Icon(Icons.check_circle, color: AppTheme.success, size: 22),
                   onPressed: widget.onConfirm,
-                  tooltip: 'Save (Enter)',
+                  tooltip: 'Add Product',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 ),
               ),
               SizedBox(
-                width: 36, height: 36,
+                width: 36,
+                height: 36,
                 child: IconButton(
                   icon: Icon(Icons.close, color: Colors.grey.shade400, size: 18),
                   onPressed: widget.onCancel,
-                  tooltip: 'Cancel (Esc)',
+                  tooltip: 'Cancel',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 ),
@@ -276,12 +182,29 @@ class _ProductEditRowState extends State<ProductEditRow> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(_displayName, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13), overflow: TextOverflow.ellipsis),
+                      Text(
+                        _displayName,
+                        style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Unit: ${widget.item.unit}',
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 SizedBox(
-                  width: 36, height: 36,
+                  width: 36,
+                  height: 36,
                   child: IconButton(
                     icon: const Icon(Icons.close, size: 18),
                     onPressed: widget.onCancel,
@@ -291,10 +214,6 @@ class _ProductEditRowState extends State<ProductEditRow> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            _buildUnitChips(),
-            const SizedBox(height: 8),
-            _buildUnitField(),
             const SizedBox(height: 10),
             Row(
               children: [
@@ -340,13 +259,19 @@ class _ProductEditRowState extends State<ProductEditRow> {
               children: [
                 Text(
                   AppUtils.formatCurrency(_amount),
-                  style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 18),
+                  style: const TextStyle(
+                    color: AppTheme.primaryRed,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
                 ),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.check, size: 16),
                   label: const Text('Add'),
                   onPressed: widget.onConfirm,
-                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  ),
                 ),
               ],
             ),

@@ -5,7 +5,7 @@ import '../config/theme.dart';
 import '../core/utils.dart';
 import '../core/params.dart';
 import '../providers/customer_provider.dart';
-import '../widgets/loading_widget.dart';
+
 import '../widgets/empty_state.dart';
 import '../widgets/breadcrumb.dart';
 import '../models/customer.dart';
@@ -43,79 +43,83 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Customers')]),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchCtrl,
-              decoration: const InputDecoration(hintText: 'Search by name or mobile...', prefixIcon: Icon(Icons.search)),
-              onChanged: (_) => setState(() => _page = 1),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Customers')]),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: _searchCtrl,
+                decoration: const InputDecoration(hintText: 'Search by name or mobile...', prefixIcon: Icon(Icons.search)),
+                onChanged: (_) => setState(() => _page = 1),
+              ),
             ),
-          ),
-          Expanded(
-            child: customersAsync.when(
-              loading: () => const LoadingWidget(),
-              error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.error))),
+            customersAsync.when(
+              loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+              error: (e, _) => SizedBox(height: 200, child: Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.error)))),
               data: (result) {
                 if (result.data.isEmpty) {
-                  return const EmptyState(icon: Icons.people_outline, title: 'No customers found', subtitle: 'Add your first customer to get started');
+                  return const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: EmptyState(icon: Icons.people_outline, title: 'No customers found', subtitle: 'Add your first customer to get started'),
+                  );
                 }
                 return Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: result.data.length,
-                        itemBuilder: (context, index) {
-                          final c = result.data[index];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              title: Text(c.name, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                              subtitle: Text('${c.mobile}  •  ${c.address ?? ""}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(AppUtils.formatCurrency(c.currentDue), style: TextStyle(color: c.currentDue > 0 ? AppTheme.warning : AppTheme.success, fontWeight: FontWeight.w600)),
-                                      Text('${c.billCount} bills', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                                    ],
-                                  ),
-                                  const SizedBox(width: 4),
-                                  PopupMenuButton<String>(
-                                    padding: EdgeInsets.zero,
-                                    icon: const Icon(Icons.more_vert, size: 20, color: AppTheme.textSecondary),
-                                    onSelected: (v) {
-                                      if (v == 'edit') {
-                                        _showCustomerForm(context, {
-                                          'id': c.id,
-                                          'name': c.name,
-                                          'mobile': c.mobile,
-                                          'address': c.address ?? '',
-                                          'gstNumber': c.gstNumber ?? '',
-                                          'openingBalance': c.openingBalance,
-                                        });
-                                      } else if (v == 'delete') {
-                                        _confirmDelete(context, c);
-                                      }
-                                    },
-                                    itemBuilder: (_) => [
-                                      const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Edit')])),
-                                      const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline, size: 18, color: AppTheme.error), SizedBox(width: 8), Text('Delete', style: TextStyle(color: AppTheme.error))])),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              onTap: () => context.go('/customers/${c.id}'),
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: result.data.length,
+                      itemBuilder: (context, index) {
+                        final c = result.data[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            title: Text(c.name, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                            subtitle: Text('${c.mobile}  •  ${c.address ?? ""}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(AppUtils.formatCurrency(c.currentDue), style: TextStyle(color: c.currentDue > 0 ? AppTheme.warning : AppTheme.success, fontWeight: FontWeight.w600)),
+                                    Text('${c.billCount} bills', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                                  ],
+                                ),
+                                const SizedBox(width: 4),
+                                PopupMenuButton<String>(
+                                  padding: EdgeInsets.zero,
+                                  icon: const Icon(Icons.more_vert, size: 20, color: AppTheme.textSecondary),
+                                  onSelected: (v) {
+                                    if (v == 'edit') {
+                                      _showCustomerForm(context, {
+                                        'id': c.id,
+                                        'name': c.name,
+                                        'mobile': c.mobile,
+                                        'address': c.address ?? '',
+                                        'gstNumber': c.gstNumber ?? '',
+                                        'openingBalance': c.openingBalance,
+                                      });
+                                    } else if (v == 'delete') {
+                                      _confirmDelete(context, c);
+                                    }
+                                  },
+                                  itemBuilder: (_) => [
+                                    const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Edit')])),
+                                    const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline, size: 18, color: AppTheme.error), SizedBox(width: 8), Text('Delete', style: TextStyle(color: AppTheme.error))])),
+                                  ],
+                                ),
+                              ],
                             ),
-                          );
-                        },
-                      ),
+                            onTap: () => context.go('/customers/${c.id}'),
+                          ),
+                        );
+                      },
                     ),
                     if (result.meta != null)
                       Container(
@@ -133,8 +137,8 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                 );
               },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

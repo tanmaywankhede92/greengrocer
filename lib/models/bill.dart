@@ -11,6 +11,8 @@ class Bill extends Equatable {
   final double subtotal;
   final double deliveryCharge;
   final double total;
+  final double totalAdjusted;
+  final double adjustedTotal;
   final double paidNow;
   final String? paymentType;
   final String? notes;
@@ -26,6 +28,8 @@ class Bill extends Equatable {
     this.subtotal = 0,
     this.deliveryCharge = 0,
     this.total = 0,
+    this.totalAdjusted = 0,
+    this.adjustedTotal = 0,
     this.paidNow = 0,
     this.paymentType,
     this.notes,
@@ -33,25 +37,31 @@ class Bill extends Equatable {
     this.createdAt,
   });
 
-  factory Bill.fromJson(Map<String, dynamic> json) => Bill(
-    id: json['_id'] ?? json['id'] ?? '',
-    billNumber: json['billNumber'] ?? '',
-    customerId: json['customerId'] is Map
-        ? (json['customerId']['_id'] ?? json['customerId']['id'] ?? '')
-        : (json['customerId'] ?? ''),
-    customer: json['customer'] != null
-        ? Customer.fromJson(json['customer'])
-        : (json['customerId'] is Map ? Customer.fromJson(json['customerId']) : null),
-    billDate: DateTime.parse(json['billDate'] ?? DateTime.now().toIso8601String()),
-    subtotal: (json['subtotal'] ?? 0).toDouble(),
-    deliveryCharge: (json['deliveryCharge'] ?? 0).toDouble(),
-    total: (json['total'] ?? 0).toDouble(),
-    paidNow: (json['paidNow'] ?? 0).toDouble(),
-    paymentType: json['paymentType'],
-    notes: json['notes'],
-    status: BillStatus.fromString(json['status'] ?? 'active'),
-    createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
-  );
+  factory Bill.fromJson(Map<String, dynamic> json) {
+    final total = (json['total'] ?? 0).toDouble();
+    final totalAdjusted = (json['totalAdjusted'] ?? 0).toDouble();
+    return Bill(
+      id: json['_id'] ?? json['id'] ?? '',
+      billNumber: json['billNumber'] ?? '',
+      customerId: json['customerId'] is Map
+          ? (json['customerId']['_id'] ?? json['customerId']['id'] ?? '')
+          : (json['customerId'] ?? ''),
+      customer: json['customer'] != null
+          ? Customer.fromJson(json['customer'])
+          : (json['customerId'] is Map ? Customer.fromJson(json['customerId']) : null),
+      billDate: DateTime.parse(json['billDate'] ?? DateTime.now().toIso8601String()),
+      subtotal: (json['subtotal'] ?? 0).toDouble(),
+      deliveryCharge: (json['deliveryCharge'] ?? 0).toDouble(),
+      total: total,
+      totalAdjusted: totalAdjusted,
+      adjustedTotal: (json['adjustedTotal'] ?? (total - totalAdjusted)).toDouble(),
+      paidNow: (json['paidNow'] ?? 0).toDouble(),
+      paymentType: json['paymentType'],
+      notes: json['notes'],
+      status: BillStatus.fromString(json['status'] ?? 'active'),
+      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
+    );
+  }
 
   @override
   List<Object?> get props => [id, billNumber, customerId, total, status];

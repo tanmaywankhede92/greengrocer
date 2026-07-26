@@ -219,14 +219,14 @@ Future<Uint8List> buildStatementPdf({
     final shortDesc = _shortDesc(desc);
     final label = _typeLabel(type);
 
-    final isCancel = type == 'adjustment' && desc.toLowerCase().contains('cancel');
+    final isAdjustment = type == 'adjustment';
     final isPayment = type == 'payment';
 
-    final bgColor = isCancel
+    final bgColor = isAdjustment
         ? const PdfColor(1.0, 0.95, 0.88)
         : (isAlt ? altRow : null);
 
-    final typeColor = isCancel
+    final typeColor = isAdjustment
         ? const PdfColor(0.9, 0.32, 0.0)
         : (isPayment ? PdfColors.green700 : (type == 'bill' ? red : textColor));
 
@@ -250,10 +250,11 @@ Future<Uint8List> buildStatementPdf({
           pw.Expanded(flex: 26, child: pw.Text(debit > 0 ? money(debit) : '-',
             textAlign: pw.TextAlign.right,
             style: pw.TextStyle(font: font, fontSize: 8.5,
-              color: isCancel ? const PdfColor(0.9, 0.32, 0.0) : red))),
+              color: isAdjustment ? const PdfColor(0.9, 0.32, 0.0) : red))),
           pw.Expanded(flex: 26, child: pw.Text(credit > 0 ? money(credit) : '-',
             textAlign: pw.TextAlign.right,
-            style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.green700))),
+            style: pw.TextStyle(font: font, fontSize: 8.5,
+              color: isAdjustment ? const PdfColor(0.9, 0.32, 0.0) : PdfColors.green700))),
           pw.Expanded(flex: 28, child: pw.Text(money(balance),
             textAlign: pw.TextAlign.right,
             style: pw.TextStyle(font: fontB, fontSize: 8.5, color: textColor))),

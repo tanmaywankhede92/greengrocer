@@ -43,4 +43,9 @@ const cancel = asyncHandler(async (req, res) => {
   ApiResponse.success(res, null, messages.BILL.CANCELLED);
 });
 
-module.exports = { list, getById, create, cancel };
+const adjust = asyncHandler(async (req, res) => {
+  const result = await billService.adjustBill(req.params.id, req.body, req.user.id);
+  ApiResponse.success(res, result, messages.BILL.ADJUSTED);
+});
+
+module.exports = { list, getById, create, cancel, adjust };
