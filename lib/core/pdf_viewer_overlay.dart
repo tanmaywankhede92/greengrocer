@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'dart:html' as html;
-import 'dart:js' as js;
 import 'dart:typed_data';
-
-import 'package:printing/printing.dart';
 
 Future<void> showPdfViewer(Uint8List pdfBytes, String filename) async {
   final completer = Completer<void>();
   StreamSubscription? keySub;
+  html.StyleElement? printStyle;
 
   html.document.getElementById('pdf-viewer-overlay')?.remove();
 
@@ -19,9 +17,10 @@ Future<void> showPdfViewer(Uint8List pdfBytes, String filename) async {
     ..id = 'pdf-viewer-overlay'
     ..style.cssText =
         'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:99999;'
-        'display:flex;flex-direction:column;background:#e0e0e0;';
+        'display:flex;flex-direction:column;background:#fff;';
 
   final toolbar = html.DivElement()
+    ..id = 'pdf-viewer-toolbar'
     ..style.cssText =
         'display:flex;align-items:center;padding:6px 12px;'
         'background:#1565C0;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);'
@@ -47,61 +46,70 @@ Future<void> showPdfViewer(Uint8List pdfBytes, String filename) async {
 
   toolbar.children.addAll([title, printBtn, closeBtn]);
 
-  final scrollArea = html.DivElement()
-    ..style.cssText =
-        'flex:1;overflow-y:auto;display:flex;flex-direction:column;'
-        'align-items:center;padding:16px;gap:16px;';
-
   final loading = html.DivElement()
     ..text = 'Loading PDF...'
     ..style.cssText =
         'display:flex;align-items:center;justify-content:center;'
         'flex:1;font-size:16px;color:#888;';
 
-  scrollArea.append(loading);
-  overlay.children.addAll([toolbar, scrollArea]);
+  final iframe = html.IFrameElement()
+    ..id = 'pdf-viewer-iframe'
+    ..src = blobUrl
+    ..style.cssText =
+        'border:none;width:100%;flex:1;display:none;';
+
+  iframe.onLoad.listen((_) {
+    loading.style.display = 'none';
+    iframe.style.display = 'block';
+  });
+
+  overlay.children.addAll([toolbar, loading, iframe]);
   html.document.body!.append(overlay);
 
-  try {
-    await for (final page in Printing.raster(pdfBytes, dpi: 150)) {
-      final pngBytes = await page.toPng();
-      final imgUrl = html.Url.createObjectUrlFromBlob(
-        html.Blob([pngBytes], 'image/png'),
-      );
-      final img = html.ImageElement()
-        ..src = imgUrl
-        ..style.cssText = 'width:100%;max-width:700px;display:block;box-shadow:0 1px 6px rgba(0,0,0,.18);';
-      scrollArea.append(img);
+  void removePrintStyle() {
+    if (printStyle != null) {
+      printStyle!.remove();
+      printStyle = null;
     }
-    loading.remove();
-  } catch (_) {
-    final iframe = html.IFrameElement()
-      ..id = 'pdf-viewer-iframe'
-      ..src = blobUrl
-      ..style.cssText = 'border:none;width:100%;flex:1;display:none;';
-    iframe.onLoad.listen((_) {
-      loading.remove();
-      scrollArea.append(iframe);
-      iframe.style.display = 'block';
-    });
   }
 
   void close() {
     keySub?.cancel();
+    removePrintStyle();
     html.Url.revokeObjectUrl(blobUrl);
     overlay.remove();
     if (!completer.isCompleted) completer.complete();
   }
 
   printBtn.onClick.listen((_) {
-    try {
-      final iframeJs = js.context['document']
-          .callMethod('getElementById', ['pdf-viewer-iframe']);
-      final cw = iframeJs?.callMethod('contentWindow');
-      cw?.callMethod('print');
-    } catch (_) {
-      html.window.print();
-    }
+    removePrintStyle();
+    printStyle = html.StyleElement()
+      ..id = 'pdf-print-style'
+      ..innerHtml = '''
+        @media print {
+          body > *:not(#pdf-viewer-overlay) { display: none !important; }
+          #pdf-viewer-toolbar { display: none !important; }
+          #pdf-viewer-overlay {
+            position: static !important;
+            width: 100% !important;
+            height: auto !important;
+            z-index: auto !important;
+            background: white !important;
+            box-shadow: none !important;
+          }
+          #pdf-viewer-iframe {
+            width: 100% !important;
+            height: 100vh !important;
+            border: none !important;
+            display: block !important;
+          }
+        }
+      ''';
+    html.document.head!.append(printStyle!);
+
+    html.window.print();
+
+    Future.delayed(const Duration(seconds: 3), removePrintStyle);
   });
 
   closeBtn.onClick.listen((_) => close());
