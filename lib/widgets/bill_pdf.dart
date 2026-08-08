@@ -369,53 +369,28 @@ Future<Uint8List> buildBillPdf({
     );
   }
 
+  pw.Page oneCopy(String copyLabel) {
+    return pw.Page(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      // Each copy is a single atomic page: never split a bill across pages.
+      // FittedBox(scaleDown) shrinks oversized bills to fit and keeps small
+      // bills at their natural size. The SizedBox pins the content width so
+      // flex-width tables compute their columns correctly.
+      build: (_) => pw.FittedBox(
+        fit: pw.BoxFit.scaleDown,
+        alignment: pw.Alignment.topCenter,
+        child: pw.SizedBox(
+          width: PdfPageFormat.a4.width - 40,
+          child: buildCopy(copyLabel),
+        ),
+      ),
+    );
+  }
+
   final doc = pw.Document();
-
-  doc.addPage(
-    pw.MultiPage(
-      pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      build: (_) => [buildCopy('Customer Copy')],
-      footer: (context) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-        children: [
-          pw.SizedBox(height: 4),
-          pw.Container(height: 0.3, color: lineC),
-          pw.SizedBox(height: 3),
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text('Customer Copy', style: pw.TextStyle(font: font, fontSize: 7.5, color: muted)),
-              pw.Text('Page ${context.pageNumber} of ${context.pagesCount}', style: pw.TextStyle(font: fontB, fontSize: 7.5, color: muted)),
-            ],
-          ),
-        ],
-      ),
-    ),
-  );
-
-  doc.addPage(
-    pw.MultiPage(
-      pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      build: (_) => [buildCopy('Office Copy')],
-      footer: (context) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-        children: [
-          pw.SizedBox(height: 4),
-          pw.Container(height: 0.3, color: lineC),
-          pw.SizedBox(height: 3),
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text('Office Copy', style: pw.TextStyle(font: font, fontSize: 7.5, color: muted)),
-              pw.Text('Page ${context.pageNumber} of ${context.pagesCount}', style: pw.TextStyle(font: fontB, fontSize: 7.5, color: muted)),
-            ],
-          ),
-        ],
-      ),
-    ),
-  );
+  doc.addPage(oneCopy('Customer Copy'));
+  doc.addPage(oneCopy('Office Copy'));
 
   return doc.save();
 }

@@ -1,25 +1,18 @@
 import 'dart:async';
 import 'dart:html' as html;
-import 'dart:math' as math;
 import 'dart:typed_data';
-
-/// A4 aspect ratio (height / width). Used to slice a tall captured bill image
-/// into page-sized bands so printing produces the correct number of pages.
-const double _a4Aspect = 1.4142;
 
 /// Prints the given PNG pages on the web by injecting them into a hidden
 /// print-only container and calling [html.window.print] directly — no
 /// intermediate preview screen. iOS Safari cannot print PDFs inside iframes,
-/// but prints plain <img> elements reliably, so each page is rendered as an
-/// image sliced to an exact A4 ratio.
+/// but prints plain <img> elements reliably. Each captured image is printed as
+/// exactly one page: the CSS scales it down to fit a single page, so a bill
+/// copy is never split across pages.
 Future<void> showImagePrintView(List<Uint8List> pngBytes, String filename) async {
   html.document.getElementById('pdf-print-root')?.remove();
   html.document.getElementById('pdf-print-style')?.remove();
 
-  final pages = <Uint8List>[];
-  for (final bytes in pngBytes) {
-    pages.addAll(await _sliceToPages(bytes));
-  }
+  final pages = pngBytes;
   if (pages.isEmpty) return;
 
   final urls = <String>[];
@@ -100,52 +93,6 @@ Future<void> _waitForImage(html.ImageElement img) async {
     if (!completer.isCompleted) completer.complete();
   });
   await completer.future;
-}
-
-/// Slices a tall PNG into A4-page-height bands. Every band is drawn at an
-/// exact A4 ratio (width x width*1.4142) so each band maps to exactly one
-/// printed page. The number of pages is derived from the captured image
-/// aspect, which scales exactly with the capture pixel ratio.
-Future<List<Uint8List>> _sliceToPages(Uint8List pngBytes) async {
-  final blobUrl = html.Url.createObjectUrlFromBlob(
-    html.Blob([pngBytes], 'image/png'),
-  );
-  final img = html.ImageElement()..src = blobUrl;
-  await _waitForImage(img);
-  final w = img.naturalWidth;
-  final h = img.naturalHeight;
-  html.Url.revokeObjectUrl(blobUrl);
-  if (w <= 0 || h <= 0) return [pngBytes];
-
-  final pageHeight = (w * _a4Aspect).round();
-  final nPages = math.max(1, (h / pageHeight).ceil());
-  if (nPages <= 1) return [pngBytes];
-
-  final pages = <Uint8List>[];
-  for (var i = 0; i < nPages; i++) {
-    final y = i * pageHeight;
-    final canvas = html.CanvasElement(width: w, height: pageHeight);
-    final ctx = canvas.context2D;
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, w, pageHeight);
-    ctx.setTransform(1, 0, 0, 1, 0, -y);
-    ctx.drawImage(img, 0, 0);
-    pages.add(_canvasToPngBytes(canvas));
-  }
-  return pages;
-}
-
-Uint8List _canvasToPngBytes(html.CanvasElement canvas) {
-  final dataUrl = canvas.toDataUrl('image/png');
-  final comma = dataUrl.indexOf(',');
-  if (comma < 0) return Uint8List(0);
-  final base64 = dataUrl.substring(comma + 1);
-  final decoded = html.window.atob(base64);
-  final bytes = Uint8List(decoded.length);
-  for (var i = 0; i < decoded.length; i++) {
-    bytes[i] = decoded.codeUnitAt(i);
-  }
-  return bytes;
 }
 
 Future<void> showPdfViewer(Uint8List pdfBytes, String filename) async {
