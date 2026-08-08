@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../core/print_pdf.dart';
+import '../core/share_pdf.dart';
 import '../config/theme.dart';
 import '../core/utils.dart';
 import '../core/enums.dart';
@@ -29,6 +32,9 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
   static const _muted = Color(0xFF757575);
   static const _line = Color(0xFFBDBDBD);
   static const _lightLine = Color(0xFFE0E0E0);
+
+  final _customerCopyKey = GlobalKey();
+  final _officeCopyKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -132,22 +138,28 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                               ],
                             ),
                           ),
-                        _buildCopy(
-                          isCustomerCopy: true,
-                          maxWidth: 700,
-                          bill: bill,
-                          items: items,
-                          adjustments: adjustments,
-                          isActive: isActive,
+                        RepaintBoundary(
+                          key: _customerCopyKey,
+                          child: _buildCopy(
+                            isCustomerCopy: true,
+                            maxWidth: 700,
+                            bill: bill,
+                            items: items,
+                            adjustments: adjustments,
+                            isActive: isActive,
+                          ),
                         ),
                         const SizedBox(height: 24),
-                        _buildCopy(
-                          isCustomerCopy: false,
-                          maxWidth: 700,
-                          bill: bill,
-                          items: items,
-                          adjustments: adjustments,
-                          isActive: isActive,
+                        RepaintBoundary(
+                          key: _officeCopyKey,
+                          child: _buildCopy(
+                            isCustomerCopy: false,
+                            maxWidth: 700,
+                            bill: bill,
+                            items: items,
+                            adjustments: adjustments,
+                            isActive: isActive,
+                          ),
                         ),
                       ],
                     ),
@@ -167,6 +179,17 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                         icon: const Icon(Icons.arrow_back, size: 18),
                         label: const Text('Back to Bills'),
                         onPressed: () => context.go('/bills'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.share, size: 18),
+                        label: const Text('Share'),
+                        onPressed: () => _share(bill, items, adjustments),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
@@ -373,42 +396,13 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
 
   Future<void> _reprint(Bill bill, List<BillItem> items, List<BillAdjustment> adjustments) async {
     try {
-      final settings = await ref.read(settingsProvider.future);
-      final lineItems = items.map((i) {
-        final curQty = _currentQuantity(i, adjustments);
-        final itemAdj = adjustments.where((a) => a.billItemId == i.id).toList();
-        final reason = itemAdj.isNotEmpty ? itemAdj.last.reasonLabel : null;
-        return LineItem(
-          productId: i.productId,
-          productName: i.productName,
-          productNameHindi: i.productNameHindi,
-          unit: i.unit,
-          quantity: i.quantity,
-          defaultRate: i.defaultRate,
-          appliedRate: i.appliedRate,
-          adjustedQuantity: curQty != i.quantity ? curQty : null,
-          adjustmentReason: reason,
-        );
-      }).toList();
-      final totalAdjusted = adjustments.fold<double>(0, (sum, a) => sum + a.amount);
-      final pdf = await buildBillPdf(
-        settings: settings,
-        billNumber: bill.billNumber,
-        customerName: bill.customer?.name ?? '',
-        customerMobile: bill.customer?.mobile ?? '',
-        customerAddress: bill.customer?.address,
-        subtotal: bill.subtotal,
-        total: bill.total,
-        deliveryCharge: bill.deliveryCharge,
-        paidNow: bill.paidNow,
-        items: lineItems,
-        billDate: bill.billDate,
-        paymentMode: bill.paymentType,
-        isReprint: true,
-        adjustmentAmount: totalAdjusted,
-        adjustmentNote: adjustments.map((a) => '${a.reasonLabel}: ${a.note}'.trim()).join(', '),
+      final pdf = await _buildBillPdf(bill, items, adjustments);
+      if (pdf == null) return;
+      await printBillWidgets(
+        boundaryKeys: [_customerCopyKey, _officeCopyKey],
+        pdfBytes: pdf,
+        filename: bill.billNumber,
       );
-      await printPdf(pdf, filename: bill.billNumber);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -416,6 +410,68 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
         );
       }
     }
+  }
+
+  Future<void> _share(Bill bill, List<BillItem> items, List<BillAdjustment> adjustments) async {
+    try {
+      final pdf = await _buildBillPdf(bill, items, adjustments);
+      if (pdf == null) return;
+      final settings = await ref.read(settingsProvider.future);
+      final grandTotal = bill.total > 0 ? bill.total : bill.subtotal;
+      final totalAdjusted = adjustments.fold<double>(0, (sum, a) => sum + a.amount);
+      final balance = grandTotal - totalAdjusted - bill.paidNow;
+      final message = buildShareMessage(
+        businessName: settings.businessName,
+        docLabel: 'Sale Invoice',
+        amount: grandTotal - totalAdjusted,
+        balance: balance < 0 ? 0 : balance,
+      );
+      await sharePdf(pdf, filename: bill.billNumber, message: message);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    }
+  }
+
+  Future<Uint8List?> _buildBillPdf(Bill bill, List<BillItem> items, List<BillAdjustment> adjustments) async {
+    final settings = await ref.read(settingsProvider.future);
+    final lineItems = items.map((i) {
+      final curQty = _currentQuantity(i, adjustments);
+      final itemAdj = adjustments.where((a) => a.billItemId == i.id).toList();
+      final reason = itemAdj.isNotEmpty ? itemAdj.last.reasonLabel : null;
+      return LineItem(
+        productId: i.productId,
+        productName: i.productName,
+        productNameHindi: i.productNameHindi,
+        unit: i.unit,
+        quantity: i.quantity,
+        defaultRate: i.defaultRate,
+        appliedRate: i.appliedRate,
+        adjustedQuantity: curQty != i.quantity ? curQty : null,
+        adjustmentReason: reason,
+      );
+    }).toList();
+    final totalAdjusted = adjustments.fold<double>(0, (sum, a) => sum + a.amount);
+    return buildBillPdf(
+      settings: settings,
+      billNumber: bill.billNumber,
+      customerName: bill.customer?.name ?? '',
+      customerMobile: bill.customer?.mobile ?? '',
+      customerAddress: bill.customer?.address,
+      subtotal: bill.subtotal,
+      total: bill.total,
+      deliveryCharge: bill.deliveryCharge,
+      paidNow: bill.paidNow,
+      items: lineItems,
+      billDate: bill.billDate,
+      paymentMode: bill.paymentType,
+      isReprint: true,
+      adjustmentAmount: totalAdjusted,
+      adjustmentNote: adjustments.map((a) => '${a.reasonLabel}: ${a.note}'.trim()).join(', '),
+    );
   }
 
   Widget _buildCopy({

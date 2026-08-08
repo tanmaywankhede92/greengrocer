@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,8 +7,10 @@ import '../config/theme.dart';
 import '../core/utils.dart';
 import '../core/params.dart';
 import '../core/print_pdf.dart';
+import '../core/share_pdf.dart';
 import '../providers/customer_provider.dart';
 import '../providers/statement_provider.dart';
+import '../providers/settings_provider.dart';
 import '../widgets/breadcrumb.dart';
 import '../services/api_client.dart';
 import '../widgets/loading_widget.dart';
@@ -42,6 +46,19 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
         ),
         title: const Text('Statement'),
         actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              icon: _isDownloading
+                  ? const SizedBox(
+                      width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.share, size: 18),
+              label: Text(_isDownloading ? 'Generating...' : 'Share'),
+              onPressed: _isDownloading ? null : () => _shareStatement(customerAsync.value),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: TextButton.icon(
@@ -168,33 +185,11 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
   Future<void> _downloadStatement(dynamic customer) async {
     setState(() => _isDownloading = true);
     try {
-      final params = StatementParams(
-        customerId: widget.customerId,
-        from: AppUtils.formatDateApi(_from),
-        to: AppUtils.formatDateApi(_to),
-      );
-      final data = await ref.read(statementProvider(params).future);
-      final rows = data['rows'] as List<dynamic>? ?? [];
-      final openingBalance = (data['openingBalance'] ?? 0).toDouble();
-      final closingBalance = (data['closingBalance'] ?? 0).toDouble();
-      final totalDebit = (data['totalDebit'] ?? 0).toDouble();
-      final totalCredit = (data['totalCredit'] ?? 0).toDouble();
-
-      final castRows = rows.map((r) => Map<String, dynamic>.from(r as Map)).toList();
-
-      final pdf = await buildStatementPdf(
-        customerName: customer.name,
-        customerMobile: customer.mobile,
-        customerAddress: customer.address,
-        from: AppUtils.formatDateApi(_from),
-        to: AppUtils.formatDateApi(_to),
-        openingBalance: openingBalance,
-        closingBalance: closingBalance,
-        totalDebit: totalDebit,
-        totalCredit: totalCredit,
-        rows: castRows,
-      );
-      await printPdf(pdf, filename: 'Statement_${customer.name}_${AppUtils.formatDateShort(_from)}-${AppUtils.formatDateShort(_to)}');
+      final result = await _buildStatementPdf(customer);
+      if (result == null) return;
+      final pdf = result.$1;
+      final filename = result.$2;
+      await printPdf(pdf, filename: filename);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -204,6 +199,64 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
     } finally {
       if (mounted) setState(() => _isDownloading = false);
     }
+  }
+
+  Future<void> _shareStatement(dynamic customer) async {
+    setState(() => _isDownloading = true);
+    try {
+      final result = await _buildStatementPdf(customer);
+      if (result == null) return;
+      final pdf = result.$1;
+      final filename = result.$2;
+      final closingBalance = result.$3;
+      final settings = await ref.read(settingsProvider.future);
+      final message = buildShareMessage(
+        businessName: settings.businessName,
+        docLabel: 'Statement',
+        amount: closingBalance,
+        balance: closingBalance,
+      );
+      await sharePdf(pdf, filename: filename, message: message);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
+  Future<(Uint8List, String, double)?> _buildStatementPdf(dynamic customer) async {
+    final params = StatementParams(
+      customerId: widget.customerId,
+      from: AppUtils.formatDateApi(_from),
+      to: AppUtils.formatDateApi(_to),
+    );
+    final data = await ref.read(statementProvider(params).future);
+    final rows = data['rows'] as List<dynamic>? ?? [];
+    final openingBalance = ((data['openingBalance'] ?? 0) as num).toDouble();
+    final closingBalance = ((data['closingBalance'] ?? 0) as num).toDouble();
+    final totalDebit = ((data['totalDebit'] ?? 0) as num).toDouble();
+    final totalCredit = ((data['totalCredit'] ?? 0) as num).toDouble();
+
+    final castRows = rows.map((r) => Map<String, dynamic>.from(r as Map)).toList();
+
+    final pdf = await buildStatementPdf(
+      customerName: customer.name,
+      customerMobile: customer.mobile,
+      customerAddress: customer.address,
+      from: AppUtils.formatDateApi(_from),
+      to: AppUtils.formatDateApi(_to),
+      openingBalance: openingBalance,
+      closingBalance: closingBalance,
+      totalDebit: totalDebit,
+      totalCredit: totalCredit,
+      rows: castRows,
+    );
+    final filename = 'Statement_${customer.name}_${AppUtils.formatDateShort(_from)}-${AppUtils.formatDateShort(_to)}';
+    return (pdf, filename, closingBalance);
   }
 
   Widget _datePickerField(String label, DateTime date, ValueChanged<DateTime> onPicked) {

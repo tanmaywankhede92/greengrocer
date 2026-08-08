@@ -9,6 +9,7 @@ class CustomerOutstandingTable extends StatelessWidget {
   final ValueChanged<Customer> onPay;
   final ValueChanged<Customer> onStatement;
   final ValueChanged<Customer> onInvoice;
+  final ValueChanged<Customer> onShare;
   final ValueChanged<Customer> onViewLedger;
   final String? loadingAction;
 
@@ -18,6 +19,7 @@ class CustomerOutstandingTable extends StatelessWidget {
     required this.onPay,
     required this.onStatement,
     required this.onInvoice,
+    required this.onShare,
     required this.onViewLedger,
     this.loadingAction,
   });
@@ -68,6 +70,7 @@ class CustomerOutstandingTable extends StatelessWidget {
                       onPay: onPay,
                       onStatement: onStatement,
                       onInvoice: onInvoice,
+                      onShare: onShare,
                       onViewLedger: onViewLedger,
                       loadingAction: loadingAction,
                     );
@@ -85,6 +88,7 @@ class _CustomerRow extends StatelessWidget {
   final ValueChanged<Customer> onPay;
   final ValueChanged<Customer> onStatement;
   final ValueChanged<Customer> onInvoice;
+  final ValueChanged<Customer> onShare;
   final ValueChanged<Customer> onViewLedger;
   final String? loadingAction;
 
@@ -94,6 +98,7 @@ class _CustomerRow extends StatelessWidget {
     required this.onPay,
     required this.onStatement,
     required this.onInvoice,
+    required this.onShare,
     required this.onViewLedger,
     this.loadingAction,
   });
@@ -137,6 +142,7 @@ class _CustomerRow extends StatelessWidget {
                 _Action(Icons.payments, 'Pay', AppTheme.primaryRed, false, () => onPay(c)),
               _Action(Icons.description_outlined, 'Stmt', AppTheme.info, false, () => onStatement(c)),
               _Action(isInvLoading ? Icons.hourglass_empty : Icons.receipt_long, 'Inv', AppTheme.textSecondary, isInvLoading, isInvLoading ? () {} : () => onInvoice(c)),
+              _Action(Icons.share, 'Share', AppTheme.info, false, () => onShare(c)),
               _Action(Icons.account_balance, 'Ledger', AppTheme.primaryRedDark, false, () => onViewLedger(c)),
             ],
           )),

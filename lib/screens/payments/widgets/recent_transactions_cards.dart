@@ -9,6 +9,7 @@ class TransactionCard extends StatelessWidget {
   final ValueChanged<Payment> onView;
   final ValueChanged<Payment> onPrint;
   final ValueChanged<Payment> onDownload;
+  final ValueChanged<Payment> onShare;
   final String? loadingAction;
 
   const TransactionCard({
@@ -17,6 +18,7 @@ class TransactionCard extends StatelessWidget {
     required this.onView,
     required this.onPrint,
     required this.onDownload,
+    required this.onShare,
     this.loadingAction,
   });
 
@@ -81,6 +83,8 @@ class TransactionCard extends StatelessWidget {
                 _CompactAction(isLoadingPrint ? Icons.hourglass_empty : Icons.print, 'Invoice', isLoadingPrint, isLoadingPrint ? () {} : () => onPrint(p)),
                 const SizedBox(width: 4),
                 _CompactAction(isLoadingDownload ? Icons.hourglass_empty : Icons.download, 'Invoice', isLoadingDownload, isLoadingDownload ? () {} : () => onDownload(p)),
+                const SizedBox(width: 4),
+                _CompactAction(Icons.share, 'Share', false, () => onShare(p)),
               ],
             ),
           ],

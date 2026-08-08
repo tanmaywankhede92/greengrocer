@@ -9,6 +9,7 @@ class RecentTransactionsTable extends StatelessWidget {
   final ValueChanged<Payment> onView;
   final ValueChanged<Payment> onPrint;
   final ValueChanged<Payment> onDownload;
+  final ValueChanged<Payment> onShare;
   final String? loadingAction;
 
   const RecentTransactionsTable({
@@ -17,6 +18,7 @@ class RecentTransactionsTable extends StatelessWidget {
     required this.onView,
     required this.onPrint,
     required this.onDownload,
+    required this.onShare,
     this.loadingAction,
   });
 
@@ -65,6 +67,7 @@ class RecentTransactionsTable extends StatelessWidget {
                     onView: onView,
                     onPrint: onPrint,
                     onDownload: onDownload,
+                    onShare: onShare,
                     loadingAction: loadingAction,
                   ),
                 ),
@@ -80,6 +83,7 @@ class _TransactionRow extends StatelessWidget {
   final ValueChanged<Payment> onView;
   final ValueChanged<Payment> onPrint;
   final ValueChanged<Payment> onDownload;
+  final ValueChanged<Payment> onShare;
   final String? loadingAction;
 
   const _TransactionRow({
@@ -88,6 +92,7 @@ class _TransactionRow extends StatelessWidget {
     required this.onView,
     required this.onPrint,
     required this.onDownload,
+    required this.onShare,
     this.loadingAction,
   });
 
@@ -144,6 +149,7 @@ class _TransactionRow extends StatelessWidget {
               _Action(Icons.visibility, AppTheme.info, false, () => onView(p)),
               _Action(Icons.print, AppTheme.textSecondary, isInvLoading, isInvLoading ? () {} : () => onPrint(p)),
               _Action(Icons.download, AppTheme.success, isInvLoading, isInvLoading ? () {} : () => onDownload(p)),
+              _Action(Icons.share, AppTheme.info, false, () => onShare(p)),
             ],
           )),
         ],

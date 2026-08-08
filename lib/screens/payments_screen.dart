@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../config/theme.dart';
 import '../core/print_pdf.dart';
+import '../core/share_pdf.dart';
 import '../core/params.dart';
 import '../models/customer.dart';
 import '../models/payment.dart';
@@ -114,6 +117,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                           onPay: (c) => AddPaymentDialog.show(context, ref: ref, customer: c, onPaymentRecorded: () => setState(() {})),
                           onStatement: (c) => StatementDownloadDialog.show(context, ref: ref, customer: c),
                           onInvoice: (c) => _downloadInvoice(c, actionKey: 'inv_${c.id}'),
+                          onShare: (c) => _shareInvoice(c, actionKey: 'sh_${c.id}'),
                           onViewLedger: (c) => context.go('/customers/${c.id}'),
                         ),
                       ),
@@ -137,6 +141,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                       onPay: (c) => AddPaymentDialog.show(context, ref: ref, customer: c, onPaymentRecorded: () => setState(() {})),
                       onStatement: (c) => StatementDownloadDialog.show(context, ref: ref, customer: c),
                       onInvoice: (c) => _downloadInvoice(c, actionKey: 'inv_${c.id}'),
+                      onShare: (c) => _shareInvoice(c, actionKey: 'sh_${c.id}'),
                       onViewLedger: (c) => context.go('/customers/${c.id}'),
                     ),
             ),
@@ -176,9 +181,11 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                             loadingAction: _loadingAction,
                             onView: (p) => PaymentDetailsDialog.show(context, payment: p, loadingAction: _loadingAction,
                               onPrint: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'print_pay_${p.id}') : null,
-                              onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'dl_pay_${p.id}') : null),
+                              onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'dl_pay_${p.id}') : null,
+                              onShare: p.customer != null ? () => _shareInvoice(p.customer!, payment: p, actionKey: 'sh_pay_${p.id}') : null),
                             onPrint: cust != null ? (_) => _downloadInvoice(cust, payment: pay, actionKey: 'print_pay_${pay.id}') : (_) {},
                             onDownload: cust != null ? (_) => _downloadInvoice(cust, payment: pay, actionKey: 'dl_pay_${pay.id}') : (_) {},
+                            onShare: cust != null ? (_) => _shareInvoice(cust, payment: pay, actionKey: 'sh_pay_${pay.id}') : (_) {},
                           );
                         },
                       ),
@@ -201,9 +208,11 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                       loadingAction: _loadingAction,
                       onView: (p) => PaymentDetailsDialog.show(context, payment: p, loadingAction: _loadingAction,
                         onPrint: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'print_pay_${p.id}') : null,
-                        onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'dl_pay_${p.id}') : null),
+                        onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'dl_pay_${p.id}') : null,
+                        onShare: p.customer != null ? () => _shareInvoice(p.customer!, payment: p, actionKey: 'sh_pay_${p.id}') : null),
                       onPrint: (p) => p.customer != null ? _downloadInvoice(p.customer!, payment: p, actionKey: 'print_pay_${p.id}') : null,
                       onDownload: (p) => p.customer != null ? _downloadInvoice(p.customer!, payment: p, actionKey: 'dl_pay_${p.id}') : null,
+                      onShare: (p) => p.customer != null ? _shareInvoice(p.customer!, payment: p, actionKey: 'sh_pay_${p.id}') : null,
                     ),
             ),
             if (totalPages > 1) _PaginationBar(
@@ -238,38 +247,10 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   Future<void> _downloadInvoice(Customer customer, {Payment? payment, String? actionKey}) async {
     if (actionKey != null) setState(() => _loadingAction = actionKey);
     try {
-      Payment? pay = payment;
-      if (pay == null) {
-        final paymentService = ref.read(paymentServiceProvider);
-        final result = await paymentService.getAll(customerId: customer.id, limit: 1);
-        if (result.data.isEmpty) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('No payments found for ${customer.name}'), backgroundColor: AppTheme.error),
-            );
-          }
-          return;
-        }
-        pay = result.data.first;
-      }
-
-      final settings = await ref.read(settingsProvider.future);
-      final previousOutstanding = customer.currentDue + pay.amount;
-      final remainingOutstanding = customer.currentDue;
-
-      final pdf = await buildPaymentInvoicePdf(
-        settings: settings,
-        receiptNumber: pay.receiptNumber,
-        customer: pay.customer ?? customer,
-        amount: pay.amount,
-        paymentMode: pay.mode.displayName,
-        previousOutstanding: previousOutstanding,
-        remainingOutstanding: remainingOutstanding,
-        paymentDate: pay.paymentDate,
-        remarks: pay.notes,
-      );
+      final pdf = await _buildInvoicePdf(customer, payment: payment);
+      if (pdf == null) return;
       if (mounted) {
-        await printPdf(pdf, filename: 'Invoice-${pay.receiptNumber}');
+        await printPdf(pdf, filename: 'Invoice-${_lastReceiptNumber}');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Invoice downloaded'), backgroundColor: AppTheme.success),
         );
@@ -283,6 +264,76 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     } finally {
       if (mounted && actionKey != null) setState(() => _loadingAction = null);
     }
+  }
+
+  String? _lastReceiptNumber;
+
+  Future<void> _shareInvoice(Customer customer, {Payment? payment, String? actionKey}) async {
+    if (actionKey != null) setState(() => _loadingAction = actionKey);
+    try {
+      final pdf = await _buildInvoicePdf(customer, payment: payment);
+      if (pdf == null) return;
+      final settings = await ref.read(settingsProvider.future);
+      final message = buildShareMessage(
+        businessName: settings.businessName,
+        docLabel: 'Payment Invoice',
+        amount: _lastInvoiceAmount,
+        balance: _lastRemainingOutstanding,
+      );
+      if (mounted) {
+        await sharePdf(pdf, filename: 'Invoice-${_lastReceiptNumber}', message: message);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invoice ready to share'), backgroundColor: AppTheme.success),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
+        );
+      }
+    } finally {
+      if (mounted && actionKey != null) setState(() => _loadingAction = null);
+    }
+  }
+
+  double _lastInvoiceAmount = 0;
+  double _lastRemainingOutstanding = 0;
+
+  Future<Uint8List?> _buildInvoicePdf(Customer customer, {Payment? payment}) async {
+    Payment? pay = payment;
+    if (pay == null) {
+      final paymentService = ref.read(paymentServiceProvider);
+      final result = await paymentService.getAll(customerId: customer.id, limit: 1);
+      if (result.data.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No payments found for ${customer.name}'), backgroundColor: AppTheme.error),
+          );
+        }
+        return null;
+      }
+      pay = result.data.first;
+    }
+
+    final settings = await ref.read(settingsProvider.future);
+    final previousOutstanding = customer.currentDue + pay.amount;
+    final remainingOutstanding = customer.currentDue;
+    _lastInvoiceAmount = pay.amount;
+    _lastRemainingOutstanding = remainingOutstanding;
+    _lastReceiptNumber = pay.receiptNumber;
+
+    return buildPaymentInvoicePdf(
+      settings: settings,
+      receiptNumber: pay.receiptNumber,
+      customer: pay.customer ?? customer,
+      amount: pay.amount,
+      paymentMode: pay.mode.displayName,
+      previousOutstanding: previousOutstanding,
+      remainingOutstanding: remainingOutstanding,
+      paymentDate: pay.paymentDate,
+      remarks: pay.notes,
+    );
   }
 }
 

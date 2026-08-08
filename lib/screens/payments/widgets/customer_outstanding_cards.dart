@@ -9,6 +9,7 @@ class CustomerOutstandingCard extends StatelessWidget {
   final ValueChanged<Customer> onPay;
   final ValueChanged<Customer> onStatement;
   final ValueChanged<Customer> onInvoice;
+  final ValueChanged<Customer> onShare;
   final ValueChanged<Customer> onViewLedger;
   final String? loadingAction;
 
@@ -18,6 +19,7 @@ class CustomerOutstandingCard extends StatelessWidget {
     required this.onPay,
     required this.onStatement,
     required this.onInvoice,
+    required this.onShare,
     required this.onViewLedger,
     this.loadingAction,
   });
@@ -81,6 +83,8 @@ class CustomerOutstandingCard extends StatelessWidget {
                 _CompactBtn(Icons.description_outlined, 'Stmt', AppTheme.info, false, () => onStatement(c)),
                 const SizedBox(width: 4),
                 _CompactBtn(isInvLoading ? Icons.hourglass_empty : Icons.receipt_long, 'Inv', AppTheme.textSecondary, isInvLoading, isInvLoading ? () {} : () => onInvoice(c)),
+                const SizedBox(width: 4),
+                _CompactBtn(Icons.share, 'Share', AppTheme.info, false, () => onShare(c)),
                 const SizedBox(width: 4),
                 _CompactBtn(Icons.account_balance, 'Ledger', AppTheme.primaryRedDark, false, () => onViewLedger(c)),
               ],

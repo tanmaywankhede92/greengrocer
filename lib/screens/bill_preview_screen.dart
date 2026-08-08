@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../core/print_pdf.dart';
+import '../core/share_pdf.dart';
 import 'package:dio/dio.dart';
 import '../config/theme.dart';
 import '../services/api_client.dart';
@@ -36,10 +39,13 @@ class BillPreviewScreen extends ConsumerStatefulWidget {
 }
 
 class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
+  final _customerCopyKey = GlobalKey();
+  final _officeCopyKey = GlobalKey();
   late List<LineItem> _items;
   late double _paymentAmount;
   late PaymentMode _paymentMode;
   bool _isGenerating = false;
+  String? _billNumber;
 
   @override
   void initState() {
@@ -76,33 +82,13 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   Future<void> _print() async {
     setState(() => _isGenerating = true);
     try {
-      final billService = ref.read(billServiceProvider);
-      final settings = await ref.read(settingsProvider.future);
-
-      final payload = _buildCreatePayload();
-      final result = await billService.create(payload);
-      final billNumber = result['billNumber'] as String;
-
+      final result = await _createBillAndBuildPdf();
       if (!mounted) return;
-      ref.invalidate(billListProvider);
-
-      final pdf = await buildBillPdf(
-        settings: settings,
-        billNumber: billNumber,
-        customerName: widget.customer.name,
-        customerMobile: widget.customer.mobile,
-        customerAddress: widget.customer.address,
-        subtotal: _subtotal,
-        total: _total,
-        deliveryCharge: widget.deliveryCharge,
-        paidNow: _paymentAmount,
-        items: _items,
-        billDate: DateTime.now(),
-        paymentMode: _paymentMode.displayName,
-        isReprint: false,
+      await printBillWidgets(
+        boundaryKeys: [_customerCopyKey, _officeCopyKey],
+        pdfBytes: result.pdf,
+        filename: result.billNumber,
       );
-      if (!mounted) return;
-      await printPdf(pdf, filename: billNumber);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Bill saved & printed'), backgroundColor: AppTheme.success),
@@ -125,6 +111,77 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
     } finally {
       if (mounted) setState(() => _isGenerating = false);
     }
+  }
+
+  Future<void> _share() async {
+    setState(() => _isGenerating = true);
+    try {
+      final result = await _createBillAndBuildPdf();
+      final settings = await ref.read(settingsProvider.future);
+      final balance = (_total - _paymentAmount) < 0 ? 0.0 : (_total - _paymentAmount);
+      final message = buildShareMessage(
+        businessName: settings.businessName,
+        docLabel: 'Sale Invoice',
+        amount: _total,
+        balance: balance,
+      );
+      await sharePdf(result.pdf, filename: result.billNumber, message: message);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bill saved & ready to share'), backgroundColor: AppTheme.success),
+        );
+        context.go('/bills');
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        final msg = e.response?.data?['message'] ?? 'Failed to save bill. Please try again.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: AppTheme.error),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGenerating = false);
+    }
+  }
+
+  Future<({String billNumber, Uint8List pdf})> _createBillAndBuildPdf() async {
+    final billService = ref.read(billServiceProvider);
+    final settings = await ref.read(settingsProvider.future);
+
+    final payload = _buildCreatePayload();
+    final result = await billService.create(payload);
+    final billNumber = result['billNumber'] as String;
+
+    if (!mounted) return (billNumber: billNumber, pdf: Uint8List(0));
+    ref.invalidate(billListProvider);
+
+    setState(() => _billNumber = billNumber);
+    if (!mounted) return (billNumber: billNumber, pdf: Uint8List(0));
+    // Wait a frame so the updated Bill No. is painted before capture.
+    await WidgetsBinding.instance.endOfFrame;
+
+    final pdf = await buildBillPdf(
+      settings: settings,
+      billNumber: billNumber,
+      customerName: widget.customer.name,
+      customerMobile: widget.customer.mobile,
+      customerAddress: widget.customer.address,
+      subtotal: _subtotal,
+      total: _total,
+      deliveryCharge: widget.deliveryCharge,
+      paidNow: _paymentAmount,
+      items: _items,
+      billDate: DateTime.now(),
+      paymentMode: _paymentMode.displayName,
+      isReprint: false,
+    );
+    return (billNumber: billNumber, pdf: pdf);
   }
 
   static const _red = Color(0xFFB71C1C);
@@ -199,7 +256,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _infoField('Bill No.', 'Will be generated on print'),
+                      _infoField('Bill No.', _billNumber ?? 'Will be generated on print'),
                       const SizedBox(height: 6),
                       _infoField('Customer', widget.customer.name),
                       const SizedBox(height: 6),
@@ -401,9 +458,15 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
               child: Center(
                 child: Column(
                   children: [
-                    _buildCopy(isCustomerCopy: true, maxWidth: 700),
+                    RepaintBoundary(
+                      key: _customerCopyKey,
+                      child: _buildCopy(isCustomerCopy: true, maxWidth: 700),
+                    ),
                     const SizedBox(height: 24),
-                    _buildCopy(isCustomerCopy: false, maxWidth: 700),
+                    RepaintBoundary(
+                      key: _officeCopyKey,
+                      child: _buildCopy(isCustomerCopy: false, maxWidth: 700),
+                    ),
                   ],
                 ),
               ),
@@ -419,6 +482,18 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                     icon: const Icon(Icons.edit, size: 18),
                     label: const Text('Edit'),
                     onPressed: () => context.pop(),
+                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: OutlinedButton.icon(
+                    icon: _isGenerating
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.share, size: 18),
+                    label: Text(_isGenerating ? 'Saving...' : 'Share'),
+                    onPressed: _isGenerating ? null : () => _share(),
                     style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
                   ),
                 ),

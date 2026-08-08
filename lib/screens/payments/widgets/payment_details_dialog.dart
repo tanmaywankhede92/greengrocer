@@ -10,6 +10,7 @@ class PaymentDetailsDialog extends StatelessWidget {
   final String? loadingAction;
   final VoidCallback? onPrint;
   final VoidCallback? onDownload;
+  final VoidCallback? onShare;
 
   const PaymentDetailsDialog({
     super.key,
@@ -17,12 +18,13 @@ class PaymentDetailsDialog extends StatelessWidget {
     this.loadingAction,
     this.onPrint,
     this.onDownload,
+    this.onShare,
   });
 
-  static void show(BuildContext context, {required Payment payment, String? loadingAction, VoidCallback? onPrint, VoidCallback? onDownload}) {
+  static void show(BuildContext context, {required Payment payment, String? loadingAction, VoidCallback? onPrint, VoidCallback? onDownload, VoidCallback? onShare}) {
     showDialog(
       context: context,
-      builder: (_) => PaymentDetailsDialog(payment: payment, loadingAction: loadingAction, onPrint: onPrint, onDownload: onDownload),
+      builder: (_) => PaymentDetailsDialog(payment: payment, loadingAction: loadingAction, onPrint: onPrint, onDownload: onDownload, onShare: onShare),
     );
   }
 
@@ -149,6 +151,18 @@ class PaymentDetailsDialog extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.share, size: 18),
+                  label: const Text('Share Invoice'),
+                  onPressed: onShare == null ? null : onShare,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
               ),
             ],
           ),
