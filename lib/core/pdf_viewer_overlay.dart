@@ -42,7 +42,6 @@ Future<void> showImagePrintView(List<Uint8List> pngBytes, String filename) async
         top: 0;
       }
       @media print {
-        @page { size: A4; margin: 0; }
         body > *:not(#pdf-print-root) { display: none !important; }
         #pdf-print-root {
           position: static !important;
@@ -51,10 +50,12 @@ Future<void> showImagePrintView(List<Uint8List> pngBytes, String filename) async
         }
         #pdf-print-root img {
           display: block !important;
-          width: 100% !important;
-          max-width: none !important;
+          width: auto !important;
+          max-width: 100% !important;
           height: auto !important;
-          margin: 0 !important;
+          max-height: 96vh !important;
+          margin: 0 auto !important;
+          object-fit: contain;
           page-break-after: always;
           break-after: page;
         }
