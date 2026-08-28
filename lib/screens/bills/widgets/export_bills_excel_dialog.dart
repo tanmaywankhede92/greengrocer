@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'dart:html' as html;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:excel/excel.dart' hide Border;
+import '../../../core/download_bytes.dart';
 import '../../../config/theme.dart';
 import '../../../core/enums.dart';
 import '../../../providers/bill_provider.dart';
@@ -181,15 +181,7 @@ class _ExportBillsExcelDialogState extends ConsumerState<ExportBillsExcelDialog>
   }
 
   void _downloadBytes(Uint8List bytes, String filename) {
-    final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    final anchor = html.AnchorElement(href: url)
-      ..download = filename
-      ..style.display = 'none';
-    html.document.body!.append(anchor);
-    anchor.click();
-    anchor.remove();
-    html.Url.revokeObjectUrl(url);
+    downloadBytes(bytes, filename);
   }
 
   @override
