@@ -35,8 +35,8 @@ class Sidebar extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Rathod', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
-                      Text('Enterprises', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                      Text('Rathod Enterprises', style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.bold)),
+                      Text('Wholesale Vegetables & Fruits', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
                     ],
                   ),
                 ),
