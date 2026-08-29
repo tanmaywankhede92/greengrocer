@@ -34,6 +34,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   final _searchCtrl = TextEditingController();
   final _searchFocusNode = FocusNode();
   final _searchFieldKey = GlobalKey();
+  final _searchLayerLink = LayerLink();
   final _qtyCtrl = TextEditingController();
   final _qtyFocusNode = FocusNode();
   final _rateCtrl = TextEditingController();
@@ -74,7 +75,6 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     final RenderBox? renderBox =
         _searchFieldKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null || !renderBox.attached) return;
-    final position = renderBox.localToGlobal(Offset.zero);
     final size = renderBox.size;
 
     _dropdownOverlay = OverlayEntry(
@@ -86,14 +86,18 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
               behavior: HitTestBehavior.translucent,
             ),
           ),
-          Positioned(
-            left: position.dx,
-            top: position.dy + size.height + 4,
-            width: size.width,
-            child: Material(
-              elevation: 8,
-              borderRadius: BorderRadius.circular(10),
-              child: ProductSearchDropdown(
+          CompositedTransformFollower(
+            link: _searchLayerLink,
+            targetAnchor: Alignment.bottomLeft,
+            followerAnchor: Alignment.topLeft,
+            offset: const Offset(0, 4),
+            showWhenUnlinked: false,
+            child: SizedBox(
+              width: size.width,
+              child: Material(
+                elevation: 8,
+                borderRadius: BorderRadius.circular(10),
+                child: ProductSearchDropdown(
                 results: _searchResults,
                 defaultRates: _defaultRates,
                 onSelected: (p) {
@@ -107,6 +111,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
                 searchQuery: _searchCtrl.text.trim(),
               ),
             ),
+          ),
           ),
         ],
       ),
@@ -343,16 +348,19 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
         Padding(
           key: _searchFieldKey,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: ProductSearchBar(
-            controller: _searchCtrl,
-            focusNode: _searchFocusNode,
-            onChanged: _onSearchChanged,
-            onSubmitted: (v) {
-              if (_searchResults.length == 1) {
-                _selectProduct(_searchResults.first);
-              }
-            },
-            isSearching: _isSearching,
+          child: CompositedTransformTarget(
+            link: _searchLayerLink,
+            child: ProductSearchBar(
+              controller: _searchCtrl,
+              focusNode: _searchFocusNode,
+              onChanged: _onSearchChanged,
+              onSubmitted: (v) {
+                if (_searchResults.length == 1) {
+                  _selectProduct(_searchResults.first);
+                }
+              },
+              isSearching: _isSearching,
+            ),
           ),
         ),
         if (_editingProduct != null)
@@ -371,9 +379,6 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
           ),
         Expanded(
           child: SingleChildScrollView(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

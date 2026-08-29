@@ -19,6 +19,7 @@ class CustomerSelect extends ConsumerStatefulWidget {
 class _CustomerSelectState extends ConsumerState<CustomerSelect> {
   final _controller = TextEditingController();
   final _fieldKey = GlobalKey();
+  final _layerLink = LayerLink();
   List<Customer> _results = [];
   Customer? _selected;
   OverlayEntry? _dropdownOverlay;
@@ -44,7 +45,6 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
     final RenderBox? renderBox =
         _fieldKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null || !renderBox.attached) return;
-    final position = renderBox.localToGlobal(Offset.zero);
     final size = renderBox.size;
 
     _dropdownOverlay = OverlayEntry(
@@ -56,14 +56,18 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
               behavior: HitTestBehavior.translucent,
             ),
           ),
-          Positioned(
-            left: position.dx,
-            top: position.dy + size.height + 4,
-            width: size.width,
-            child: Material(
-              elevation: 8,
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
+          CompositedTransformFollower(
+            link: _layerLink,
+            targetAnchor: Alignment.bottomLeft,
+            followerAnchor: Alignment.topLeft,
+            offset: const Offset(0, 4),
+            showWhenUnlinked: false,
+            child: SizedBox(
+              width: size.width,
+              child: Material(
+                elevation: 8,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
                 constraints: const BoxConstraints(maxHeight: 240),
                 decoration: BoxDecoration(
                   color: AppTheme.surface,
@@ -115,6 +119,7 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
                       ),
               ),
             ),
+          ),
           ),
         ],
       ),
@@ -237,26 +242,29 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
             style: TextStyle(
                 color: AppTheme.textSecondary, fontSize: 13)),
         const SizedBox(height: 6),
-        TextField(
-          key: _fieldKey,
-          controller: _controller,
-          onChanged: _onSearchChanged,
-          decoration: InputDecoration(
-            hintText: 'Search customer by name or mobile...',
-            prefixIcon: const Icon(Icons.search, size: 20),
-            suffixIcon: _selected != null
-                ? IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
-                    onPressed: () {
-                      _controller.clear();
-                      setState(() {
-                        _selected = null;
-                        _results = [];
-                      });
-                      _removeDropdown();
-                    },
-                  )
-                : null,
+        CompositedTransformTarget(
+          link: _layerLink,
+          child: TextField(
+            key: _fieldKey,
+            controller: _controller,
+            onChanged: _onSearchChanged,
+            decoration: InputDecoration(
+              hintText: 'Search customer by name or mobile...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: _selected != null
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        _controller.clear();
+                        setState(() {
+                          _selected = null;
+                          _results = [];
+                        });
+                        _removeDropdown();
+                      },
+                    )
+                  : null,
+            ),
           ),
         ),
         if (_selected != null && _selected!.currentDue > 0)
