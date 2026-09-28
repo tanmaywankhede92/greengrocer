@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:printing/printing.dart';
 
 import 'share_pdf_stub.dart'
     if (dart.library.js) 'share_pdf_web.dart' as web;
@@ -7,11 +8,17 @@ import 'share_pdf_stub.dart'
 /// On web it uses the Web Share API when available (opens the native share
 /// sheet so WhatsApp can receive the PDF), otherwise it opens WhatsApp with the
 /// text message via a wa.me deep link.
+/// On Android and other mobile platforms, it opens the native system share sheet.
 Future<void> sharePdf(Uint8List pdfBytes, {required String filename, required String message}) async {
   if (kIsWeb) {
     return web.webSharePdf(pdfBytes, filename: filename, message: message);
   }
-  throw UnsupportedError('Share is only supported on the web build.');
+  await Printing.sharePdf(
+    bytes: pdfBytes,
+    filename: filename.endsWith('.pdf') ? filename : '$filename.pdf',
+    subject: message,
+    body: message,
+  );
 }
 
 /// Builds the WhatsApp share message using the same format requested by the
