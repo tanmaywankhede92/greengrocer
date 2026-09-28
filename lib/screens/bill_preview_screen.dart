@@ -62,6 +62,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
     )).toList();
     _paymentAmount = widget.paymentAmount;
     _paymentMode = widget.paymentMode;
+    precacheStamp(context);
   }
 
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.amount);

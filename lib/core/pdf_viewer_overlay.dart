@@ -22,7 +22,12 @@ Future<void> showImagePrintView(List<Uint8List> pngBytes, String filename) async
       html.Blob([page], 'image/png'),
     );
     urls.add(url);
-    container.append(html.ImageElement()..src = url);
+    // Wrap every image in an explicit A4 page box. Sizing the page (not just
+    // the image) is what forces one captured copy onto exactly one sheet.
+    final pageBox = html.DivElement()
+      ..className = 'pdf-print-page'
+      ..append(html.ImageElement()..src = url);
+    container.append(pageBox);
   }
   html.document.body!.append(container);
 
@@ -34,27 +39,50 @@ Future<void> showImagePrintView(List<Uint8List> pngBytes, String filename) async
         left: -100000px;
         top: 0;
       }
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
       @media print {
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #fff !important;
+        }
         body > *:not(#pdf-print-root) { display: none !important; }
         #pdf-print-root {
           position: static !important;
           left: 0 !important;
           display: block !important;
         }
-        #pdf-print-root img {
-          display: block !important;
-          width: auto !important;
-          max-width: 100% !important;
-          height: auto !important;
-          max-height: 96vh !important;
-          margin: 0 auto !important;
-          object-fit: contain;
+        .pdf-print-page {
+          box-sizing: border-box;
+          width: 210mm;
+          height: 297mm;
+          margin: 0 !important;
+          padding: 0 !important;
+          display: flex !important;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          background: #fff !important;
           page-break-after: always;
           break-after: page;
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
-        #pdf-print-root img:last-child {
+        .pdf-print-page:last-child {
           page-break-after: auto;
           break-after: auto;
+        }
+        .pdf-print-page img {
+          display: block !important;
+          width: auto !important;
+          height: auto !important;
+          max-width: 100% !important;
+          max-height: 100% !important;
+          margin: 0 auto !important;
+          object-fit: contain;
         }
       }
     ''';

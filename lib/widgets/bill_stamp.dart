@@ -36,3 +36,14 @@ Widget buildStampPreview({double width = kStampWidthPreview}) {
     ),
   );
 }
+
+/// Warms the asset cache so a following `RepaintBoundary.toImage()` always
+/// captures the stamp. Without this the snapshot can be taken while the JPEG
+/// is still decoding, which silently prints the copies without the stamp.
+Future<void> precacheStamp(BuildContext context) async {
+  try {
+    await precacheImage(const AssetImage(kStampAssetPath), context);
+  } catch (_) {
+    // Leave the errorBuilder fallback in place if the asset cannot be loaded.
+  }
+}

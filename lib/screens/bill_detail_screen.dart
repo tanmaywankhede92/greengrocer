@@ -18,6 +18,7 @@ import '../providers/settings_provider.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/breadcrumb.dart';
 import '../widgets/bill_pdf.dart';
+import '../widgets/bill_stamp.dart';
 import '../widgets/bill_item_row.dart';
 
 class BillDetailScreen extends ConsumerStatefulWidget {
@@ -35,6 +36,12 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
 
   final _customerCopyKey = GlobalKey();
   final _officeCopyKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    precacheStamp(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -763,6 +770,8 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 10),
+          buildStampPreview(),
           const SizedBox(height: 12),
         ],
       ),
