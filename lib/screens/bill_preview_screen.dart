@@ -25,6 +25,7 @@ class BillPreviewScreen extends ConsumerStatefulWidget {
   final double deliveryCharge;
   final double paymentAmount;
   final PaymentMode paymentMode;
+  final String? draftId;
 
   const BillPreviewScreen({
     super.key,
@@ -33,6 +34,7 @@ class BillPreviewScreen extends ConsumerStatefulWidget {
     this.deliveryCharge = 0,
     this.paymentAmount = 0,
     this.paymentMode = PaymentMode.cash,
+    this.draftId,
   });
 
   @override
@@ -81,6 +83,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
       'notes': '',
       'paymentAmount': _paymentAmount,
       'paymentMode': _paymentMode.value,
+      if (widget.draftId != null && widget.draftId!.isNotEmpty) 'draftId': widget.draftId,
     };
   }
 
@@ -155,6 +158,8 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
 
     _billNumber = billNumber;
     ref.invalidate(billListProvider);
+    ref.invalidate(draftListProvider);
+    ref.invalidate(draftCountProvider);
     setState(() {});
     // Wait a frame so the printed Bill No. is painted before capture.
     await WidgetsBinding.instance.endOfFrame;

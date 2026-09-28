@@ -55,6 +55,8 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
       to: _toDate != null ? AppUtils.formatDateApi(_toDate!) : null,
     );
     final billsAsync = ref.watch(billListProvider(params));
+    final draftCountAsync = ref.watch(draftCountProvider);
+    final draftCount = draftCountAsync.valueOrNull ?? 0;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Bills'), actions: [
@@ -62,6 +64,25 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
           icon: const Icon(Icons.table_chart_outlined, size: 20),
           tooltip: 'Export Excel',
           onPressed: () => ExportBillsExcelDialog.show(context),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: draftCount > 0 ? Colors.amber.shade900 : AppTheme.textSecondary,
+              side: BorderSide(color: draftCount > 0 ? Colors.amber.shade600 : AppTheme.border),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              minimumSize: const Size(0, 36),
+            ),
+            icon: Badge(
+              isLabelVisible: draftCount > 0,
+              label: Text('$draftCount'),
+              backgroundColor: AppTheme.primaryRed,
+              child: const Icon(Icons.drafts_outlined, size: 18),
+            ),
+            label: Text('Drafts${draftCount > 0 ? ' ($draftCount)' : ''}', style: const TextStyle(fontSize: 13)),
+            onPressed: () => context.go('/bills/drafts'),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.only(right: 8),
@@ -76,6 +97,49 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
         child: Column(
           children: [
             const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Bills')]),
+            if (draftCount > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Material(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => context.go('/bills/drafts'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.amber.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_note, color: Colors.amber.shade900, size: 22),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'You have $draftCount saved draft ${draftCount == 1 ? 'bill' : 'bills'} waiting to be completed.',
+                              style: TextStyle(
+                                color: Colors.amber.shade900,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            'View Drafts \u2192',
+                            style: TextStyle(
+                              color: Colors.amber.shade900,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: TextField(

@@ -48,4 +48,34 @@ const adjust = asyncHandler(async (req, res) => {
   ApiResponse.success(res, result, messages.BILL.ADJUSTED);
 });
 
-module.exports = { list, getById, create, cancel, adjust };
+const listDrafts = asyncHandler(async (req, res) => {
+  const drafts = await billService.listDrafts(req.query);
+  ApiResponse.success(res, drafts);
+});
+
+const getDraftById = asyncHandler(async (req, res) => {
+  const draft = await billService.getDraft(req.params.id);
+  ApiResponse.success(res, draft);
+});
+
+const saveDraft = asyncHandler(async (req, res) => {
+  const draft = await billService.saveDraft(req.body, req.user?.id);
+  ApiResponse.success(res, draft, 'Bill saved as draft');
+});
+
+const discardDraft = asyncHandler(async (req, res) => {
+  await billService.discardDraft(req.params.id);
+  ApiResponse.success(res, null, 'Draft discarded');
+});
+
+module.exports = {
+  list,
+  getById,
+  create,
+  cancel,
+  adjust,
+  listDrafts,
+  getDraftById,
+  saveDraft,
+  discardDraft,
+};

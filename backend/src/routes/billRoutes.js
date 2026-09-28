@@ -3,9 +3,15 @@ const router = express.Router();
 const billController = require('../controllers/billController');
 const authenticate = require('../middlewares/authenticate');
 const validate = require('../middlewares/validate');
-const { createBillSchema, adjustBillSchema } = require('../validators/billValidator');
+const { createBillSchema, adjustBillSchema, saveDraftSchema } = require('../validators/billValidator');
 
 router.use(authenticate);
+
+// Draft routes MUST come before /:id routes
+router.get('/drafts', billController.listDrafts);
+router.get('/drafts/:id', billController.getDraftById);
+router.post('/drafts', validate(saveDraftSchema), billController.saveDraft);
+router.delete('/drafts/:id', billController.discardDraft);
 
 router.get('/', billController.list);
 router.get('/:id', billController.getById);

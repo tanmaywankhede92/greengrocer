@@ -4,8 +4,9 @@ const ledgerRepository = require('../repositories/ledgerRepository');
 const paymentRepository = require('../repositories/paymentRepository');
 const settingsRepository = require('../repositories/settingsRepository');
 const customerRepository = require('../repositories/customerRepository');
-const { generateBillNumber, generateReceiptNumber } = require('../helpers/sequenceGenerator');
+const { generateBillNumber, generateReceiptNumber, generateDraftId } = require('../helpers/sequenceGenerator');
 const Bill = require('../models/Bill');
+const DraftBill = require('../models/DraftBill');
 const BillItem = require('../models/BillItem');
 const BillAdjustment = require('../models/BillAdjustment');
 const Payment = require('../models/Payment');
@@ -25,7 +26,7 @@ const getBill = async (id) => {
   return result;
 };
 
-const createBill = async ({ customerId, billDate, items, deliveryCharge, notes, paymentAmount, paymentMode }, userId) => {
+const createBill = async ({ customerId, billDate, items, deliveryCharge, notes, paymentAmount, paymentMode, draftId }, userId) => {
   const customer = await customerRepository.findById(customerId);
   if (!customer) {
     const error = new Error('Customer not found');
@@ -110,6 +111,21 @@ const createBill = async ({ customerId, billDate, items, deliveryCharge, notes, 
           referenceId: bill._id,
           createdBy: userId,
         });
+      }
+
+      if (draftId) {
+        const query = [{ draftId }];
+        if (/^[0-9a-fA-F]{24}$/.test(draftId)) {
+          query.unshift({ _id: draftId });
+        }
+        await DraftBill.findOneAndUpdate(
+          { $or: query },
+          {
+            status: 'converted',
+            convertedBillId: bill._id,
+            convertedBillNumber: bill.billNumber,
+          }
+        );
       }
 
       return { id: bill._id, billNumber: bill.billNumber };
@@ -268,4 +284,167 @@ const adjustBill = async (billId, { items }, userId) => {
   return { adjustments: created };
 };
 
-module.exports = { listBills, getBill, createBill, cancelBill, adjustBill };
+const saveDraft = async (data, userId) => {
+  const {
+    id,
+    draftId,
+    customerId,
+    billDate,
+    items = [],
+    deliveryCharge = 0,
+    discount = 0,
+    notes = '',
+    paymentAmount = 0,
+    paymentMode = 'cash',
+  } = data;
+
+  let customerName = data.customerName || '';
+  let customerMobile = data.customerMobile || '';
+  let customerAddress = data.customerAddress || '';
+
+  if (customerId) {
+    try {
+      const customer = await customerRepository.findById(customerId);
+      if (customer) {
+        customerName = customer.name || customerName;
+        customerMobile = customer.mobile || customerMobile;
+        customerAddress = customer.address || customerAddress;
+      }
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  const mappedItems = items.map((item) => {
+    const qty = Number(item.quantity) || 0;
+    const rate = Number(item.appliedRate) || 0;
+    return {
+      productId: item.productId || null,
+      productName: item.productName || '',
+      productNameHindi: item.productNameHindi || '',
+      unit: item.unit || 'kg',
+      quantity: qty,
+      defaultRate: Number(item.defaultRate) || 0,
+      appliedRate: rate,
+      amount: item.amount != null ? Number(item.amount) : qty * rate,
+    };
+  });
+
+  const subtotal = mappedItems.reduce((acc, item) => acc + item.amount, 0);
+  const total = Math.max(0, subtotal + (Number(deliveryCharge) || 0) - (Number(discount) || 0));
+
+  const targetIdentifier = id || draftId;
+  let draft = null;
+
+  if (targetIdentifier) {
+    const query = [{ draftId: targetIdentifier }];
+    if (/^[0-9a-fA-F]{24}$/.test(targetIdentifier)) {
+      query.unshift({ _id: targetIdentifier });
+    }
+    draft = await DraftBill.findOne({ $or: query, status: 'draft' });
+  }
+
+  if (draft) {
+    draft.customerId = customerId || null;
+    draft.customerName = customerName;
+    draft.customerMobile = customerMobile;
+    draft.customerAddress = customerAddress;
+    if (billDate) draft.billDate = new Date(billDate);
+    draft.items = mappedItems;
+    draft.subtotal = subtotal;
+    draft.deliveryCharge = Number(deliveryCharge) || 0;
+    draft.discount = Number(discount) || 0;
+    draft.total = total;
+    draft.notes = notes;
+    draft.paymentAmount = Number(paymentAmount) || 0;
+    draft.paymentMode = paymentMode;
+    if (userId) draft.createdBy = userId;
+    await draft.save();
+    return draft;
+  }
+
+  const generatedId = await generateDraftId();
+  draft = await DraftBill.create({
+    draftId: generatedId,
+    customerId: customerId || null,
+    customerName,
+    customerMobile,
+    customerAddress,
+    billDate: billDate ? new Date(billDate) : new Date(),
+    items: mappedItems,
+    subtotal,
+    deliveryCharge: Number(deliveryCharge) || 0,
+    discount: Number(discount) || 0,
+    total,
+    notes,
+    paymentAmount: Number(paymentAmount) || 0,
+    paymentMode,
+    status: 'draft',
+    createdBy: userId || null,
+  });
+
+  return draft;
+};
+
+const listDrafts = async (filters = {}) => {
+  const query = { status: 'draft' };
+  if (filters.search) {
+    const s = filters.search.trim();
+    query.$or = [
+      { draftId: { $regex: s, $options: 'i' } },
+      { customerName: { $regex: s, $options: 'i' } },
+      { customerMobile: { $regex: s, $options: 'i' } },
+    ];
+  }
+  const drafts = await DraftBill.find(query)
+    .populate('customerId', 'name mobile address')
+    .sort({ updatedAt: -1 })
+    .lean();
+  return drafts;
+};
+
+const getDraft = async (id) => {
+  const query = [{ draftId: id }];
+  if (/^[0-9a-fA-F]{24}$/.test(id)) {
+    query.unshift({ _id: id });
+  }
+  const draft = await DraftBill.findOne({ $or: query })
+    .populate('customerId', 'name mobile address')
+    .lean();
+  if (!draft) {
+    const error = new Error('Draft not found');
+    error.statusCode = 404;
+    throw error;
+  }
+  return draft;
+};
+
+const discardDraft = async (id) => {
+  const query = [{ draftId: id }];
+  if (/^[0-9a-fA-F]{24}$/.test(id)) {
+    query.unshift({ _id: id });
+  }
+  const draft = await DraftBill.findOneAndUpdate(
+    { $or: query },
+    { status: 'discarded' },
+    { new: true }
+  );
+  if (!draft) {
+    const error = new Error('Draft not found');
+    error.statusCode = 404;
+    throw error;
+  }
+  return draft;
+};
+
+module.exports = {
+  listBills,
+  getBill,
+  createBill,
+  cancelBill,
+  adjustBill,
+  saveDraft,
+  listDrafts,
+  getDraft,
+  discardDraft,
+};

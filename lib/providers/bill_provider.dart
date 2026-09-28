@@ -3,6 +3,7 @@ import '../core/params.dart';
 import '../models/bill.dart';
 import '../models/bill_item.dart';
 import '../models/bill_adjustment.dart';
+import '../models/draft_bill.dart';
 import '../services/bill_service.dart';
 
 final billServiceProvider = Provider<BillService>((ref) => BillService());
@@ -22,4 +23,14 @@ final billListProvider = FutureProvider.family<({List<Bill> data, Map<String, dy
 final billDetailProvider = FutureProvider.family<({Bill bill, List<BillItem> items, List<BillAdjustment> adjustments}), String>((ref, id) async {
   final service = ref.read(billServiceProvider);
   return service.getById(id);
+});
+
+final draftListProvider = FutureProvider.family<List<DraftBill>, String?>((ref, search) async {
+  final service = ref.read(billServiceProvider);
+  return service.getDrafts(search: search);
+});
+
+final draftCountProvider = FutureProvider<int>((ref) async {
+  final drafts = await ref.watch(draftListProvider(null).future);
+  return drafts.length;
 });

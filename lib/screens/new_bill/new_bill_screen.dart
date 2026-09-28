@@ -7,8 +7,11 @@ import '../../core/enums.dart';
 import '../../core/utils.dart';
 import '../../models/customer.dart';
 import '../../models/product.dart';
+import '../../models/draft_bill.dart';
+import '../../providers/bill_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/rate_provider.dart';
+import '../../services/api_client.dart';
 import '../../widgets/breadcrumb.dart';
 import '../../widgets/bill_item_row.dart';
 import 'widgets/customer_section.dart';
@@ -20,7 +23,8 @@ import 'widgets/bottom_bar.dart';
 import 'widgets/summary_card.dart';
 
 class NewBillScreen extends ConsumerStatefulWidget {
-  const NewBillScreen({super.key});
+  final DraftBill? initialDraft;
+  const NewBillScreen({super.key, this.initialDraft});
   @override
   ConsumerState<NewBillScreen> createState() => _NewBillScreenState();
 }
@@ -30,6 +34,9 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   final List<LineItem> _items = [];
   double _deliveryCharge = 0;
   Map<String, double> _defaultRates = {};
+  String? _draftId;
+  String? _draftMongoId;
+  bool _isSavingDraft = false;
 
   final _searchCtrl = TextEditingController();
   final _searchFocusNode = FocusNode();
@@ -52,8 +59,32 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialDraft != null) {
+      final draft = widget.initialDraft!;
+      _draftId = draft.draftId;
+      _draftMongoId = draft.id;
+      _selectedCustomer = draft.toCustomer();
+      _items.addAll(draft.items.map((i) => LineItem(
+        productId: i.productId,
+        productName: i.productName,
+        productNameHindi: i.productNameHindi,
+        unit: i.unit,
+        quantity: i.quantity,
+        defaultRate: i.defaultRate,
+        appliedRate: i.appliedRate,
+      )));
+      _deliveryCharge = draft.deliveryCharge;
+      if (_deliveryCharge > 0) {
+        _deliveryChargeCtrl.text = _deliveryCharge.toStringAsFixed(0);
+      }
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _searchFocusNode.requestFocus();
+      if (mounted) {
+        if (_selectedCustomer != null) {
+          _loadDefaultRates();
+        }
+        _searchFocusNode.requestFocus();
+      }
     });
   }
 
@@ -267,6 +298,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
       'customer': _selectedCustomer!,
       'items': List.from(_items),
       'deliveryCharge': _deliveryCharge,
+      if (_draftId != null && _draftId!.isNotEmpty) 'draftId': _draftId,
     });
   }
 
@@ -277,18 +309,173 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
       _items.isNotEmpty &&
       !_items.any((i) => i.quantity <= 0);
 
+  bool get _hasUnsavedData =>
+      _items.isNotEmpty || _selectedCustomer != null || _editingProduct != null;
+
+  Future<void> _saveDraft({bool navigateBack = true}) async {
+    if (_isSavingDraft) return;
+    setState(() => _isSavingDraft = true);
+
+    try {
+      if (_editingProduct != null) {
+        final qty = double.tryParse(_qtyCtrl.text) ?? 0;
+        final rate = double.tryParse(_rateCtrl.text) ?? 0;
+        if (qty > 0) {
+          _editingItem!.quantity = qty;
+          _editingItem!.appliedRate = rate;
+          _items.add(_editingItem!);
+          _editingProduct = null;
+          _editingItem = null;
+        }
+      }
+
+      final billService = ref.read(billServiceProvider);
+      final payload = {
+        if (_draftMongoId != null && _draftMongoId!.isNotEmpty) 'id': _draftMongoId,
+        if (_draftId != null && _draftId!.isNotEmpty) 'draftId': _draftId,
+        'customerId': _selectedCustomer?.id,
+        'customerName': _selectedCustomer?.name ?? '',
+        'customerMobile': _selectedCustomer?.mobile ?? '',
+        'customerAddress': _selectedCustomer?.address ?? '',
+        'billDate': AppUtils.formatDateApi(DateTime.now()),
+        'items': _items.map((i) => i.toJson()).toList(),
+        'deliveryCharge': _deliveryCharge,
+        'notes': '',
+      };
+
+      final saved = await billService.saveDraft(payload);
+      _draftId = saved.draftId;
+      _draftMongoId = saved.id;
+
+      ref.invalidate(draftListProvider);
+      ref.invalidate(draftCountProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Bill saved as draft (${saved.draftId})'),
+            backgroundColor: AppTheme.success,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        if (navigateBack) {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/bills');
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save draft: ${ApiClient.humanizeError(e)}'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSavingDraft = false);
+    }
+  }
+
+  Future<void> _handleBack() async {
+    if (!_hasUnsavedData) {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/bills');
+      }
+      return;
+    }
+
+    final action = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryRed.withAlpha(20),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.drafts_outlined, color: AppTheme.primaryRed, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Save this bill as Draft?',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'You have unsaved bill items or details. Would you like to save this bill as a draft to continue later without losing your work?',
+          style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop('cancel'),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.error,
+              side: const BorderSide(color: AppTheme.error),
+            ),
+            onPressed: () => Navigator.of(dialogCtx).pop('discard'),
+            child: const Text('Discard'),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryRed,
+              foregroundColor: Colors.white,
+            ),
+            icon: const Icon(Icons.save_outlined, size: 18),
+            label: const Text('Save Draft'),
+            onPressed: () => Navigator.of(dialogCtx).pop('save'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+    if (action == 'discard') {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/bills');
+      }
+    } else if (action == 'save') {
+      await _saveDraft(navigateBack: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= AppConstants.tabletBreakpoint;
-        return GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          behavior: HitTestBehavior.translucent,
-          child: Scaffold(
-            appBar: _buildAppBar(),
-            body: _buildBody(isWide),
-            resizeToAvoidBottomInset: true,
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            _handleBack();
+          },
+          child: GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            behavior: HitTestBehavior.translucent,
+            child: Scaffold(
+              appBar: _buildAppBar(),
+              body: _buildBody(isWide),
+              resizeToAvoidBottomInset: true,
+            ),
           ),
         );
       },
@@ -299,10 +486,59 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     return AppBar(
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
-        onPressed: () => context.go('/bills'),
+        onPressed: _handleBack,
       ),
-      title: const Text('New Bill'),
+      title: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('New Bill'),
+            if (_draftId != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade100,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.amber.shade700, width: 0.8),
+                ),
+                child: Text(
+                  'Draft: $_draftId',
+                  style: TextStyle(
+                    color: Colors.amber.shade900,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
       actions: [
+        if (_hasUnsavedData)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.primaryRed,
+                side: const BorderSide(color: AppTheme.primaryRed),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                minimumSize: const Size(0, 36),
+              ),
+              icon: _isSavingDraft
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryRed),
+                    )
+                  : const Icon(Icons.save_outlined, size: 16),
+              label: Text(_isSavingDraft ? 'Saving...' : 'Save Draft', style: const TextStyle(fontSize: 13)),
+              onPressed: _isSavingDraft ? null : () => _saveDraft(navigateBack: false),
+            ),
+          ),
         if (_items.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(right: 16),

@@ -2,6 +2,7 @@ import 'api_client.dart';
 import '../models/bill.dart';
 import '../models/bill_item.dart';
 import '../models/bill_adjustment.dart';
+import '../models/draft_bill.dart';
 
 class BillService {
   final ApiClient _client = ApiClient();
@@ -45,5 +46,29 @@ class BillService {
       'items': items,
     });
     return response.data['data'] as Map<String, dynamic>;
+  }
+
+  Future<List<DraftBill>> getDrafts({String? search}) async {
+    final response = await _client.get('/bills/drafts', queryParameters: {
+      if (search != null && search.isNotEmpty) 'search': search,
+    });
+    final list = (response.data['data'] as List)
+        .map((e) => DraftBill.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+    return list;
+  }
+
+  Future<DraftBill> getDraftById(String id) async {
+    final response = await _client.get('/bills/drafts/$id');
+    return DraftBill.fromJson(Map<String, dynamic>.from(response.data['data'] as Map));
+  }
+
+  Future<DraftBill> saveDraft(Map<String, dynamic> data) async {
+    final response = await _client.post('/bills/drafts', data: data);
+    return DraftBill.fromJson(Map<String, dynamic>.from(response.data['data'] as Map));
+  }
+
+  Future<void> discardDraft(String id) async {
+    await _client.delete('/bills/drafts/$id');
   }
 }

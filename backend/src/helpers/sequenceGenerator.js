@@ -47,4 +47,12 @@ const generateReceiptNumber = async () => {
   return `RCPT-${yy}${mm}-${seq}`;
 };
 
-module.exports = { generateBillNumber, generateReceiptNumber };
+const generateDraftId = async () => {
+  const now = new Date();
+  const yy = now.getFullYear().toString().slice(-2);
+  const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+  const seq = await getNextSequence('draft_id');
+  return `DFT-${yy}${mm}-${seq}`;
+};
+
+module.exports = { generateBillNumber, generateReceiptNumber, generateDraftId };

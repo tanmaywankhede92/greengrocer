@@ -49,6 +49,7 @@ class Sidebar extends ConsumerWidget {
               children: [
                 const _MenuItem(icon: Icons.dashboard, label: 'Dashboard', route: '/dashboard'),
                 const _MenuItem(icon: Icons.receipt_long, label: 'Bills', route: '/bills'),
+                const _MenuItem(icon: Icons.drafts_outlined, label: 'Draft Bills', route: '/bills/drafts'),
                 const _MenuItem(icon: Icons.people, label: 'Customers', route: '/customers'),
                 const _MenuItem(icon: Icons.inventory, label: 'Products', route: '/products'),
                 const _MenuItem(icon: Icons.trending_up, label: 'Daily Rates', route: '/rates'),
@@ -84,8 +85,14 @@ class _MenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isActive = GoRouterState.of(context).matchedLocation == route ||
-        GoRouterState.of(context).matchedLocation.startsWith(route + (route == '/' ? '' : '/'));
+    final loc = GoRouterState.of(context).matchedLocation;
+    final bool isActive;
+    if (route == '/bills') {
+      isActive = loc == '/bills' || (loc.startsWith('/bills/') && !loc.startsWith('/bills/drafts'));
+    } else {
+      isActive = loc == route ||
+          loc.startsWith(route + (route == '/' ? '' : '/'));
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(

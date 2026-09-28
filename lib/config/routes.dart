@@ -12,8 +12,10 @@ import '../screens/products_screen.dart';
 import '../screens/daily_rates_screen.dart';
 import '../screens/new_bill/new_bill_screen.dart';
 import '../screens/bills_screen.dart';
+import '../screens/draft_bills_screen.dart';
 import '../screens/bill_detail_screen.dart';
 import '../screens/bill_preview_screen.dart';
+import '../models/draft_bill.dart';
 import '../screens/payments_screen.dart';
 import '../screens/add_payment_screen.dart';
 import '../screens/statement_screen.dart';
@@ -52,6 +54,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             customer: extra['customer'] as Customer,
             items: List<LineItem>.from(extra['items'] as List),
             deliveryCharge: extra['deliveryCharge'] as double? ?? 0,
+            draftId: extra['draftId'] as String?,
           );
         },
       ),
@@ -65,7 +68,20 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/products', builder: (context, state) => const ProductsScreen()),
           GoRoute(path: '/rates', builder: (context, state) => const DailyRatesScreen()),
           GoRoute(path: '/bills', builder: (context, state) => const BillsScreen()),
-          GoRoute(path: '/bills/new', builder: (context, state) => const NewBillScreen()),
+          GoRoute(path: '/bills/drafts', builder: (context, state) => const DraftBillsScreen()),
+          GoRoute(
+            path: '/bills/new',
+            builder: (context, state) {
+              final extra = state.extra;
+              DraftBill? draft;
+              if (extra is DraftBill) {
+                draft = extra;
+              } else if (extra is Map<String, dynamic> && extra['draft'] != null) {
+                draft = extra['draft'] as DraftBill;
+              }
+              return NewBillScreen(initialDraft: draft);
+            },
+          ),
           GoRoute(path: '/bills/:id', builder: (context, state) => BillDetailScreen(id: state.pathParameters['id']!)),
           GoRoute(path: '/payments', builder: (context, state) => const PaymentsScreen()),
           GoRoute(path: '/payments/add', builder: (context, state) => const AddPaymentScreen()),

@@ -23,6 +23,34 @@ const createBillSchema = Joi.object({
   notes: Joi.string().trim().max(500).allow('').default(''),
   paymentAmount: Joi.number().min(0).default(0),
   paymentMode: Joi.string().valid(...PAYMENT_MODES).default('cash'),
+  draftId: Joi.string().allow(null, '').optional(),
+});
+
+const draftItemSchema = Joi.object({
+  productId: Joi.string().allow(null, '').optional(),
+  productName: Joi.string().trim().max(120).allow('').default(''),
+  productNameHindi: Joi.string().trim().max(120).allow('').default(''),
+  unit: Joi.string().trim().max(30).default('kg'),
+  quantity: Joi.number().min(0).default(1),
+  defaultRate: Joi.number().min(0).default(0),
+  appliedRate: Joi.number().min(0).default(0),
+  amount: Joi.number().min(0).default(0),
+});
+
+const saveDraftSchema = Joi.object({
+  id: Joi.string().allow(null, '').optional(),
+  draftId: Joi.string().allow(null, '').optional(),
+  customerId: Joi.string().allow(null, '').optional(),
+  customerName: Joi.string().trim().allow('').default(''),
+  customerMobile: Joi.string().trim().allow('').default(''),
+  customerAddress: Joi.string().trim().allow('').default(''),
+  billDate: Joi.date().optional(),
+  items: Joi.array().items(draftItemSchema).default([]),
+  deliveryCharge: Joi.number().min(0).default(0),
+  discount: Joi.number().min(0).default(0),
+  notes: Joi.string().trim().max(500).allow('').default(''),
+  paymentAmount: Joi.number().min(0).default(0),
+  paymentMode: Joi.string().valid(...PAYMENT_MODES).default('cash'),
 });
 
 const adjustBillItemSchema = Joi.object({
@@ -36,4 +64,4 @@ const adjustBillSchema = Joi.object({
   items: Joi.array().items(adjustBillItemSchema).min(1).required(),
 });
 
-module.exports = { createBillSchema, adjustBillSchema };
+module.exports = { createBillSchema, adjustBillSchema, saveDraftSchema };

@@ -38,6 +38,18 @@ class LineItem {
     'defaultRate': defaultRate,
     'appliedRate': appliedRate,
   };
+
+  factory LineItem.fromJson(Map<String, dynamic> json) => LineItem(
+    productId: json['productId'] as String?,
+    productName: json['productName'] as String? ?? '',
+    productNameHindi: json['productNameHindi'] as String? ?? '',
+    unit: json['unit'] as String? ?? 'kg',
+    quantity: (json['quantity'] as num?)?.toDouble() ?? 1,
+    defaultRate: (json['defaultRate'] as num?)?.toDouble() ?? 0,
+    appliedRate: (json['appliedRate'] as num?)?.toDouble() ?? 0,
+    adjustedQuantity: (json['adjustedQuantity'] as num?)?.toDouble(),
+    adjustmentReason: json['adjustmentReason'] as String?,
+  );
 }
 
 class BillItemRow extends StatefulWidget {
