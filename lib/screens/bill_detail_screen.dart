@@ -37,10 +37,14 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
   final _customerCopyKey = GlobalKey();
   final _officeCopyKey = GlobalKey();
 
+  /// Set while a print job is running, so the action cannot be repeated and the
+  bool _printing = false;
+
   @override
   void initState() {
     super.initState();
     precacheStamp(context);
+    BillPdfFonts.preload();
   }
 
   @override
@@ -208,7 +212,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.print, size: 18),
                         label: const Text('Print Both Copies'),
-                        onPressed: () => _reprint(bill, items, adjustments),
+                        onPressed: _printing ? null : () => _reprint(bill, items, adjustments),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
@@ -402,19 +406,22 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
   }
 
   Future<void> _reprint(Bill bill, List<BillItem> items, List<BillAdjustment> adjustments) async {
+    if (_printing) return;
+    setState(() => _printing = true);
     try {
       final pdf = await _buildBillPdf(bill, items, adjustments);
-      if (pdf == null) return;
-      await printBillWidgets(
-        boundaryKeys: [_customerCopyKey, _officeCopyKey],
-        pdfBytes: pdf,
-        filename: bill.billNumber,
-      );
+      if (pdf != null) {
+        await printPdf(pdf, filename: bill.billNumber);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _printing = false);
       }
     }
   }
@@ -489,8 +496,8 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
     required List<BillAdjustment> adjustments,
     bool isActive = false,
   }) {
-    const copyLabel = 'ORIGINAL';
     final copySuffix = isCustomerCopy ? 'Customer Copy' : 'Office Copy';
+    final copyLabel = isCustomerCopy ? 'ORIGINAL' : 'DUPLICATE';
     final billDate = bill.billDate;
     final grandTotal = bill.total > 0 ? bill.total : bill.subtotal;
     final totalAdjusted = adjustments.fold<double>(0, (sum, a) => sum + a.amount);
@@ -695,58 +702,68 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
 
           const SizedBox(height: 16),
 
-          // ── Summary (stamp on the left, totals on the right) ──
-          buildStampBesideTotalsPreview(
-            Container(
-              width: 220,
-              padding: const EdgeInsets.only(right: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _amountRow('Subtotal', bill.subtotal),
-                  if (bill.deliveryCharge > 0)
-                    _amountRow('Delivery Charge', bill.deliveryCharge),
-                  _amountRow('Grand Total', grandTotal),
-                  if (totalAdjusted > 0) ...[
-                    _amountRow('Total Adjustment', -totalAdjusted, isAdjustment: true),
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: _line, width: 0.7),
-                          bottom: BorderSide(color: _line, width: 0.7),
+          // ── Summary & Stamp (in line with Grand Total, slightly to the left) ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 110, bottom: 4),
+                  child: buildStampPreview(width: 150),
+                ),
+                SizedBox(
+                  width: 220,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _amountRow('Subtotal', bill.subtotal),
+                      if (bill.deliveryCharge > 0)
+                        _amountRow('Delivery Charge', bill.deliveryCharge),
+                      if (totalAdjusted > 0) ...[
+                        _amountRow('Grand Total', grandTotal),
+                        _amountRow('Total Adjustment', -totalAdjusted, isAdjustment: true),
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              top: BorderSide(color: _line, width: 0.7),
+                              bottom: BorderSide(color: _line, width: 0.7),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Final Amount', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primaryRed)),
+                              Text('₹ ${adjustedTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primaryRed)),
+                            ],
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Final Amount', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primaryRed)),
-                          Text('₹ ${adjustedTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primaryRed)),
-                        ],
-                      ),
-                    ),
-                  ] else
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: _line, width: 0.7),
-                          bottom: BorderSide(color: _line, width: 0.7),
+                      ] else
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              top: BorderSide(color: _line, width: 0.7),
+                              bottom: BorderSide(color: _line, width: 0.7),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Grand Total', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                              Text('₹ ${grandTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Grand Total', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                          Text('₹ ${grandTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                        ],
-                      ),
-                    ),
-                  if (bill.paidNow > 0) _amountRow('Paid', bill.paidNow),
-                  if (totalAdjusted > 0 && bill.paidNow > 0)
-                    _amountRow('Balance Due', adjustedTotal - bill.paidNow, isBold: true),
-                ],
-              ),
+                      if (bill.paidNow > 0) _amountRow('Paid', bill.paidNow),
+                      if (totalAdjusted > 0 && bill.paidNow > 0)
+                        _amountRow('Balance Due', adjustedTotal - bill.paidNow, isBold: true),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 18),

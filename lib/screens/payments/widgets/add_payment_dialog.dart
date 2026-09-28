@@ -4,7 +4,6 @@ import '../../../config/theme.dart';
 import '../../../core/print_pdf.dart';
 import '../../../core/utils.dart';
 import '../../../core/enums.dart';
-import '../../../core/params.dart';
 import '../../../models/customer.dart';
 import '../../../providers/customer_provider.dart';
 import '../../../providers/payment_provider.dart';
@@ -165,9 +164,8 @@ class _AddPaymentDialogState extends ConsumerState<AddPaymentDialog> {
       });
       if (mounted) Navigator.pop(context);
       if (mounted) {
-        ref.invalidate(customerListProvider(const CustomerListParams()));
-        ref.invalidate(paymentListProvider(const PaymentListParams()));
-        ref.invalidate(paymentListProvider(PaymentListParams(customerId: c.id)));
+        invalidateCustomerLists(ref);
+        invalidatePaymentLists(ref);
         widget.onPaymentRecorded?.call();
         _showInvoice(c, paidNow: amount, paymentMode: _mode.value);
       }

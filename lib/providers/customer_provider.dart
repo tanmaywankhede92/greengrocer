@@ -16,6 +16,20 @@ final customerListProvider = FutureProvider.family<({List<Customer> data, Map<St
   );
 });
 
+final customersAllProvider = FutureProvider.family<List<Customer>, CustomerListParams>((ref, params) async {
+  final service = ref.read(customerServiceProvider);
+  return service.getAllPages(
+    search: params.search.isNotEmpty ? params.search : null,
+    sort: params.sort,
+    order: params.order,
+  );
+});
+
+void invalidateCustomerLists(WidgetRef ref) {
+  ref.invalidate(customerListProvider);
+  ref.invalidate(customersAllProvider);
+}
+
 final customerDetailProvider = FutureProvider.family<Customer, String>((ref, id) async {
   final service = ref.read(customerServiceProvider);
   return service.getById(id);

@@ -21,15 +21,14 @@ void main() {
 
   test('a copy that already fits one sheet is left alone', () async {
     final png = _pngOfHeight(600, 700);
-    final sheets = await sliceCapturedToA4Sheets(png);
+    final sheets = sliceCapturedToA4Sheets(png);
     expect(sheets.length, 1);
   });
 
   test('a copy taller than A4 is split into several sheets', () async {
     // 600 wide -> an A4 sheet is round(600 * 297/210) = 849 tall.
-    const sheetHeight = 849;
     final png = _pngOfHeight(600, 2000);
-    final sheets = await sliceCapturedToA4Sheets(png);
+    final sheets = sliceCapturedToA4Sheets(png);
     expect(sheets.length, 3, reason: '2000 / 849 needs three sheets');
     for (final sheet in sheets) {
       final decoded = img.decodePng(sheet)!;
@@ -39,7 +38,7 @@ void main() {
 
   test('the slices keep every band of the original copy', () async {
     final png = _pngOfHeight(600, 2000);
-    final sheets = await sliceCapturedToA4Sheets(png);
+    final sheets = sliceCapturedToA4Sheets(png);
 
     // Concatenating the slices must reproduce the full original height, so no
     // content is silently dropped when the bill is cut into pages.

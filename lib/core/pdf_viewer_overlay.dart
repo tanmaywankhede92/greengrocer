@@ -39,8 +39,11 @@ Future<void> showImagePrintView(List<Uint8List> pngBytes, String filename) async
         left: -100000px;
         top: 0;
       }
+      /* The paper size is deliberately left to the printer: forcing A4 on a
+         Letter printer makes the browser rescale the page, which shifts the
+         content and clips the margins. Only the browser's own default page
+         margins are removed so each sheet is filled edge to edge. */
       @page {
-        size: A4 portrait;
         margin: 0;
       }
       @media print {
@@ -57,8 +60,8 @@ Future<void> showImagePrintView(List<Uint8List> pngBytes, String filename) async
         }
         .pdf-print-page {
           box-sizing: border-box;
-          width: 210mm;
-          height: 297mm;
+          width: 100%;
+          height: 100vh;
           margin: 0 !important;
           padding: 0 !important;
           display: flex !important;

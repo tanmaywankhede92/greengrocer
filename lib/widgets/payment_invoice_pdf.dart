@@ -281,69 +281,77 @@ Future<Uint8List> buildPaymentInvoicePdf({
               ),
             ],
 
-            pw.SizedBox(height: 40),
+            pw.SizedBox(height: 20),
 
             // Signature Section
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
               children: [
                 pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
                   children: [
-                    pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: const pw.BoxDecoration(color: headerBg),
-                      child: pw.Text('Authorized Signature', style: pw.TextStyle(font: fontB, fontSize: 9, color: muted)),
-                    ),
-                    pw.SizedBox(height: 30),
+                    if (stampBytes != null)
+                      pw.Container(
+                        height: 55,
+                        alignment: pw.Alignment.bottomCenter,
+                        child: buildStampPdf(stampBytes, width: 140),
+                      )
+                    else
+                      pw.SizedBox(height: 55),
+                    pw.SizedBox(height: 4),
                     pw.Container(width: 140, height: 1, color: lineC),
                     pw.SizedBox(height: 4),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                      decoration: const pw.BoxDecoration(color: headerBg),
+                      child: pw.Text('Authorized Signature', style: pw.TextStyle(font: fontB, fontSize: 8.5, color: muted)),
+                    ),
+                    pw.SizedBox(height: 2),
                     pw.Text('Date: $dateStr', style: pw.TextStyle(font: font, fontSize: 8, color: muted)),
                   ],
                 ),
-                pw.SizedBox(width: 60),
+                pw.SizedBox(width: 40),
                 pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
                   children: [
-                    pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: const pw.BoxDecoration(color: headerBg),
-                      child: pw.Text('Customer Signature', style: pw.TextStyle(font: fontB, fontSize: 9, color: muted)),
-                    ),
-                    pw.SizedBox(height: 30),
+                    pw.SizedBox(height: 55),
+                    pw.SizedBox(height: 4),
                     pw.Container(width: 140, height: 1, color: lineC),
                     pw.SizedBox(height: 4),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                      decoration: const pw.BoxDecoration(color: headerBg),
+                      child: pw.Text('Customer Signature', style: pw.TextStyle(font: fontB, fontSize: 8.5, color: muted)),
+                    ),
+                    pw.SizedBox(height: 2),
                     pw.Text('Received with thanks', style: pw.TextStyle(font: fontI, fontSize: 8, color: muted)),
                   ],
                 ),
               ],
             ),
 
-            pw.SizedBox(height: 24),
+            pw.SizedBox(height: 18),
             thinLine(thickness: 0.5, color: red),
-            pw.SizedBox(height: 10),
+            pw.SizedBox(height: 8),
             pw.Center(
               child: pw.Column(
                 children: [
-                  pw.Text('Thank You!  Visit Again', style: pw.TextStyle(font: fontI, fontSize: 11, color: muted)),
-                  pw.SizedBox(height: 3),
+                  pw.Text('Thank You!  Visit Again', style: pw.TextStyle(font: fontI, fontSize: 10.5, color: muted)),
+                  pw.SizedBox(height: 2),
                   pw.Text(businessName, style: pw.TextStyle(font: fontB, fontSize: 11, color: red, letterSpacing: 1)),
                 ],
               ),
             ),
             pw.SizedBox(height: 6),
-            pw.Container(height: 4, color: red),
+            pw.Container(height: 3, color: red),
           ],
         ),
       ],
       footer: (context) => pw.Column(
+        mainAxisSize: pw.MainAxisSize.min,
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
         children: [
-          if (context.pageNumber == context.pagesCount) ...[
-            buildStampPdf(stampBytes),
-            pw.SizedBox(height: 4),
-          ],
-          pw.SizedBox(height: 4),
           thinLine(thickness: 0.3),
           pw.SizedBox(height: 3),
           pw.Row(

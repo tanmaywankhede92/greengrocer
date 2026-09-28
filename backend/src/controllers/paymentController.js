@@ -6,8 +6,17 @@ const messages = require('../constants/messages');
 
 const list = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPagination(req.query);
-  const sort = getSort(req.query, 'createdAt', 'desc');
-  const { payments, total } = await paymentService.listPayments(req.query.customerId || null, { page, limit, skip, sort });
+  const sort = getSort(req.query, 'paymentDate', 'desc');
+  const { payments, total } = await paymentService.listPayments(req.query.customerId || null, {
+    page,
+    limit,
+    skip,
+    sort,
+    from: req.query.from,
+    to: req.query.to,
+    mode: req.query.mode,
+    isCancelled: req.query.isCancelled,
+  });
   ApiResponse.paginated(res, payments, buildMeta(total, page, limit));
 });
 

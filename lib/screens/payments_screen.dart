@@ -7,6 +7,7 @@ import '../config/theme.dart';
 import '../core/print_pdf.dart';
 import '../core/share_pdf.dart';
 import '../core/params.dart';
+import '../core/utils.dart';
 import '../models/customer.dart';
 import '../models/payment.dart';
 import '../providers/customer_provider.dart';
@@ -17,6 +18,7 @@ import '../widgets/breadcrumb.dart';
 import '../widgets/payment_invoice_pdf.dart';
 import 'payments/widgets/summary_cards.dart';
 import 'payments/widgets/payment_toolbar.dart';
+import 'payments/widgets/payment_filter_bar.dart';
 import 'payments/widgets/customer_outstanding_table.dart';
 import 'payments/widgets/customer_outstanding_cards.dart';
 import 'payments/widgets/recent_transactions_table.dart';
@@ -38,17 +40,30 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   _ViewTab _activeTab = _ViewTab.customers;
   String _search = '';
   String _activeFilter = 'all';
-  int _customerPage = 1;
-  int _paymentPage = 1;
+  DateTime? _fromDate;
+  DateTime? _toDate;
   String? _loadingAction;
-  static const _pageSize = 20;
+
+  bool get _hasDateFilter => _fromDate != null || _toDate != null;
+
+  PaymentListParams get _paymentsParams => PaymentListParams(
+        from: _fromDate != null ? AppUtils.formatDate(_fromDate!) : null,
+        to: _toDate != null ? AppUtils.formatDate(_toDate!) : null,
+      );
+
+  CustomerListParams get _customersParams => CustomerListParams(search: _search);
+
+  void _refresh() {
+    invalidateCustomerLists(ref);
+    invalidatePaymentLists(ref);
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 768;
-    final customersParams = CustomerListParams(search: _search, page: _customerPage, limit: _pageSize);
-    final customersAsync = ref.watch(customerListProvider(customersParams));
-    final paymentsAsync = ref.watch(paymentListProvider(PaymentListParams(page: _paymentPage, limit: _pageSize)));
+    final customersAsync = ref.watch(customersAllProvider(_customersParams));
+    final paymentsAsync = ref.watch(paymentsAllProvider(_paymentsParams));
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -60,16 +75,24 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
             child: PaymentToolbar(
               searchQuery: _search,
-              onSearchChanged: (v) => setState(() { _search = v.trim(); _customerPage = 1; _paymentPage = 1; }),
-              activeFilter: _activeFilter,
-              onFilterChanged: (v) => setState(() => _activeFilter = v),
-              onRefresh: () => setState(() {}),
+              onSearchChanged: (v) => setState(() => _search = v.trim()),
+              hasActiveFilters: _activeFilter != 'all' || _hasDateFilter,
+              filtersPanel: PaymentFilterBar(
+                fromDate: _fromDate,
+                toDate: _toDate,
+                onFromDateChanged: (d) => setState(() => _fromDate = d),
+                onToDateChanged: (d) => setState(() => _toDate = d),
+                onClearDates: () => setState(() { _fromDate = null; _toDate = null; }),
+                activeFilter: _activeFilter,
+                onFilterChanged: (v) => setState(() => _activeFilter = v),
+              ),
+              onRefresh: _refresh,
               onAddPayment: () => context.go('/payments/add'),
               onExport: () => ExportExcelDialog.show(context),
               isMobile: isMobile,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: _ViewToggle(
@@ -78,149 +101,119 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
               isMobile: isMobile,
             ),
           ),
-          const SizedBox(height: 6),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: SummaryCards(),
-          ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
           Expanded(
-            child: _activeTab == _ViewTab.customers
-                ? _buildCustomersView(customersAsync, isMobile)
-                : _buildPaymentsView(paymentsAsync, isMobile),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: SummaryCards(paymentsParams: _paymentsParams),
+                  ),
+                  const SizedBox(height: 10),
+                  _activeTab == _ViewTab.customers
+                      ? _buildCustomersView(customersAsync, isMobile)
+                      : _buildPaymentsView(paymentsAsync, isMobile),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCustomersView(AsyncValue<({List<Customer> data, Map<String, dynamic>? meta})> async, bool isMobile) {
+  Widget _buildCustomersView(AsyncValue<List<Customer>> async, bool isMobile) {
     return async.when(
-      loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryRed)),
-      error: (e, _) => _ErrorCard(message: ApiClient.humanizeError(e), onRetry: () => setState(() {})),
-      data: (result) {
-        final filtered = _applyCustomerFilter(result.data);
-        final meta = result.meta;
-        final totalPages = meta != null ? ((meta['totalPages'] ?? 1) as int) : 1;
-        if (isMobile) {
-          return Column(
-            children: [
-              Expanded(
-                child: filtered.isEmpty
-                    ? const _EmptyView(icon: Icons.people_outline, title: 'No customers found', subtitle: 'Try adjusting your search')
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                        itemCount: filtered.length,
-                        itemBuilder: (_, i) => CustomerOutstandingCard(
-                          customer: filtered[i],
-                          loadingAction: _loadingAction,
-                          onPay: (c) => AddPaymentDialog.show(context, ref: ref, customer: c, onPaymentRecorded: () => setState(() {})),
-                          onStatement: (c) => StatementDownloadDialog.show(context, ref: ref, customer: c),
-                          onInvoice: (c) => _downloadInvoice(c, actionKey: 'inv_${c.id}'),
-                          onShare: (c) => _shareInvoice(c, actionKey: 'sh_${c.id}'),
-                          onViewLedger: (c) => context.go('/customers/${c.id}'),
-                        ),
-                      ),
-              ),
-              if (totalPages > 1) _PaginationBar(
-                page: _customerPage, totalPages: totalPages,
-                onPrev: _customerPage > 1 ? () => setState(() => _customerPage--) : null,
-                onNext: _customerPage < totalPages ? () => setState(() => _customerPage++) : null,
-              ),
-            ],
+      loading: () => const _TableLoader(),
+      error: (e, _) => _ErrorCard(message: ApiClient.humanizeError(e), onRetry: _refresh),
+      data: (customers) {
+        final filtered = _applyCustomerFilter(customers);
+        if (filtered.isEmpty) {
+          return const _EmptyView(
+            icon: Icons.people_outline,
+            title: 'No customers found',
+            subtitle: 'Try adjusting your search or filters',
           );
         }
-        return Column(
-          children: [
-            Expanded(
-              child: filtered.isEmpty
-                  ? const _EmptyView(icon: Icons.people_outline, title: 'No customers found', subtitle: 'Try adjusting your search')
-                  : CustomerOutstandingTable(
-                      customers: filtered,
-                      loadingAction: _loadingAction,
-                      onPay: (c) => AddPaymentDialog.show(context, ref: ref, customer: c, onPaymentRecorded: () => setState(() {})),
-                      onStatement: (c) => StatementDownloadDialog.show(context, ref: ref, customer: c),
-                      onInvoice: (c) => _downloadInvoice(c, actionKey: 'inv_${c.id}'),
-                      onShare: (c) => _shareInvoice(c, actionKey: 'sh_${c.id}'),
-                      onViewLedger: (c) => context.go('/customers/${c.id}'),
-                    ),
+        if (isMobile) {
+          return ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            itemCount: filtered.length,
+            itemBuilder: (_, i) => CustomerOutstandingCard(
+              customer: filtered[i],
+              loadingAction: _loadingAction,
+              onPay: (c) => AddPaymentDialog.show(context, ref: ref, customer: c, onPaymentRecorded: _refresh),
+              onStatement: (c) => StatementDownloadDialog.show(context, ref: ref, customer: c),
+              onInvoice: (c) => _downloadInvoice(c, actionKey: 'inv_${c.id}'),
+              onShare: (c) => _shareInvoice(c, actionKey: 'sh_${c.id}'),
+              onViewLedger: (c) => context.go('/customers/${c.id}'),
             ),
-            if (totalPages > 1) _PaginationBar(
-              page: _customerPage, totalPages: totalPages,
-              onPrev: _customerPage > 1 ? () => setState(() => _customerPage--) : null,
-              onNext: _customerPage < totalPages ? () => setState(() => _customerPage++) : null,
-            ),
-          ],
+          );
+        }
+        return CustomerOutstandingTable(
+          customers: filtered,
+          loadingAction: _loadingAction,
+          onPay: (c) => AddPaymentDialog.show(context, ref: ref, customer: c, onPaymentRecorded: _refresh),
+          onStatement: (c) => StatementDownloadDialog.show(context, ref: ref, customer: c),
+          onInvoice: (c) => _downloadInvoice(c, actionKey: 'inv_${c.id}'),
+          onShare: (c) => _shareInvoice(c, actionKey: 'sh_${c.id}'),
+          onViewLedger: (c) => context.go('/customers/${c.id}'),
         );
       },
     );
   }
 
-  Widget _buildPaymentsView(AsyncValue<({List<Payment> data, Map<String, dynamic>? meta})> async, bool isMobile) {
+  Widget _buildPaymentsView(AsyncValue<List<Payment>> async, bool isMobile) {
     return async.when(
-      loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryRed)),
-      error: (e, _) => _ErrorCard(message: ApiClient.humanizeError(e), onRetry: () => setState(() {})),
-      data: (result) {
-        final payments = _applyPaymentFilter(result.data);
-        final meta = result.meta;
-        final totalPages = meta != null ? ((meta['totalPages'] ?? 1) as int) : 1;
-        if (isMobile) {
-          return Column(
-            children: [
-              Expanded(
-                child: payments.isEmpty
-                    ? const _EmptyView(icon: Icons.receipt_long, title: 'No transactions found', subtitle: 'Payments will appear here')
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                        itemCount: payments.length,
-                        itemBuilder: (_, i) {
-                          final pay = payments[i];
-                          final cust = pay.customer;
-                          return TransactionCard(
-                            payment: pay,
-                            loadingAction: _loadingAction,
-                            onView: (p) => PaymentDetailsDialog.show(context, payment: p, loadingAction: _loadingAction,
-                              onPrint: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'print_pay_${p.id}') : null,
-                              onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'dl_pay_${p.id}') : null,
-                              onShare: p.customer != null ? () => _shareInvoice(p.customer!, payment: p, actionKey: 'sh_pay_${p.id}') : null),
-                            onPrint: cust != null ? (_) => _downloadInvoice(cust, payment: pay, actionKey: 'print_pay_${pay.id}') : (_) {},
-                            onDownload: cust != null ? (_) => _downloadInvoice(cust, payment: pay, actionKey: 'dl_pay_${pay.id}') : (_) {},
-                            onShare: cust != null ? (_) => _shareInvoice(cust, payment: pay, actionKey: 'sh_pay_${pay.id}') : (_) {},
-                          );
-                        },
-                      ),
-              ),
-              if (totalPages > 1) _PaginationBar(
-                page: _paymentPage, totalPages: totalPages,
-                onPrev: _paymentPage > 1 ? () => setState(() => _paymentPage--) : null,
-                onNext: _paymentPage < totalPages ? () => setState(() => _paymentPage++) : null,
-              ),
-            ],
+      loading: () => const _TableLoader(),
+      error: (e, _) => _ErrorCard(message: ApiClient.humanizeError(e), onRetry: _refresh),
+      data: (all) {
+        final payments = _applyPaymentFilter(_applyPaymentSearch(all));
+        if (payments.isEmpty) {
+          return const _EmptyView(
+            icon: Icons.receipt_long,
+            title: 'No transactions found',
+            subtitle: 'Try adjusting your search, filters or date range',
           );
         }
-        return Column(
-          children: [
-            Expanded(
-              child: payments.isEmpty
-                  ? const _EmptyView(icon: Icons.receipt_long, title: 'No transactions found', subtitle: 'Payments will appear here')
-                  : RecentTransactionsTable(
-                      payments: payments,
-                      loadingAction: _loadingAction,
-                      onView: (p) => PaymentDetailsDialog.show(context, payment: p, loadingAction: _loadingAction,
-                        onPrint: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'print_pay_${p.id}') : null,
-                        onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'dl_pay_${p.id}') : null,
-                        onShare: p.customer != null ? () => _shareInvoice(p.customer!, payment: p, actionKey: 'sh_pay_${p.id}') : null),
-                      onPrint: (p) => p.customer != null ? _downloadInvoice(p.customer!, payment: p, actionKey: 'print_pay_${p.id}') : null,
-                      onDownload: (p) => p.customer != null ? _downloadInvoice(p.customer!, payment: p, actionKey: 'dl_pay_${p.id}') : null,
-                      onShare: (p) => p.customer != null ? _shareInvoice(p.customer!, payment: p, actionKey: 'sh_pay_${p.id}') : null,
-                    ),
-            ),
-            if (totalPages > 1) _PaginationBar(
-              page: _paymentPage, totalPages: totalPages,
-              onPrev: _paymentPage > 1 ? () => setState(() => _paymentPage--) : null,
-              onNext: _paymentPage < totalPages ? () => setState(() => _paymentPage++) : null,
-            ),
-          ],
+        if (isMobile) {
+          return ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            itemCount: payments.length,
+            itemBuilder: (_, i) {
+              final pay = payments[i];
+              final cust = pay.customer;
+              return TransactionCard(
+                payment: pay,
+                loadingAction: _loadingAction,
+                onView: (p) => PaymentDetailsDialog.show(context, payment: p, loadingAction: _loadingAction,
+                  onPrint: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'print_pay_${p.id}') : null,
+                  onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'dl_pay_${p.id}') : null,
+                  onShare: p.customer != null ? () => _shareInvoice(p.customer!, payment: p, actionKey: 'sh_pay_${p.id}') : null),
+                onPrint: cust != null ? (_) => _downloadInvoice(cust, payment: pay, actionKey: 'print_pay_${pay.id}') : (_) {},
+                onDownload: cust != null ? (_) => _downloadInvoice(cust, payment: pay, actionKey: 'dl_pay_${pay.id}') : (_) {},
+                onShare: cust != null ? (_) => _shareInvoice(cust, payment: pay, actionKey: 'sh_pay_${pay.id}') : (_) {},
+              );
+            },
+          );
+        }
+        return RecentTransactionsTable(
+          payments: payments,
+          loadingAction: _loadingAction,
+          onView: (p) => PaymentDetailsDialog.show(context, payment: p, loadingAction: _loadingAction,
+            onPrint: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'print_pay_${p.id}') : null,
+            onDownload: p.customer != null ? () => _downloadInvoice(p.customer!, payment: p, actionKey: 'dl_pay_${p.id}') : null,
+            onShare: p.customer != null ? () => _shareInvoice(p.customer!, payment: p, actionKey: 'sh_pay_${p.id}') : null),
+          onPrint: (p) => p.customer != null ? _downloadInvoice(p.customer!, payment: p, actionKey: 'print_pay_${p.id}') : null,
+          onDownload: (p) => p.customer != null ? _downloadInvoice(p.customer!, payment: p, actionKey: 'dl_pay_${p.id}') : null,
+          onShare: (p) => p.customer != null ? _shareInvoice(p.customer!, payment: p, actionKey: 'sh_pay_${p.id}') : null,
         );
       },
     );
@@ -233,6 +226,19 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
       case 'partial': return data.where((c) => c.currentDue > 0 && c.totalPaid > 0).toList();
       default: return data;
     }
+  }
+
+  List<Payment> _applyPaymentSearch(List<Payment> data) {
+    if (_search.isEmpty) return data;
+    final q = _search.toLowerCase();
+    return data.where((p) {
+      if (p.receiptNumber.toLowerCase().contains(q)) return true;
+      final cust = p.customer;
+      if (cust == null) return false;
+      return cust.name.toLowerCase().contains(q) ||
+          cust.mobile.contains(q) ||
+          (p.mode.displayName.toLowerCase().contains(q));
+    }).toList();
   }
 
   List<Payment> _applyPaymentFilter(List<Payment> data) {
@@ -419,46 +425,6 @@ class _ToggleBtn extends StatelessWidget {
   }
 }
 
-class _PaginationBar extends StatelessWidget {
-  final int page;
-  final int totalPages;
-  final VoidCallback? onPrev;
-  final VoidCallback? onNext;
-
-  const _PaginationBar({required this.page, required this.totalPages, this.onPrev, this.onNext});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: AppTheme.border.withAlpha(128))),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left, size: 20),
-            onPressed: onPrev,
-            color: onPrev != null ? AppTheme.primaryRed : Colors.grey.shade300,
-          ),
-          const SizedBox(width: 8),
-          Text('Page $page of $totalPages', style: const TextStyle(
-            color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w500,
-          )),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.chevron_right, size: 20),
-            onPressed: onNext,
-            color: onNext != null ? AppTheme.primaryRed : Colors.grey.shade300,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _EmptyView extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -467,20 +433,47 @@ class _EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 56, color: AppTheme.textSecondary.withAlpha(80)),
-            const SizedBox(height: 16),
-            Text(title, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
-            if (subtitle != null) ...[
-              const SizedBox(height: 6),
-              Text(subtitle!, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13), textAlign: TextAlign.center),
-            ],
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 56, color: AppTheme.textSecondary.withAlpha(80)),
+          const SizedBox(height: 16),
+          Text(title, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+          if (subtitle != null) ...[
+            const SizedBox(height: 6),
+            Text(subtitle!, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13), textAlign: TextAlign.center),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TableLoader extends StatelessWidget {
+  const _TableLoader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      height: 220,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: const Center(
+        child: SizedBox(
+          width: 28, height: 28,
+          child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.primaryRed),
         ),
       ),
     );
@@ -494,32 +487,30 @@ class _ErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.all(24),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.error.withAlpha(60)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: AppTheme.error),
-            const SizedBox(height: 12),
-            const Text('Something went wrong', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 4),
-            Text(message, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13), textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('Retry'),
-              onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.error),
-            ),
-          ],
-        ),
+    return Container(
+      margin: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.error.withAlpha(60)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline, size: 48, color: AppTheme.error),
+          const SizedBox(height: 12),
+          const Text('Something went wrong', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          Text(message, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13), textAlign: TextAlign.center),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            icon: const Icon(Icons.refresh, size: 16),
+            label: const Text('Retry'),
+            onPressed: onRetry,
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.error),
+          ),
+        ],
       ),
     );
   }

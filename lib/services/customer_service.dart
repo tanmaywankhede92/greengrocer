@@ -16,6 +16,23 @@ class CustomerService {
     return (data: list, meta: body['meta'] as Map<String, dynamic>?);
   }
 
+  Future<List<Customer>> getAllPages({
+    String? search, String sort = 'name', String order = 'asc',
+  }) async {
+    const pageSize = 100;
+    const maxPages = 50;
+    final all = <Customer>[];
+    for (var page = 1; page <= maxPages; page++) {
+      final result = await getAll(
+        search: search, page: page, limit: pageSize, sort: sort, order: order,
+      );
+      all.addAll(result.data);
+      final total = (result.meta?['total'] as num?)?.toInt() ?? 0;
+      if (result.data.length < pageSize || all.length >= total) break;
+    }
+    return all;
+  }
+
   Future<Customer> getById(String id) async {
     final response = await _client.get('/customers/$id');
     return Customer.fromJson(response.data['data']);

@@ -59,9 +59,8 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
         'paymentDate': AppUtils.formatDateApi(_paymentDate),
       });
       if (mounted) {
-        ref.invalidate(customerListProvider(const CustomerListParams()));
-        ref.invalidate(paymentListProvider(const PaymentListParams()));
-        ref.invalidate(paymentListProvider(PaymentListParams(customerId: _selectedCustomer!.id)));
+        invalidateCustomerLists(ref);
+        invalidatePaymentLists(ref);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment recorded'), backgroundColor: AppTheme.success));
         _showInvoice(_selectedCustomer!.id, paidNow: amount, paymentMode: _mode.value);
       }

@@ -48,17 +48,32 @@ class BillListParams extends Equatable {
 
 class PaymentListParams extends Equatable {
   final String? customerId;
+  final String? from;
+  final String? to;
+  final String? mode;
   final int page;
   final int limit;
 
   const PaymentListParams({
     this.customerId,
+    this.from,
+    this.to,
+    this.mode,
     this.page = 1,
     this.limit = 50,
   });
 
+  PaymentListParams copyWith({String? from, String? to, String? mode}) => PaymentListParams(
+    customerId: customerId,
+    from: from ?? this.from,
+    to: to ?? this.to,
+    mode: mode ?? this.mode,
+    page: page,
+    limit: limit,
+  );
+
   @override
-  List<Object?> get props => [customerId, page, limit];
+  List<Object?> get props => [customerId, from, to, mode, page, limit];
 }
 
 class LedgerParams extends Equatable {

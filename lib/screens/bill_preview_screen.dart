@@ -45,7 +45,9 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   late List<LineItem> _items;
   late double _paymentAmount;
   late PaymentMode _paymentMode;
-  bool _isGenerating = false;
+  /// Non-null while the bill is being saved, shared or printed. Doubles as a
+  /// lock so the action cannot be started twice.
+  String? _busyStage;
   String? _billNumber;
 
   @override
@@ -63,6 +65,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
     _paymentAmount = widget.paymentAmount;
     _paymentMode = widget.paymentMode;
     precacheStamp(context);
+    BillPdfFonts.preload();
   }
 
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.amount);
@@ -81,94 +84,88 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
     };
   }
 
-  Future<void> _print() async {
-    setState(() => _isGenerating = true);
+  /// Runs a save/print action behind the blocking overlay and reports failures
+  /// to the user. Ignored while another action is already running.
+  Future<void> _runBusy(Future<void> Function() action, {required String stage}) async {
+    if (_busyStage != null) return;
+    setState(() => _busyStage = stage);
     try {
-      final result = await _createBillAndBuildPdf();
-      if (!mounted) return;
-      await printBillWidgets(
-        boundaryKeys: [_customerCopyKey, _officeCopyKey],
-        pdfBytes: result.pdf,
-        filename: result.billNumber,
-      );
-      if (mounted) {
+      await action();
+    } on DioException catch (e) {
+      _showError(e.response?.data?['message'] ?? 'Failed to save bill. Please try again.');
+    } catch (e) {
+      _showError(ApiClient.humanizeError(e));
+    } finally {
+      if (mounted) setState(() => _busyStage = null);
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: AppTheme.error),
+    );
+  }
+
+  Future<void> _print() => _runBusy(() async {
+        final billNumber = await _ensureBillSaved();
+        if (!mounted) return;
+        final pdf = await _buildPdf(billNumber);
+        await printPdf(pdf, filename: billNumber);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Bill saved & printed'), backgroundColor: AppTheme.success),
         );
         context.go('/bills');
-      }
-    } on DioException catch (e) {
-      if (mounted) {
-        final msg = e.response?.data?['message'] ?? 'Failed to save bill. Please try again.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg), backgroundColor: AppTheme.error),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isGenerating = false);
-    }
-  }
+      }, stage: 'Printing bill...');
 
-  Future<void> _share() async {
-    setState(() => _isGenerating = true);
-    try {
-      final result = await _createBillAndBuildPdf();
-      final settings = await ref.read(settingsProvider.future);
-      final balance = (_total - _paymentAmount) < 0 ? 0.0 : (_total - _paymentAmount);
-      final message = buildShareMessage(
-        businessName: settings.businessName,
-        docLabel: 'Sale Invoice',
-        amount: _total,
-        balance: balance,
-      );
-      await sharePdf(result.pdf, filename: result.billNumber, message: message);
-      if (mounted) {
+  Future<void> _share() => _runBusy(() async {
+        final billNumber = await _ensureBillSaved();
+        if (!mounted) return;
+        final balance = (_total - _paymentAmount) < 0 ? 0.0 : (_total - _paymentAmount);
+        final message = buildShareMessage(
+          businessName: (await ref.read(settingsProvider.future)).businessName,
+          docLabel: 'Sale Invoice',
+          amount: _total,
+          balance: balance,
+        );
+        await sharePdf(await _buildPdf(billNumber), filename: billNumber, message: message);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Bill saved & ready to share'), backgroundColor: AppTheme.success),
         );
         context.go('/bills');
-      }
-    } on DioException catch (e) {
-      if (mounted) {
-        final msg = e.response?.data?['message'] ?? 'Failed to save bill. Please try again.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg), backgroundColor: AppTheme.error),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isGenerating = false);
-    }
+      }, stage: 'Preparing bill...');
+
+
+  /// Saves the bill once and returns its server-assigned number.
+  ///
+  /// Kept separate from printing because the number is what the printed copy
+  /// shows, and the preview renders a placeholder until it arrives. The result
+  /// is cached, so printing and sharing the same bill never creates a second
+  /// bill, and no settings, font or PDF work happens here.
+  Future<String> _ensureBillSaved() async {
+    final existing = _billNumber;
+    if (existing != null) return existing;
+
+    final billService = ref.read(billServiceProvider);
+    final result = await billService.create(_buildCreatePayload());
+    final billNumber = result['billNumber'] as String;
+    if (!mounted) return billNumber;
+
+    _billNumber = billNumber;
+    ref.invalidate(billListProvider);
+    setState(() {});
+    // Wait a frame so the printed Bill No. is painted before capture.
+    await WidgetsBinding.instance.endOfFrame;
+    return billNumber;
   }
 
-  Future<({String billNumber, Uint8List pdf})> _createBillAndBuildPdf() async {
-    final billService = ref.read(billServiceProvider);
+  /// Only the share path needs a real PDF file; the print path reuses the
+  /// already-rendered preview and never calls this.
+  Future<Uint8List> _buildPdf(String billNumber) async {
     final settings = await ref.read(settingsProvider.future);
-
-    final payload = _buildCreatePayload();
-    final result = await billService.create(payload);
-    final billNumber = result['billNumber'] as String;
-
-    if (!mounted) return (billNumber: billNumber, pdf: Uint8List(0));
-    ref.invalidate(billListProvider);
-
-    setState(() => _billNumber = billNumber);
-    if (!mounted) return (billNumber: billNumber, pdf: Uint8List(0));
-    // Wait a frame so the updated Bill No. is painted before capture.
-    await WidgetsBinding.instance.endOfFrame;
-
-    final pdf = await buildBillPdf(
+    return buildBillPdf(
       settings: settings,
       billNumber: billNumber,
       customerName: widget.customer.name,
@@ -183,7 +180,6 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
       paymentMode: _paymentMode.displayName,
       isReprint: false,
     );
-    return (billNumber: billNumber, pdf: pdf);
   }
 
   static const _red = Color(0xFFB71C1C);
@@ -196,8 +192,8 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   }
 
   Widget _buildCopy({required bool isCustomerCopy, required double maxWidth}) {
-    const copyLabel = 'ORIGINAL';
     final copySuffix = isCustomerCopy ? 'Customer Copy' : 'Office Copy';
+    final copyLabel = isCustomerCopy ? 'ORIGINAL' : 'DUPLICATE';
     final now = DateTime.now();
     final grandTotal = _total > 0 ? _total : _subtotal;
 
@@ -359,33 +355,43 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
 
           const SizedBox(height: 16),
 
-          // ── Summary (stamp on the left, totals on the right) ──
-          buildStampBesideTotalsPreview(
-            Container(
-              width: 220,
-              padding: const EdgeInsets.only(right: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _amountRow('Subtotal', _subtotal),
-                  if (widget.deliveryCharge > 0)
-                    _amountRow('Delivery Charge', widget.deliveryCharge),
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    decoration: const BoxDecoration(
-                      border: Border(top: BorderSide(color: _line, width: 0.7), bottom: BorderSide(color: _line, width: 0.7)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Grand Total', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                        Text('₹ ${grandTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                      ],
-                    ),
+          // ── Summary & Stamp (in line with Grand Total, slightly to the left) ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 110, bottom: 4),
+                  child: buildStampPreview(width: 150),
+                ),
+                SizedBox(
+                  width: 220,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _amountRow('Subtotal', _subtotal),
+                      if (widget.deliveryCharge > 0)
+                        _amountRow('Delivery Charge', widget.deliveryCharge),
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        decoration: const BoxDecoration(
+                          border: Border(top: BorderSide(color: _line, width: 0.7), bottom: BorderSide(color: _line, width: 0.7)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Grand Total', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                            Text('₹ ${grandTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                      if (_paymentAmount > 0) _amountRow('Paid', _paymentAmount),
+                    ],
                   ),
-                  if (_paymentAmount > 0) _amountRow('Paid', _paymentAmount),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
 
@@ -451,69 +457,90 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
         title: const Text('Bill Preview'),
       ),
-      body: Column(
+      body: Stack(
         children: [
-          const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Bills', route: '/bills'), Crumb('Preview')]),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Center(
-                child: Column(
-                  children: [
-                    RepaintBoundary(
-                      key: _customerCopyKey,
-                      child: _buildCopy(isCustomerCopy: true, maxWidth: 700),
+          Column(
+            children: [
+              const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Bills', route: '/bills'), Crumb('Preview')]),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        RepaintBoundary(
+                          key: _customerCopyKey,
+                          child: _buildCopy(isCustomerCopy: true, maxWidth: 700),
+                        ),
+                        const SizedBox(height: 24),
+                        RepaintBoundary(
+                          key: _officeCopyKey,
+                          child: _buildCopy(isCustomerCopy: false, maxWidth: 700),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 24),
-                    RepaintBoundary(
-                      key: _officeCopyKey,
-                      child: _buildCopy(isCustomerCopy: false, maxWidth: 700),
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(color: AppTheme.surface, border: Border(top: BorderSide(color: AppTheme.border))),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.edit, size: 18),
+                        label: const Text('Edit'),
+                        onPressed: _busyStage == null ? () => context.pop() : null,
+                        style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.share, size: 18),
+                        label: const Text('Share'),
+                        onPressed: _busyStage == null ? () => _share() : null,
+                        style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.print, size: 18),
+                        label: const Text('Print Both Copies'),
+                        onPressed: _busyStage == null ? () => _print() : null,
+                        style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(color: AppTheme.surface, border: Border(top: BorderSide(color: AppTheme.border))),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.edit, size: 18),
-                    label: const Text('Edit'),
-                    onPressed: () => context.pop(),
-                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+          if (_busyStage != null)
+            Positioned.fill(
+              child: ColoredBox(
+                color: Colors.black.withValues(alpha: 0.35),
+                child: Center(
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                          const SizedBox(width: 16),
+                          Text(_busyStage!, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: OutlinedButton.icon(
-                    icon: _isGenerating
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.share, size: 18),
-                    label: Text(_isGenerating ? 'Saving...' : 'Share'),
-                    onPressed: _isGenerating ? null : () => _share(),
-                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton.icon(
-                    icon: _isGenerating
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.print, size: 18),
-                    label: Text(_isGenerating ? 'Saving & Printing...' : 'Print Both Copies'),
-                    onPressed: _isGenerating ? null : () => _print(),
-                    style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
         ],
       ),
     );

@@ -7,51 +7,109 @@ import '../../../providers/customer_provider.dart';
 import '../../../providers/payment_provider.dart';
 
 class SummaryCards extends ConsumerWidget {
-  const SummaryCards({super.key});
+  final PaymentListParams paymentsParams;
+
+  const SummaryCards({super.key, this.paymentsParams = const PaymentListParams()});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final customersAsync = ref.watch(customerListProvider(const CustomerListParams(limit: 500)));
-    final paymentsAsync = ref.watch(paymentListProvider(const PaymentListParams(limit: 500)));
+    final customersAsync = ref.watch(customersAllProvider(const CustomerListParams()));
+    final paymentsAsync = ref.watch(paymentsAllProvider(paymentsParams));
+
+    final hasRange = paymentsParams.from != null && paymentsParams.to != null;
 
     return customersAsync.when(
       loading: () => const _CardsSkeleton(),
       error: (e, _) => const SizedBox.shrink(),
-      data: (custResult) => paymentsAsync.when(
+      data: (customers) => paymentsAsync.when(
         loading: () => const _CardsSkeleton(),
         error: (e, _) => const _CardsSkeleton(),
-        data: (payResult) {
-          final customers = custResult.data;
-          final payments = payResult.data;
+        data: (payments) {
           final now = DateTime.now();
-          final today = DateTime(now.year, now.month, now.day);
+          final dayStart = DateTime(now.year, now.month, now.day);
+          final dayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
           final monthStart = DateTime(now.year, now.month, 1);
 
+          double sumWhere(bool Function(DateTime date) test) => payments
+              .where((p) => !p.isCancelled && test(p.paymentDate))
+              .fold<double>(0, (s, p) => s + p.amount);
+
+          final active = payments.where((p) => !p.isCancelled).toList();
           final outstanding = customers.fold<double>(0, (s, c) => s + c.currentDue);
-          final todayCollection = payments.where((p) => p.paymentDate.isAfter(today) && !p.isCancelled).fold<double>(0, (s, p) => s + p.amount);
-          final monthCollection = payments.where((p) => p.paymentDate.isAfter(monthStart) && !p.isCancelled).fold<double>(0, (s, p) => s + p.amount);
           final pendingCount = customers.where((c) => c.currentDue > 0).length;
+          final periodTotal = active.fold<double>(0, (s, p) => s + p.amount);
+
+          final cards = <_SummaryCardData>[
+            if (hasRange)
+              _SummaryCardData(
+                Icons.calendar_month,
+                'Period Collection',
+                periodTotal,
+                AppTheme.success,
+                'in selected period',
+                isCurrency: true,
+              )
+            else
+              _SummaryCardData(
+                Icons.today,
+                'Today\'s Collection',
+                sumWhere((d) => !d.isBefore(dayStart) && !d.isAfter(dayEnd)),
+                AppTheme.success,
+                'collected today',
+                isCurrency: true,
+              ),
+            if (hasRange)
+              _SummaryCardData(
+                Icons.receipt_long,
+                'Period Transactions',
+                active.length.toDouble(),
+                AppTheme.primaryRed,
+                'in selected period',
+              )
+            else
+              _SummaryCardData(
+                Icons.calendar_month,
+                'Monthly Collection',
+                sumWhere((d) => !d.isBefore(monthStart)),
+                AppTheme.info,
+                'this month',
+                isCurrency: true,
+              ),
+            _SummaryCardData(
+              Icons.account_balance_wallet,
+              'Outstanding',
+              outstanding,
+              AppTheme.error,
+              'total pending',
+              isCurrency: true,
+            ),
+            _SummaryCardData(
+              Icons.people_outline,
+              hasRange ? 'Period Customers' : 'Total Customers',
+              customers.length.toDouble(),
+              AppTheme.primaryRed,
+              '$pendingCount pending',
+            ),
+          ];
 
           return LayoutBuilder(
             builder: (context, constraints) {
               final isWide = constraints.maxWidth > 600;
-              final cards = [
-                _SummaryCardData(Icons.today, 'Today\'s Collection', todayCollection, AppTheme.success, 'collected today'),
-                _SummaryCardData(Icons.calendar_month, 'Monthly Collection', monthCollection, AppTheme.info, 'this month'),
-                _SummaryCardData(Icons.account_balance_wallet, 'Outstanding', outstanding, AppTheme.error, 'total pending'),
-                _SummaryCardData(Icons.receipt_long, 'Total Payments', payments.length.toDouble(), AppTheme.primaryRed, '$pendingCount pending'),
-              ];
               if (isWide) {
                 return Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: cards.map((c) => Expanded(child: _SummaryCard(data: c))).toList(),
                 );
               }
               return Wrap(
-                spacing: 8, runSpacing: 8,
-                children: cards.map((c) => SizedBox(
-                  width: (constraints.maxWidth - 8) / 2,
-                  child: _SummaryCard(data: c),
-                )).toList(),
+                spacing: 8,
+                runSpacing: 8,
+                children: cards
+                    .map((c) => SizedBox(
+                          width: (constraints.maxWidth - 8) / 2,
+                          child: _SummaryCard(data: c),
+                        ))
+                    .toList(),
               );
             },
           );
@@ -67,7 +125,8 @@ class _SummaryCardData {
   final double value;
   final Color color;
   final String subtitle;
-  const _SummaryCardData(this.icon, this.title, this.value, this.color, this.subtitle);
+  final bool isCurrency;
+  const _SummaryCardData(this.icon, this.title, this.value, this.color, this.subtitle, {this.isCurrency = false});
 }
 
 class _SummaryCard extends StatelessWidget {
@@ -76,7 +135,6 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCurrency = data.title.contains('Collection') || data.title.contains('Outstanding');
     return Container(
       margin: const EdgeInsets.all(4),
       padding: const EdgeInsets.all(16),
@@ -107,11 +165,11 @@ class _SummaryCard extends StatelessWidget {
                 Text(data.title, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 2),
                 Text(
-                  isCurrency ? AppUtils.formatCurrency(data.value) : data.value.toInt().toString(),
+                  data.isCurrency ? AppUtils.formatCurrency(data.value) : data.value.toInt().toString(),
                   style: const TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold),
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                 ),
-                Text(data.subtitle, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
+                Text(data.subtitle, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10), maxLines: 1, overflow: TextOverflow.ellipsis),
               ],
             ),
           ),

@@ -8,6 +8,33 @@ import '../models/business_settings.dart';
 import '../widgets/bill_item_row.dart';
 import '../widgets/bill_stamp.dart';
 
+class BillPdfFonts {
+  static pw.Font? nunitoRegular;
+  static pw.Font? nunitoBold;
+  static pw.Font? nunitoItalic;
+  static pw.Font? notoSansDevanagariRegular;
+  static pw.Font? notoSansDevanagariBold;
+  static Uint8List? cachedStampBytes;
+
+  static Future<void> preload() async {
+    try {
+      final results = await Future.wait([
+        PdfGoogleFonts.nunitoRegular(),
+        PdfGoogleFonts.nunitoBold(),
+        PdfGoogleFonts.nunitoItalic(),
+        PdfGoogleFonts.notoSansDevanagariRegular(),
+        PdfGoogleFonts.notoSansDevanagariBold(),
+      ]);
+      nunitoRegular = results[0];
+      nunitoBold = results[1];
+      nunitoItalic = results[2];
+      notoSansDevanagariRegular = results[3];
+      notoSansDevanagariBold = results[4];
+      cachedStampBytes = await loadStampBytes();
+    } catch (_) {}
+  }
+}
+
 Future<Uint8List> buildBillPdf({
   required BusinessSettings settings,
   required String? billNumber,
@@ -25,13 +52,20 @@ Future<Uint8List> buildBillPdf({
   double adjustmentAmount = 0,
   String adjustmentNote = '',
 }) async {
-  final font = await PdfGoogleFonts.nunitoRegular();
-  final fontB = await PdfGoogleFonts.nunitoBold();
-  final fontI = await PdfGoogleFonts.nunitoItalic();
-  final fontHi = await PdfGoogleFonts.notoSansDevanagariRegular();
-  final fontHiB = await PdfGoogleFonts.notoSansDevanagariBold();
+  final font = BillPdfFonts.nunitoRegular ?? await PdfGoogleFonts.nunitoRegular();
+  final fontB = BillPdfFonts.nunitoBold ?? await PdfGoogleFonts.nunitoBold();
+  final fontI = BillPdfFonts.nunitoItalic ?? await PdfGoogleFonts.nunitoItalic();
+  final fontHi = BillPdfFonts.notoSansDevanagariRegular ?? await PdfGoogleFonts.notoSansDevanagariRegular();
+  final fontHiB = BillPdfFonts.notoSansDevanagariBold ?? await PdfGoogleFonts.notoSansDevanagariBold();
 
-  final stampBytes = await loadStampBytes();
+  BillPdfFonts.nunitoRegular ??= font;
+  BillPdfFonts.nunitoBold ??= fontB;
+  BillPdfFonts.nunitoItalic ??= fontI;
+  BillPdfFonts.notoSansDevanagariRegular ??= fontHi;
+  BillPdfFonts.notoSansDevanagariBold ??= fontHiB;
+
+  final stampBytes = BillPdfFonts.cachedStampBytes ?? await loadStampBytes();
+  BillPdfFonts.cachedStampBytes ??= stampBytes;
 
   bool hasDevanagari(String text) => text.codeUnits.any((c) => c >= 0x0900 && c <= 0x097F);
   pw.Font pickFont(String text, {required bool bold}) {
@@ -191,76 +225,105 @@ Future<Uint8List> buildBillPdf({
 
   pw.Widget buildSummary() {
     final adjustedTotal = grandTotal - adjustmentAmount;
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-      children: [
-        pw.SizedBox(height: 16),
-        buildStampBesideTotals(
-          stampBytes,
-          pw.Container(
-            width: 220,
-            padding: const pw.EdgeInsets.only(right: 12),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-              children: [
-                amountRow('Subtotal', subtotal),
-                if (deliveryCharge > 0) amountRow('Delivery Charge', deliveryCharge),
-                amountRow('Grand Total', grandTotal),
-                if (adjustmentAmount > 0) ...[
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                    child: pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text('Adjustment', style: pw.TextStyle(font: font, fontSize: 11, color: const PdfColor(0.9, 0.5, 0.0))),
-                        pw.Text('- ${money(adjustmentAmount)}', style: pw.TextStyle(font: font, fontSize: 11, color: const PdfColor(0.9, 0.5, 0.0))),
-                      ],
-                    ),
-                  ),
-                  if (adjustmentNote.isNotEmpty)
-                    pw.Container(
-                      padding: const pw.EdgeInsets.only(bottom: 4),
-                      child: pw.Text(adjustmentNote, style: pw.TextStyle(font: fontI, fontSize: 8.5, color: muted)),
-                    ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 6),
-                    decoration: const pw.BoxDecoration(
-                      border: pw.Border(
-                        top: pw.BorderSide(color: lineC, width: 0.7),
-                        bottom: pw.BorderSide(color: lineC, width: 0.7),
-                      ),
-                    ),
-                    child: pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text('Final Amount', style: pw.TextStyle(font: fontB, fontSize: 13, color: red)),
-                        pw.Text(money(adjustedTotal), style: pw.TextStyle(font: fontB, fontSize: 13, color: red)),
-                      ],
-                    ),
-                  ),
-                ] else
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 6),
-                    decoration: const pw.BoxDecoration(
-                      border: pw.Border(
-                        top: pw.BorderSide(color: lineC, width: 0.7),
-                        bottom: pw.BorderSide(color: lineC, width: 0.7),
-                      ),
-                    ),
-                    child: pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text('Grand Total', style: pw.TextStyle(font: fontB, fontSize: 13, color: textPrimary)),
-                        pw.Text(money(grandTotal), style: pw.TextStyle(font: fontB, fontSize: 13, color: textPrimary)),
-                      ],
-                    ),
-                  ),
-                if (paidNow > 0) amountRow('Paid', paidNow),
-              ],
+    final totalsBlock = pw.Container(
+      width: 220,
+      padding: const pw.EdgeInsets.only(right: 12),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        children: [
+          amountRow('Subtotal', subtotal),
+          if (deliveryCharge > 0) amountRow('Delivery Charge', deliveryCharge),
+          if (adjustmentAmount > 0) ...[
+            amountRow('Grand Total', grandTotal),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(vertical: 2),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Adjustment', style: pw.TextStyle(font: font, fontSize: 11, color: const PdfColor(0.9, 0.5, 0.0))),
+                  pw.Text('- ${money(adjustmentAmount)}', style: pw.TextStyle(font: font, fontSize: 11, color: const PdfColor(0.9, 0.5, 0.0))),
+                ],
+              ),
             ),
+            if (adjustmentNote.isNotEmpty)
+              pw.Container(
+                padding: const pw.EdgeInsets.only(bottom: 4),
+                child: pw.Text(adjustmentNote, style: pw.TextStyle(font: fontI, fontSize: 8.5, color: muted)),
+              ),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(vertical: 6),
+              decoration: const pw.BoxDecoration(
+                border: pw.Border(
+                  top: pw.BorderSide(color: lineC, width: 0.7),
+                  bottom: pw.BorderSide(color: lineC, width: 0.7),
+                ),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Final Amount', style: pw.TextStyle(font: fontB, fontSize: 13, color: red)),
+                  pw.Text(money(adjustedTotal), style: pw.TextStyle(font: fontB, fontSize: 13, color: red)),
+                ],
+              ),
+            ),
+          ] else
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(vertical: 6),
+              decoration: const pw.BoxDecoration(
+                border: pw.Border(
+                  top: pw.BorderSide(color: lineC, width: 0.7),
+                  bottom: pw.BorderSide(color: lineC, width: 0.7),
+                ),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Grand Total', style: pw.TextStyle(font: fontB, fontSize: 13, color: textPrimary)),
+                  pw.Text(money(grandTotal), style: pw.TextStyle(font: fontB, fontSize: 13, color: textPrimary)),
+                ],
+              ),
+            ),
+          if (paidNow > 0) amountRow('Paid', paidNow),
+        ],
+      ),
+    );
+
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(top: 14),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: pw.CrossAxisAlignment.end,
+        children: [
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(left: 110, bottom: 4),
+            child: stampBytes != null
+                ? buildStampPdf(stampBytes, width: 150)
+                : pw.SizedBox(),
           ),
-        ),
-      ],
+          totalsBlock,
+        ],
+      ),
+    );
+  }
+
+  pw.Widget buildFooter(String copyLabel) {
+    return pw.Container(
+      width: PdfPageFormat.a4.width - 40,
+      child: pw.Column(
+        mainAxisSize: pw.MainAxisSize.min,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          thinLine(thickness: 0.7),
+          pw.SizedBox(height: 8),
+          pw.Text('Thank You!  Visit Again', style: pw.TextStyle(font: font, fontSize: 10.5, color: muted)),
+          pw.SizedBox(height: 4),
+          pw.Text(businessName, style: pw.TextStyle(font: fontB, fontSize: 11.5, color: red, letterSpacing: 1.2)),
+          pw.SizedBox(height: 8),
+          pw.Container(height: 1, color: lineC),
+          pw.SizedBox(height: 8),
+          pw.Text(copyLabel, style: pw.TextStyle(font: font, fontSize: 9.5, color: muted)),
+        ],
+      ),
     );
   }
 
@@ -351,22 +414,8 @@ Future<Uint8List> buildBillPdf({
       buildTableHeader(),
       ...buildTableRows(),
       buildSummary(),
-      pw.SizedBox(height: 18),
-      thinLine(thickness: 0.7),
-      pw.SizedBox(height: 10),
-      pw.Center(
-        child: pw.Column(
-          children: [
-            pw.Text('Thank You!  Visit Again', style: pw.TextStyle(font: font, fontSize: 11, color: muted)),
-            pw.SizedBox(height: 4),
-            pw.Text(businessName, style: pw.TextStyle(font: fontB, fontSize: 12, color: red, letterSpacing: 1.2)),
-            pw.SizedBox(height: 8),
-            pw.Container(height: 1, color: lineC),
-            pw.SizedBox(height: 8),
-            pw.Text('ORIGINAL – $copyLabel', style: pw.TextStyle(font: font, fontSize: 10, color: muted)),
-          ],
-        ),
-      ),
+      pw.SizedBox(height: 20),
+      buildFooter(copyLabel),
       pw.SizedBox(height: 12),
     ];
   }
@@ -374,34 +423,18 @@ Future<Uint8List> buildBillPdf({
   // One copy = one MultiPage. It always begins on a fresh sheet, and a bill with
   // a lot of items grows extra pages instead of being shrunk to fit, so the
   // customer copy and the office copy never share a page.
+  // The office copy is the duplicate, not a second original.
   pw.MultiPage oneCopy(String copyLabel) {
     return pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      // Repeat the item table header on every continuation page so a split
-      // bill stays readable.
-      header: (context) => context.pageNumber == 1
-          ? pw.SizedBox()
-          : pw.Container(
-              width: PdfPageFormat.a4.width - 40,
-              margin: const pw.EdgeInsets.only(bottom: 6),
-              child: buildTableHeader(),
-            ),
-      footer: (context) => pw.Container(
-        width: PdfPageFormat.a4.width - 40,
-        alignment: pw.Alignment.centerRight,
-        child: pw.Text(
-          'Page ${context.pageNumber} of ${context.pagesCount}',
-          style: pw.TextStyle(font: font, fontSize: 8, color: muted),
-        ),
-      ),
       build: (context) => buildCopy(copyLabel),
     );
   }
 
   final doc = pw.Document();
-  doc.addPage(oneCopy('Customer Copy'));
-  doc.addPage(oneCopy('Office Copy'));
+  doc.addPage(oneCopy('ORIGINAL – Customer Copy'));
+  doc.addPage(oneCopy('DUPLICATE – Office Copy'));
 
   return doc.save();
 }

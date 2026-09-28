@@ -288,76 +288,88 @@ Future<Uint8List> buildStatementPdf({
         pw.Text('Summary', style: pw.TextStyle(font: fontB, fontSize: 12, color: textColor)),
         pw.SizedBox(height: 8),
 
-        pw.Align(
-          alignment: pw.Alignment.centerRight,
-          child: pw.SizedBox(
-            width: 280,
-            child: pw.Container(
-              padding: const pw.EdgeInsets.all(14),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: lineColor, width: 0.7),
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(top: 14),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            children: [
+              pw.Padding(
+                padding: const pw.EdgeInsets.only(left: 40, bottom: 4),
+                child: stampBytes != null
+                    ? buildStampPdf(stampBytes, width: 150)
+                    : pw.SizedBox(),
               ),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-                children: [
-                  _summaryRow('Opening Balance', money(openingBalance), font, fontB),
-                  _summaryRow('Bills (Selected Period)', money(totalDebit), font, fontB, valueColor: red),
-                  _summaryRow('Payments (Selected Period)', money(totalCredit), font, fontB, valueColor: PdfColors.green700),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 6),
-                    decoration: const pw.BoxDecoration(
-                      border: pw.Border(top: pw.BorderSide(color: lineColor, width: 0.7)),
-                    ),
-                    child: pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text('Net Change', style: pw.TextStyle(font: fontB, fontSize: 10, color: textColor)),
-                        pw.Text(money(netChange),
-                          style: pw.TextStyle(font: fontB, fontSize: 10, color: netChange >= 0 ? red : PdfColors.green700)),
-                      ],
-                    ),
+              pw.SizedBox(
+                width: 260,
+                child: pw.Container(
+                  padding: const pw.EdgeInsets.all(10),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: lineColor, width: 0.7),
                   ),
-                  pw.Divider(thickness: 0.6, color: lightLine),
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                     children: [
-                      pw.Text('Closing Balance', style: pw.TextStyle(font: fontB, fontSize: 11, color: textColor)),
-                      pw.Text(money(closingBalance),
-                        style: pw.TextStyle(font: fontB, fontSize: 11,
-                          color: closingBalance > 0 ? red : PdfColors.green700)),
+                      _summaryRow('Opening Balance', money(openingBalance), font, fontB),
+                      _summaryRow('Bills (Selected Period)', money(totalDebit), font, fontB, valueColor: red),
+                      _summaryRow('Payments (Selected Period)', money(totalCredit), font, fontB, valueColor: PdfColors.green700),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                        decoration: const pw.BoxDecoration(
+                          border: pw.Border(top: pw.BorderSide(color: lineColor, width: 0.7)),
+                        ),
+                        child: pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text('Net Change', style: pw.TextStyle(font: fontB, fontSize: 9.5, color: textColor)),
+                            pw.Text(money(netChange),
+                              style: pw.TextStyle(font: fontB, fontSize: 9.5, color: netChange >= 0 ? red : PdfColors.green700)),
+                          ],
+                        ),
+                      ),
+                      pw.Divider(thickness: 0.5, color: lightLine),
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        children: [
+                          pw.Text('Closing Balance', style: pw.TextStyle(font: fontB, fontSize: 10.5, color: textColor)),
+                          pw.Text(money(closingBalance),
+                            style: pw.TextStyle(font: fontB, fontSize: 10.5,
+                              color: closingBalance > 0 ? red : PdfColors.green700)),
+                        ],
+                      ),
+                      if (closingBalance > 0) ...[
+                        pw.SizedBox(height: 2),
+                        pw.Text('Amount Payable', style: pw.TextStyle(font: fontB, fontSize: 9, color: red)),
+                      ],
+                      if (closingBalance <= 0 && totalCredit > 0) ...[
+                        pw.SizedBox(height: 2),
+                        pw.Text('Advance / Paid Up', style: pw.TextStyle(font: fontB, fontSize: 9, color: PdfColors.green700)),
+                      ],
                     ],
                   ),
-                  if (closingBalance > 0) ...[
-                    pw.SizedBox(height: 4),
-                    pw.Text('Amount Payable', style: pw.TextStyle(font: fontB, fontSize: 10, color: red)),
-                  ],
-                  if (closingBalance <= 0 && totalCredit > 0) ...[
-                    pw.SizedBox(height: 4),
-                    pw.Text('Advance / Paid Up', style: pw.TextStyle(font: fontB, fontSize: 10, color: PdfColors.green700)),
-                  ],
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
 
-        pw.SizedBox(height: 20),
-        thinLine(thickness: 0.7),
-        pw.SizedBox(height: 10),
+        pw.SizedBox(height: 14),
+        thinLine(thickness: 0.6),
+        pw.SizedBox(height: 8),
 
         pw.Center(
           child: pw.Column(
             children: [
               pw.Text('Thank You!  Visit Again',
-                style: pw.TextStyle(font: font, fontSize: 10, color: muted)),
-              pw.SizedBox(height: 4),
+                style: pw.TextStyle(font: font, fontSize: 9.5, color: muted)),
+              pw.SizedBox(height: 3),
               pw.Text('RATHOD ENTERPRISES',
-                style: pw.TextStyle(font: fontB, fontSize: 11.5, color: red, letterSpacing: 1.2)),
-              pw.SizedBox(height: 8),
-              pw.Container(width: double.infinity, height: 1, color: PdfColors.grey500),
-              pw.SizedBox(height: 8),
+                style: pw.TextStyle(font: fontB, fontSize: 11, color: red, letterSpacing: 1.2)),
+              pw.SizedBox(height: 6),
+              pw.Container(width: double.infinity, height: 0.6, color: PdfColors.grey400),
+              pw.SizedBox(height: 6),
               pw.Text('CUSTOMER LEDGER STATEMENT',
-                style: pw.TextStyle(font: fontB, fontSize: 9.5, color: muted, letterSpacing: 1)),
+                style: pw.TextStyle(font: fontB, fontSize: 9, color: muted, letterSpacing: 1)),
             ],
           ),
         ),
@@ -373,13 +385,7 @@ Future<Uint8List> buildStatementPdf({
       margin: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       header: (context) {
         if (context.pageNumber == 1) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-            children: [
-              buildCompanyHeader(),
-              buildTableHeader(),
-            ],
-          );
+          return pw.SizedBox();
         }
         return pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.stretch,
@@ -399,11 +405,14 @@ Future<Uint8List> buildStatementPdf({
             ),
             pw.SizedBox(height: 4),
             buildTableHeader(),
+            pw.SizedBox(height: 6),
           ],
         );
       },
       build: (context) {
         final List<pw.Widget> content = [];
+        content.add(buildCompanyHeader());
+        content.add(buildTableHeader());
 
         if (!hasRows) {
           content.add(buildNoTransactions());
@@ -422,15 +431,11 @@ Future<Uint8List> buildStatementPdf({
       },
       footer: (context) {
         return pw.Column(
+          mainAxisSize: pw.MainAxisSize.min,
           crossAxisAlignment: pw.CrossAxisAlignment.stretch,
           children: [
-            if (context.pageNumber == context.pagesCount) ...[
-              buildStampPdf(stampBytes),
-              pw.SizedBox(height: 4),
-            ],
-            pw.SizedBox(height: 6),
             pw.Container(height: 0.5, color: lightLine),
-            pw.SizedBox(height: 4),
+            pw.SizedBox(height: 3),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [

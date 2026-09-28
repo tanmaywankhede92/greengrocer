@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../../config/theme.dart';
 
+/// Top row of the payments page: search, filters toggle and page actions.
+///
+/// The toolbar stays pinned at the top of the page. Anything expandable (the
+/// filter panel) is passed in through [filtersPanel] so this widget stays
+/// unaware of what is being filtered.
 class PaymentToolbar extends StatefulWidget {
   final String searchQuery;
   final ValueChanged<String> onSearchChanged;
-  final String activeFilter;
-  final ValueChanged<String> onFilterChanged;
+  final bool hasActiveFilters;
+  final Widget? filtersPanel;
   final VoidCallback onRefresh;
   final VoidCallback onAddPayment;
   final VoidCallback onExport;
@@ -15,8 +20,8 @@ class PaymentToolbar extends StatefulWidget {
     super.key,
     required this.searchQuery,
     required this.onSearchChanged,
-    required this.activeFilter,
-    required this.onFilterChanged,
+    required this.hasActiveFilters,
+    required this.filtersPanel,
     required this.onRefresh,
     required this.onAddPayment,
     required this.onExport,
@@ -50,16 +55,6 @@ class _PaymentToolbarState extends State<PaymentToolbar> {
     _searchCtrl.dispose();
     super.dispose();
   }
-
-  static const _filters = [
-    ('All', 'all'),
-    ('Paid', 'paid'),
-    ('Unpaid', 'unpaid'),
-    ('Partial', 'partial'),
-    ('Cash', 'cash'),
-    ('UPI', 'upi'),
-    ('Bank', 'bank'),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -95,9 +90,7 @@ class _PaymentToolbarState extends State<PaymentToolbar> {
             ),
             if (!widget.isMobile) ...[
               const SizedBox(width: 8),
-              _filterChip(Icons.filter_list, 'Filters', widget.activeFilter != 'all', () {
-                setState(() => _showFilters = !_showFilters);
-              }),
+              _filterChip(() => setState(() => _showFilters = !_showFilters)),
               const SizedBox(width: 4),
               IconButton(
                 icon: const Icon(Icons.refresh, size: 20),
@@ -115,8 +108,7 @@ class _PaymentToolbarState extends State<PaymentToolbar> {
             if (widget.isMobile) ...[
               const SizedBox(width: 4),
               IconButton(
-                icon: Icon(Icons.filter_list, size: 20,
-                  color: widget.activeFilter != 'all' ? AppTheme.primaryRed : null),
+                icon: Icon(Icons.filter_list, size: 20, color: widget.hasActiveFilters ? AppTheme.primaryRed : null),
                 tooltip: 'Filters',
                 onPressed: () => setState(() => _showFilters = !_showFilters),
               ),
@@ -144,36 +136,16 @@ class _PaymentToolbarState extends State<PaymentToolbar> {
             ),
           ],
         ),
-        if (_showFilters) ...[
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 34,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _filters.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 6),
-              itemBuilder: (_, i) {
-                final (label, value) = _filters[i];
-                final active = widget.activeFilter == value;
-                return ChoiceChip(
-                  label: Text(label, style: TextStyle(fontSize: 12, color: active ? Colors.white : AppTheme.textSecondary)),
-                  selected: active,
-                  selectedColor: AppTheme.primaryRed,
-                  backgroundColor: Colors.white,
-                  side: BorderSide(color: active ? AppTheme.primaryRed : AppTheme.border),
-                  onSelected: (_) => widget.onFilterChanged(value),
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                );
-              },
-            ),
-          ),
+        if (_showFilters && widget.filtersPanel != null) ...[
+          const SizedBox(height: 10),
+          widget.filtersPanel!,
         ],
       ],
     );
   }
 
-  Widget _filterChip(IconData icon, String label, bool active, VoidCallback onTap) {
+  Widget _filterChip(VoidCallback onTap) {
+    final active = widget.hasActiveFilters;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -187,9 +159,9 @@ class _PaymentToolbarState extends State<PaymentToolbar> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: active ? AppTheme.primaryRed : AppTheme.textSecondary),
+            Icon(Icons.filter_list, size: 16, color: active ? AppTheme.primaryRed : AppTheme.textSecondary),
             const SizedBox(width: 4),
-            Text(label, style: TextStyle(fontSize: 12, color: active ? AppTheme.primaryRed : AppTheme.textSecondary, fontWeight: FontWeight.w500)),
+            Text('Filters', style: TextStyle(fontSize: 12, color: active ? AppTheme.primaryRed : AppTheme.textSecondary, fontWeight: FontWeight.w500)),
           ],
         ),
       ),
