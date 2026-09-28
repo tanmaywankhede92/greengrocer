@@ -4,6 +4,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import 'bill_stamp.dart';
+
 String _extractRef(String description) {
   final match = RegExp(r'([A-Za-z]+-\d{6}-\d{4})').firstMatch(description);
   return match != null ? match.group(1)! : '';
@@ -50,6 +52,8 @@ Future<Uint8List> buildStatementPdf({
     final data = await rootBundle.load('assets/logo.png');
     logoBytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
   } catch (_) {}
+
+  final stampBytes = await loadStampBytes();
 
   const red = PdfColors.red800;
   const textColor = PdfColors.black;
@@ -420,6 +424,10 @@ Future<Uint8List> buildStatementPdf({
         return pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.stretch,
           children: [
+            if (context.pageNumber == context.pagesCount) ...[
+              buildStampPdf(stampBytes),
+              pw.SizedBox(height: 4),
+            ],
             pw.SizedBox(height: 6),
             pw.Container(height: 0.5, color: lightLine),
             pw.SizedBox(height: 4),

@@ -31,6 +31,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/logo.png
+    - assets/rathod_enterprises_stamp.jpg
 
 flutter_launcher_icons:
   android: true

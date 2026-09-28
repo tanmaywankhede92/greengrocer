@@ -6,6 +6,7 @@ import 'package:printing/printing.dart';
 
 import '../models/business_settings.dart';
 import '../models/customer.dart';
+import '../widgets/bill_stamp.dart';
 
 Future<Uint8List> buildPaymentInvoicePdf({
   required BusinessSettings settings,
@@ -23,6 +24,8 @@ Future<Uint8List> buildPaymentInvoicePdf({
   final fontI = await PdfGoogleFonts.nunitoItalic();
   final fontHi = await PdfGoogleFonts.notoSansDevanagariRegular();
   final fontHiB = await PdfGoogleFonts.notoSansDevanagariBold();
+
+  final stampBytes = await loadStampBytes();
 
   bool hasDevanagari(String text) => text.codeUnits.any((c) => c >= 0x0900 && c <= 0x097F);
   pw.Font pickFont(String text, {required bool bold}) {
@@ -336,6 +339,10 @@ Future<Uint8List> buildPaymentInvoicePdf({
       footer: (context) => pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
         children: [
+          if (context.pageNumber == context.pagesCount) ...[
+            buildStampPdf(stampBytes),
+            pw.SizedBox(height: 4),
+          ],
           pw.SizedBox(height: 4),
           thinLine(thickness: 0.3),
           pw.SizedBox(height: 3),

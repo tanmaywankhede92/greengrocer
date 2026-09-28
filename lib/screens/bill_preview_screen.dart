@@ -17,6 +17,7 @@ import '../providers/settings_provider.dart';
 import '../widgets/breadcrumb.dart';
 import '../widgets/bill_item_row.dart';
 import '../widgets/bill_pdf.dart';
+import '../widgets/bill_stamp.dart';
 
 class BillPreviewScreen extends ConsumerStatefulWidget {
   final Customer customer;
@@ -409,6 +410,8 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 10),
+          buildStampPreview(),
           const SizedBox(height: 12),
         ],
       ),

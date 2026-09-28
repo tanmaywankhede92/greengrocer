@@ -6,6 +6,7 @@ import 'package:printing/printing.dart';
 
 import '../models/business_settings.dart';
 import '../widgets/bill_item_row.dart';
+import '../widgets/bill_stamp.dart';
 
 Future<Uint8List> buildBillPdf({
   required BusinessSettings settings,
@@ -29,6 +30,8 @@ Future<Uint8List> buildBillPdf({
   final fontI = await PdfGoogleFonts.nunitoItalic();
   final fontHi = await PdfGoogleFonts.notoSansDevanagariRegular();
   final fontHiB = await PdfGoogleFonts.notoSansDevanagariBold();
+
+  final stampBytes = await loadStampBytes();
 
   bool hasDevanagari(String text) => text.codeUnits.any((c) => c >= 0x0900 && c <= 0x097F);
   pw.Font pickFont(String text, {required bool bold}) {
@@ -377,13 +380,21 @@ Future<Uint8List> buildBillPdf({
       // FittedBox(scaleDown) shrinks oversized bills to fit and keeps small
       // bills at their natural size. The SizedBox pins the content width so
       // flex-width tables compute their columns correctly.
-      build: (_) => pw.FittedBox(
-        fit: pw.BoxFit.scaleDown,
-        alignment: pw.Alignment.topCenter,
-        child: pw.SizedBox(
-          width: PdfPageFormat.a4.width - 40,
-          child: buildCopy(copyLabel),
-        ),
+      build: (_) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        children: [
+          pw.Expanded(
+            child: pw.FittedBox(
+              fit: pw.BoxFit.scaleDown,
+              alignment: pw.Alignment.topCenter,
+              child: pw.SizedBox(
+                width: PdfPageFormat.a4.width - 40,
+                child: buildCopy(copyLabel),
+              ),
+            ),
+          ),
+          buildStampPdf(stampBytes),
+        ],
       ),
     );
   }
