@@ -115,7 +115,6 @@ Future<Uint8List> buildBillPdf({
       ),
     );
   }
-
   List<pw.Widget> buildTableRows() {
     final List<pw.Widget> result = [];
     for (var i = 0; i < items.length; i++) {
@@ -196,9 +195,9 @@ Future<Uint8List> buildBillPdf({
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
         pw.SizedBox(height: 16),
-        pw.Align(
-          alignment: pw.Alignment.centerRight,
-          child: pw.Container(
+        buildStampBesideTotals(
+          stampBytes,
+          pw.Container(
             width: 220,
             padding: const pw.EdgeInsets.only(right: 12),
             child: pw.Column(
@@ -265,137 +264,138 @@ Future<Uint8List> buildBillPdf({
     );
   }
 
-  pw.Widget buildCopy(String copyLabel) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-      children: [
-        pw.Container(height: 3, color: red),
-        pw.SizedBox(height: 12),
-        pw.Center(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              pw.Text(
-                businessName,
-                textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(font: fontB, fontSize: 20, color: red, letterSpacing: 1),
-              ),
-              pw.SizedBox(height: 4),
-              pw.Text(
-                tagline,
-                textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(font: fontB, fontSize: 11, color: muted),
-              ),
-              pw.SizedBox(height: 2),
-              pw.Text(
-                'Green & Fresh  •  Every Day',
-                textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(font: fontI, fontSize: 10, color: green),
-              ),
-              pw.SizedBox(height: 6),
-              if (settings.address != null && settings.address!.isNotEmpty)
-                pw.Text(settings.address!, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 10, color: muted))
-              else ...[
-                pw.Text('Shop No.95 Kanji House, Mahatma Phule Market,', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 10, color: muted)),
-                pw.Text('Cotton Market, Nagpur – 440018', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 10, color: muted)),
-              ],
-              if (settings.phone != null && settings.phone!.isNotEmpty) ...[
-                pw.SizedBox(height: 4),
-                pw.Text(settings.phone!, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 9.5, color: textPrimary)),
-              ],
+  // Returned as a flat list (not a single Column) so that MultiPage can break
+  // the content across as many pages as it needs. One copy always starts on a
+  // fresh page; anything that does not fit moves to the next page.
+  List<pw.Widget> buildCopy(String copyLabel) {
+    return <pw.Widget>[
+      pw.Container(height: 3, color: red),
+      pw.SizedBox(height: 12),
+      pw.Center(
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Text(
+              businessName,
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(font: fontB, fontSize: 20, color: red, letterSpacing: 1),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              tagline,
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(font: fontB, fontSize: 11, color: muted),
+            ),
+            pw.SizedBox(height: 2),
+            pw.Text(
+              'Green & Fresh  •  Every Day',
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(font: fontI, fontSize: 10, color: green),
+            ),
+            pw.SizedBox(height: 6),
+            if (settings.address != null && settings.address!.isNotEmpty)
+              pw.Text(settings.address!, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 10, color: muted))
+            else ...[
+              pw.Text('Shop No.95 Kanji House, Mahatma Phule Market,', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 10, color: muted)),
+              pw.Text('Cotton Market, Nagpur – 440018', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 10, color: muted)),
             ],
-          ),
+            if (settings.phone != null && settings.phone!.isNotEmpty) ...[
+              pw.SizedBox(height: 4),
+              pw.Text(settings.phone!, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 9.5, color: textPrimary)),
+            ],
+          ],
         ),
-        pw.SizedBox(height: 14),
-        thinLine(thickness: 0.7),
-        pw.SizedBox(height: 12),
-        pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 12),
-          child: pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Expanded(
+      ),
+      pw.SizedBox(height: 14),
+      thinLine(thickness: 0.7),
+      pw.SizedBox(height: 12),
+      pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 12),
+        child: pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  infoField('Bill No.', billNumber ?? 'N/A'),
+                  pw.SizedBox(height: 6),
+                  infoField('Customer', customerName),
+                  pw.SizedBox(height: 6),
+                  infoField('Mobile', customerMobile),
+                  pw.SizedBox(height: 6),
+                  infoField('Address', (customerAddress != null && customerAddress.isNotEmpty) ? customerAddress : '-'),
+                ],
+              ),
+            ),
+            pw.Container(width: 1, height: 80, color: lineC),
+            pw.Expanded(
+              child: pw.Padding(
+                padding: const pw.EdgeInsets.only(left: 12),
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    infoField('Bill No.', billNumber ?? 'N/A'),
+                    infoField('Date', dateStr),
                     pw.SizedBox(height: 6),
-                    infoField('Customer', customerName),
-                    pw.SizedBox(height: 6),
-                    infoField('Mobile', customerMobile),
-                    pw.SizedBox(height: 6),
-                    infoField('Address', (customerAddress != null && customerAddress.isNotEmpty) ? customerAddress : '-'),
+                    infoField('Time', timeStr),
                   ],
                 ),
               ),
-              pw.Container(width: 1, height: 80, color: lineC),
-              pw.Expanded(
-                child: pw.Padding(
-                  padding: const pw.EdgeInsets.only(left: 12),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      infoField('Date', dateStr),
-                      pw.SizedBox(height: 6),
-                      infoField('Time', timeStr),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-        pw.SizedBox(height: 12),
-        thinLine(thickness: 0.7),
-        pw.SizedBox(height: 8),
-        buildTableHeader(),
-        ...buildTableRows(),
-        buildSummary(),
-        pw.SizedBox(height: 18),
-        thinLine(thickness: 0.7),
-        pw.SizedBox(height: 10),
-        pw.Center(
-          child: pw.Column(
-            children: [
-              pw.Text('Thank You!  Visit Again', style: pw.TextStyle(font: font, fontSize: 11, color: muted)),
-              pw.SizedBox(height: 4),
-              pw.Text(businessName, style: pw.TextStyle(font: fontB, fontSize: 12, color: red, letterSpacing: 1.2)),
-              pw.SizedBox(height: 8),
-              pw.Container(height: 1, color: lineC),
-              pw.SizedBox(height: 8),
-              pw.Text('ORIGINAL – $copyLabel', style: pw.TextStyle(font: font, fontSize: 10, color: muted)),
-            ],
-          ),
+      ),
+      pw.SizedBox(height: 12),
+      thinLine(thickness: 0.7),
+      pw.SizedBox(height: 8),
+      buildTableHeader(),
+      ...buildTableRows(),
+      buildSummary(),
+      pw.SizedBox(height: 18),
+      thinLine(thickness: 0.7),
+      pw.SizedBox(height: 10),
+      pw.Center(
+        child: pw.Column(
+          children: [
+            pw.Text('Thank You!  Visit Again', style: pw.TextStyle(font: font, fontSize: 11, color: muted)),
+            pw.SizedBox(height: 4),
+            pw.Text(businessName, style: pw.TextStyle(font: fontB, fontSize: 12, color: red, letterSpacing: 1.2)),
+            pw.SizedBox(height: 8),
+            pw.Container(height: 1, color: lineC),
+            pw.SizedBox(height: 8),
+            pw.Text('ORIGINAL – $copyLabel', style: pw.TextStyle(font: font, fontSize: 10, color: muted)),
+          ],
         ),
-        pw.SizedBox(height: 12),
-      ],
-    );
+      ),
+      pw.SizedBox(height: 12),
+    ];
   }
 
-  pw.Page oneCopy(String copyLabel) {
-    return pw.Page(
+  // One copy = one MultiPage. It always begins on a fresh sheet, and a bill with
+  // a lot of items grows extra pages instead of being shrunk to fit, so the
+  // customer copy and the office copy never share a page.
+  pw.MultiPage oneCopy(String copyLabel) {
+    return pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      // Each copy is a single atomic page: never split a bill across pages.
-      // FittedBox(scaleDown) shrinks oversized bills to fit and keeps small
-      // bills at their natural size. The SizedBox pins the content width so
-      // flex-width tables compute their columns correctly.
-      build: (_) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-        children: [
-          pw.Expanded(
-            child: pw.FittedBox(
-              fit: pw.BoxFit.scaleDown,
-              alignment: pw.Alignment.topCenter,
-              child: pw.SizedBox(
-                width: PdfPageFormat.a4.width - 40,
-                child: buildCopy(copyLabel),
-              ),
+      // Repeat the item table header on every continuation page so a split
+      // bill stays readable.
+      header: (context) => context.pageNumber == 1
+          ? pw.SizedBox()
+          : pw.Container(
+              width: PdfPageFormat.a4.width - 40,
+              margin: const pw.EdgeInsets.only(bottom: 6),
+              child: buildTableHeader(),
             ),
-          ),
-          buildStampPdf(stampBytes),
-        ],
+      footer: (context) => pw.Container(
+        width: PdfPageFormat.a4.width - 40,
+        alignment: pw.Alignment.centerRight,
+        child: pw.Text(
+          'Page ${context.pageNumber} of ${context.pagesCount}',
+          style: pw.TextStyle(font: font, fontSize: 8, color: muted),
+        ),
       ),
+      build: (context) => buildCopy(copyLabel),
     );
   }
 

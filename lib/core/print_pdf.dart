@@ -1,12 +1,42 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:image/image.dart' as img;
 import 'package:printing/printing.dart';
 
 import 'print_pdf_stub.dart'
     if (dart.library.js) 'print_pdf_web.dart' as web;
+
+/// Height/width ratio of an A4 sheet.
+const double _a4HeightRatio = 297 / 210;
+
+/// Splits a captured copy into A4-proportioned slices. A bill taller than one
+/// sheet is printed across several pages instead of being shrunk to fit a
+/// single page, matching how the generated PDF paginates.
+Future<List<Uint8List>> sliceCapturedToA4Sheets(Uint8List png) async {
+  final decoded = img.decodePng(png);
+  if (decoded == null) return [png];
+
+  final sliceHeight = (decoded.width * _a4HeightRatio).round();
+  if (decoded.height <= sliceHeight) return [png];
+
+  final sheets = <Uint8List>[];
+  for (var top = 0; top < decoded.height; top += sliceHeight) {
+    final height = math.min(sliceHeight, decoded.height - top);
+    final slice = img.copyCrop(
+      decoded,
+      x: 0,
+      y: top,
+      width: decoded.width,
+      height: height,
+    );
+    sheets.add(img.encodePng(slice));
+  }
+  return sheets;
+}
 
 Future<void> printPdf(Uint8List pdfBytes, {String? filename}) async {
   if (kIsWeb) {
@@ -31,7 +61,11 @@ Future<void> printBillWidgets({
     final images = <Uint8List>[];
     for (final key in boundaryKeys) {
       final captured = await _captureBoundary(key);
-      if (captured != null) images.add(captured);
+      if (captured != null) {
+        // One captured copy can be taller than a sheet, so fan it out into
+        // as many A4 pages as the content needs.
+        images.addAll(await sliceCapturedToA4Sheets(captured));
+      }
     }
     if (images.isNotEmpty) {
       return web.webPrintImages(images, filename: filename ?? 'document');

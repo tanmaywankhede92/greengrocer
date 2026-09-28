@@ -682,7 +682,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                           child: Center(
                             child: GestureDetector(
                               onTap: () => _adjustProduct(item, adjustments, bill),
-                              child: Icon(Icons.edit_note, size: 16, color: AppTheme.primaryRed),
+                              child: const Icon(Icons.edit_note, size: 16, color: AppTheme.primaryRed),
                             ),
                           ),
                         ),
@@ -695,9 +695,9 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
 
           const SizedBox(height: 16),
 
-          Align(
-            alignment: Alignment.centerRight,
-            child: Container(
+          // ── Summary (stamp on the left, totals on the right) ──
+          buildStampBesideTotalsPreview(
+            Container(
               width: 220,
               padding: const EdgeInsets.only(right: 12),
               child: Column(
@@ -749,7 +749,6 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
               ),
             ),
           ),
-
           const SizedBox(height: 18),
           _thinLine(),
           const SizedBox(height: 10),
@@ -771,7 +770,6 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          buildStampPreview(),
           const SizedBox(height: 12),
         ],
       ),

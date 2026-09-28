@@ -359,10 +359,9 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
 
           const SizedBox(height: 16),
 
-          // ── Summary (right-aligned, same as PDF) ──
-          Align(
-            alignment: Alignment.centerRight,
-            child: Container(
+          // ── Summary (stamp on the left, totals on the right) ──
+          buildStampBesideTotalsPreview(
+            Container(
               width: 220,
               padding: const EdgeInsets.only(right: 12),
               child: Column(
@@ -412,7 +411,6 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          buildStampPreview(),
           const SizedBox(height: 12),
         ],
       ),
