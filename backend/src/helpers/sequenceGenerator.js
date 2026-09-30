@@ -56,11 +56,8 @@ const generateInvoiceNumber = async (prefix = 'INV') => {
 };
 
 const generateReceiptNumber = async () => {
-  const now = new Date();
-  const yy = now.getFullYear().toString().slice(-2);
-  const mm = (now.getMonth() + 1).toString().padStart(2, '0');
-  const seq = await getNextSequence('receipt_number', { monthly: true });
-  return `RCPT-${yy}${mm}-${seq.toString().padStart(4, '0')}`;
+  const seq = await getNextSequence('receipt_number', { monthly: false });
+  return `INV-${seq.toString().padStart(4, '0')}`;
 };
 
 const generateDraftId = async () => {

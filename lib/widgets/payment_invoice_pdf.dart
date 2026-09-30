@@ -47,8 +47,18 @@ Future<Uint8List> buildPaymentInvoicePdf({
 
   final invPrefix = settings.invoicePrefix.trim().isNotEmpty ? settings.invoicePrefix.trim() : 'INV';
   final sep = invPrefix.endsWith('-') ? '' : '-';
-  final receiptSeq = receiptNumber.contains('-') ? receiptNumber.split('-').last : receiptNumber;
-  final invoiceNumber = '$invPrefix$sep${receiptSeq.padLeft(4, '0')}';
+  String invoiceNumber;
+  if (receiptNumber.toUpperCase().startsWith('INV-')) {
+    invoiceNumber = receiptNumber.toUpperCase();
+  } else {
+    final match = RegExp(r'(\d+)$').firstMatch(receiptNumber);
+    if (match != null) {
+      final numVal = int.tryParse(match.group(1)!) ?? 1;
+      invoiceNumber = '$invPrefix$sep${numVal.toString().padLeft(4, '0')}';
+    } else {
+      invoiceNumber = '$invPrefix${sep}0001';
+    }
+  }
 
   String money(double v) => '₹ ${v.toStringAsFixed(0)}';
 
@@ -180,20 +190,9 @@ Future<Uint8List> buildPaymentInvoicePdf({
               padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: const pw.BoxDecoration(color: headerBg),
               child: pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Row(
-                    children: [
-                      pw.Text('Invoice No: ', style: pw.TextStyle(font: font, fontSize: 10.5, color: muted)),
-                      pw.Text(invoiceNumber, style: pw.TextStyle(font: fontB, fontSize: 13, color: textPrimary, letterSpacing: 0.5)),
-                    ],
-                  ),
-                  pw.Row(
-                    children: [
-                      pw.Text('Receipt No: ', style: pw.TextStyle(font: font, fontSize: 10.5, color: muted)),
-                      pw.Text(receiptNumber, style: pw.TextStyle(font: fontB, fontSize: 10.5, color: textPrimary)),
-                    ],
-                  ),
+                  pw.Text('Invoice No: ', style: pw.TextStyle(font: font, fontSize: 11, color: muted)),
+                  pw.Text(invoiceNumber, style: pw.TextStyle(font: fontB, fontSize: 13.5, color: textPrimary, letterSpacing: 0.5)),
                 ],
               ),
             ),

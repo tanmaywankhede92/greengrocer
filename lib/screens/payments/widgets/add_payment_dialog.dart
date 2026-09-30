@@ -154,7 +154,7 @@ class _AddPaymentDialogState extends ConsumerState<AddPaymentDialog> {
     setState(() => _submitting = true);
     final c = widget.customer;
     try {
-      await ref.read(paymentServiceProvider).create({
+      final result = await ref.read(paymentServiceProvider).create({
         'customerId': c.id,
         'amount': amount,
         'mode': _mode.value,
@@ -167,7 +167,8 @@ class _AddPaymentDialogState extends ConsumerState<AddPaymentDialog> {
         invalidateCustomerLists(ref);
         invalidatePaymentLists(ref);
         widget.onPaymentRecorded?.call();
-        _showInvoice(c, paidNow: amount, paymentMode: _mode.value);
+        final recNo = (result['receiptNumber'] as String?) ?? 'INV-0001';
+        _showInvoice(c, paidNow: amount, paymentMode: _mode.value, receiptNumber: recNo);
       }
     } catch (e) {
       if (mounted) {
@@ -177,13 +178,12 @@ class _AddPaymentDialogState extends ConsumerState<AddPaymentDialog> {
     }
   }
 
-  Future<void> _showInvoice(Customer customer, {required double paidNow, required String paymentMode}) async {
+  Future<void> _showInvoice(Customer customer, {required double paidNow, required String paymentMode, required String receiptNumber}) async {
     try {
       final settings = await ref.read(settingsProvider.future);
       final previousOutstanding = customer.currentDue + paidNow;
       final remainingOutstanding = customer.currentDue;
       final now = DateTime.now();
-      final receiptNumber = 'RCP-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${now.millisecond}';
       final pdf = await buildPaymentInvoicePdf(
         settings: settings,
         receiptNumber: receiptNumber,
@@ -195,7 +195,7 @@ class _AddPaymentDialogState extends ConsumerState<AddPaymentDialog> {
         paymentDate: now,
         remarks: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
       );
-      if (mounted) await printPdf(pdf, filename: 'Payment-$receiptNumber');
+      if (mounted) await printPdf(pdf, filename: 'Invoice-$receiptNumber');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));

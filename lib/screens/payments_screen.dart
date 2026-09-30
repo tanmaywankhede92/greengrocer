@@ -327,7 +327,15 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     final remainingOutstanding = customer.currentDue;
     _lastInvoiceAmount = pay.amount;
     _lastRemainingOutstanding = remainingOutstanding;
-    _lastReceiptNumber = pay.receiptNumber;
+    final prefix = settings.invoicePrefix.trim().isNotEmpty ? settings.invoicePrefix.trim() : 'INV';
+    final sep = prefix.endsWith('-') ? '' : '-';
+    if (pay.receiptNumber.toUpperCase().startsWith('INV-')) {
+      _lastReceiptNumber = pay.receiptNumber.toUpperCase();
+    } else {
+      final match = RegExp(r'(\d+)$').firstMatch(pay.receiptNumber);
+      final numVal = match != null ? (int.tryParse(match.group(1)!) ?? 1) : 1;
+      _lastReceiptNumber = '$prefix$sep${numVal.toString().padLeft(4, '0')}';
+    }
 
     return buildPaymentInvoicePdf(
       settings: settings,

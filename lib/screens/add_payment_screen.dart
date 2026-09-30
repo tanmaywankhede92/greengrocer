@@ -50,7 +50,7 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      await ref.read(paymentServiceProvider).create({
+      final result = await ref.read(paymentServiceProvider).create({
         'customerId': _selectedCustomer!.id,
         'amount': amount,
         'mode': _mode.value,
@@ -62,7 +62,8 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
         invalidateCustomerLists(ref);
         invalidatePaymentLists(ref);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment recorded'), backgroundColor: AppTheme.success));
-        _showInvoice(_selectedCustomer!.id, paidNow: amount, paymentMode: _mode.value);
+        final recNo = (result['receiptNumber'] as String?) ?? 'INV-0001';
+        _showInvoice(_selectedCustomer!.id, paidNow: amount, paymentMode: _mode.value, receiptNumber: recNo);
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));
@@ -71,13 +72,12 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
     }
   }
 
-  Future<void> _showInvoice(String customerId, {required double paidNow, required String paymentMode}) async {
+  Future<void> _showInvoice(String customerId, {required double paidNow, required String paymentMode, required String receiptNumber}) async {
     try {
       final settings = await ref.read(settingsProvider.future);
       final previousOutstanding = _selectedCustomer!.currentDue + paidNow;
       final remainingOutstanding = _selectedCustomer!.currentDue;
       final now = DateTime.now();
-      final receiptNumber = 'RCP-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${now.millisecond}';
       final pdf = await buildPaymentInvoicePdf(
         settings: settings,
         receiptNumber: receiptNumber,
@@ -89,7 +89,7 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
         paymentDate: now,
         remarks: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
       );
-      if (mounted) await printPdf(pdf, filename: 'Payment-$receiptNumber');
+      if (mounted) await printPdf(pdf, filename: 'Invoice-$receiptNumber');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));
