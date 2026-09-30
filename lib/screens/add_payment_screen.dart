@@ -137,102 +137,25 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
     }
 
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/payments')),
         title: const Text('Add Payment'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1000),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Payments', route: '/payments'), Crumb('Add Payment')]),
-              const SizedBox(height: 20),
-              if (_selectedCustomer == null)
-                _buildCustomerDirectory(isMobile)
-              else ...[
-                _buildSelectedCustomerBanner(isMobile),
-                const SizedBox(height: 20),
-                _buildSummaryCard(isMobile),
-                const SizedBox(height: 24),
-                _buildPaymentForm(isMobile),
-                const SizedBox(height: 24),
-                _buildStatementSection(isMobile, recentPayments),
-              ],
-            ],
-          ),
-        ),
-      ),
+      body: _selectedCustomer == null
+          ? _buildDirectoryScreen(isMobile)
+          : _buildPaymentFormScreen(isMobile, recentPayments),
     );
   }
 
-  Widget _buildSelectedCustomerBanner(bool isMobile) {
-    final c = _selectedCustomer!;
-    final isDue = c.currentDue > 0;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isDue ? AppTheme.error.withAlpha(12) : AppTheme.success.withAlpha(12),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: isDue ? AppTheme.error.withAlpha(50) : AppTheme.success.withAlpha(50)),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: isDue ? AppTheme.error.withAlpha(25) : AppTheme.success.withAlpha(25),
-            child: Icon(Icons.person, color: isDue ? AppTheme.error : AppTheme.success, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  c.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textPrimary),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Mobile: ${c.mobile}  •  Due: ${AppUtils.formatCurrency(c.currentDue)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isDue ? AppTheme.error : AppTheme.success,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.textPrimary,
-              side: const BorderSide(color: AppTheme.border),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            ),
-            icon: const Icon(Icons.swap_horiz, size: 16),
-            label: const Text('Change Customer', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-            onPressed: () => setState(() => _selectedCustomer = null),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCustomerDirectory(bool isMobile) {
+  Widget _buildDirectoryScreen(bool isMobile) {
     final customersAsync = ref.watch(customersAllProvider(const CustomerListParams()));
 
     return customersAsync.when(
-      loading: () => const Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 40),
-          child: CircularProgressIndicator(),
-        ),
-      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24),
+          padding: const EdgeInsets.all(24),
           child: Text(ApiClient.humanizeError(e), style: const TextStyle(color: AppTheme.error)),
         ),
       ),
@@ -266,343 +189,434 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
         }
 
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Select Customer to Record Payment',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+            // ==================== FIXED TOP HEADER (NEVER SCROLLS) ====================
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 14),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Breadcrumb(crumbs: [
+                        Crumb('Home', route: '/dashboard'),
+                        Crumb('Payments', route: '/payments'),
+                        Crumb('Add Payment'),
+                      ]),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Select Customer to Record Payment',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Search customers, review outstanding balances, and collect payments easily.',
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _searchCtrl,
+                        decoration: InputDecoration(
+                          hintText: 'Search customer by name or mobile number...',
+                          prefixIcon: const Icon(Icons.search, size: 20),
+                          suffixIcon: _customerSearch.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 18),
+                                  onPressed: () {
+                                    _searchCtrl.clear();
+                                    setState(() => _customerSearch = '');
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: const Color(0xFFF8F9FA),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppTheme.border)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppTheme.border)),
+                        ),
+                        onChanged: (v) => setState(() => _customerSearch = v),
+                      ),
+                      const SizedBox(height: 10),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _buildFilterChip(
+                              label: 'All Customers',
+                              count: totalCount,
+                              isSelected: _customerFilter == 'all',
+                              onSelected: () => setState(() => _customerFilter = 'all'),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildFilterChip(
+                              label: 'Pending Dues',
+                              count: pendingCount,
+                              isSelected: _customerFilter == 'pending',
+                              highlightColor: AppTheme.error,
+                              onSelected: () => setState(() => _customerFilter = 'pending'),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildFilterChip(
+                              label: 'This Month Due',
+                              count: thisMonthPendingCount,
+                              isSelected: _customerFilter == 'this_month',
+                              highlightColor: Colors.orange.shade800,
+                              onSelected: () => setState(() => _customerFilter = 'this_month'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Search customers, review outstanding balances, and collect payments easily.',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _searchCtrl,
-              decoration: InputDecoration(
-                hintText: 'Search customer by name or mobile number...',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _customerSearch.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          setState(() => _customerSearch = '');
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppTheme.border)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppTheme.border)),
               ),
-              onChanged: (v) => setState(() => _customerSearch = v),
             ),
-            const SizedBox(height: 12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+            const Divider(height: 1, color: AppTheme.border),
+
+            // ==================== SCROLLABLE ROWS / CARDS ====================
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1000),
+                    child: displayed.isEmpty
+                        ? Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppTheme.border),
+                            ),
+                            alignment: Alignment.center,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.search_off, size: 48, color: Colors.grey.shade400),
+                                const SizedBox(height: 12),
+                                const Text('No customers found', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 15)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _customerSearch.isNotEmpty
+                                      ? 'No customer matched "$_customerSearch".'
+                                      : 'No customers match the selected filter.',
+                                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          )
+                        : isMobile
+                            ? ListView.separated(
+                                itemCount: displayed.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                                itemBuilder: (context, i) => _buildMobileCustomerCard(displayed[i]),
+                              )
+                            : Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppTheme.border),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      color: const Color(0xFF1E2330),
+                                      child: const Row(
+                                        children: [
+                                          Expanded(flex: 25, child: Text('Customer', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
+                                          Expanded(flex: 18, child: Text('Mobile', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
+                                          Expanded(flex: 14, child: Text('Status', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
+                                          Expanded(flex: 18, child: Text('Pending Amount', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                                          Expanded(flex: 15, child: Text('Total Paid', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                                          SizedBox(width: 16),
+                                          Expanded(flex: 16, child: Text('Action', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: ListView.separated(
+                                        itemCount: displayed.length,
+                                        separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFEEEEF0)),
+                                        itemBuilder: (context, i) => _buildDesktopTableRow(displayed[i], i.isOdd),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPaymentFormScreen(bool isMobile, Widget? recentPayments) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Fixed Top Breadcrumbs & Header
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 14),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
               child: Row(
                 children: [
-                  _buildFilterChip(
-                    label: 'All Customers',
-                    count: totalCount,
-                    isSelected: _customerFilter == 'all',
-                    onSelected: () => setState(() => _customerFilter = 'all'),
+                  const Expanded(
+                    child: Breadcrumb(
+                      crumbs: [
+                        Crumb('Home', route: '/dashboard'),
+                        Crumb('Payments', route: '/payments'),
+                        Crumb('Add Payment'),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  _buildFilterChip(
-                    label: 'Pending Dues',
-                    count: pendingCount,
-                    isSelected: _customerFilter == 'pending',
-                    highlightColor: AppTheme.error,
-                    onSelected: () => setState(() => _customerFilter = 'pending'),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildFilterChip(
-                    label: 'This Month Due',
-                    count: thisMonthPendingCount,
-                    isSelected: _customerFilter == 'this_month',
-                    highlightColor: Colors.orange.shade800,
-                    onSelected: () => setState(() => _customerFilter = 'this_month'),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.primaryRed,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    ),
+                    icon: const Icon(Icons.arrow_back, size: 16),
+                    label: const Text('All Customers', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    onPressed: () => setState(() => _selectedCustomer = null),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            if (displayed.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.border),
-                ),
-                alignment: Alignment.center,
+          ),
+        ),
+        const Divider(height: 1, color: AppTheme.border),
+
+        // Scrollable Form Area
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.search_off, size: 48, color: Colors.grey.shade400),
-                    const SizedBox(height: 12),
-                    const Text('No customers found', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 15)),
-                    const SizedBox(height: 4),
-                    Text(
-                      _customerSearch.isNotEmpty
-                          ? 'No customer matched "$_customerSearch".'
-                          : 'No customers match the selected filter.',
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                    ),
+                    _buildSummaryCard(isMobile),
+                    const SizedBox(height: 20),
+                    _buildPaymentForm(isMobile),
+                    const SizedBox(height: 20),
+                    _buildStatementSection(isMobile, recentPayments),
                   ],
                 ),
-              )
-            else if (isMobile)
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: displayed.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, i) {
-                  final c = displayed[i];
-                  final isDue = c.currentDue > 0;
-                  final status = c.currentDue <= 0 ? 'Paid' : (c.totalPaid > 0 ? 'Partial' : 'Unpaid');
-                  final statusColor = c.currentDue <= 0 ? AppTheme.success : (c.totalPaid > 0 ? AppTheme.info : AppTheme.error);
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
-                  return Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: isDue ? AppTheme.error.withAlpha(60) : AppTheme.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                c.name,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textPrimary),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: statusColor.withAlpha(20),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                status,
-                                style: TextStyle(
-                                  color: statusColor,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(Icons.phone, size: 13, color: Colors.grey.shade500),
-                            const SizedBox(width: 4),
-                            Text(c.mobile, style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        const Divider(height: 1, color: AppTheme.border),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Pending Due', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
-                                  Text(
-                                    AppUtils.formatCurrency(c.currentDue),
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDue ? AppTheme.error : AppTheme.textPrimary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Total Paid', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
-                                  Text(
-                                    AppUtils.formatCurrency(c.totalPaid),
-                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.success),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 38,
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isDue ? AppTheme.primaryRed : const Color(0xFF1E2330),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            icon: const Icon(Icons.payments_outlined, size: 16),
-                            label: Text(isDue ? 'Collect Payment' : 'Record Payment', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                            onPressed: () => _selectCustomer(c),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              )
-            else
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTheme.border),
+  Widget _buildMobileCustomerCard(Customer c) {
+    final isDue = c.currentDue > 0;
+    final status = c.currentDue <= 0 ? 'Paid' : (c.totalPaid > 0 ? 'Partial' : 'Unpaid');
+    final statusColor = c.currentDue <= 0 ? AppTheme.success : (c.totalPaid > 0 ? AppTheme.info : AppTheme.error);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: isDue ? AppTheme.error.withAlpha(60) : AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  c.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textPrimary),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                clipBehavior: Clip.antiAlias,
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(Icons.phone, size: 13, color: Colors.grey.shade500),
+              const SizedBox(width: 4),
+              Text(c.mobile, style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: AppTheme.border),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-                      color: const Color(0xFF1E2330),
-                      child: const Row(
-                        children: [
-                          Expanded(flex: 25, child: Text('Customer', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
-                          Expanded(flex: 18, child: Text('Mobile', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
-                          Expanded(flex: 14, child: Text('Status', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
-                          Expanded(flex: 18, child: Text('Pending Amount', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                          Expanded(flex: 15, child: Text('Total Paid', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                          SizedBox(width: 16),
-                          Expanded(flex: 16, child: Text('Action', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-                        ],
+                    const Text('Pending Due', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                    Text(
+                      AppUtils.formatCurrency(c.currentDue),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: isDue ? AppTheme.error : AppTheme.textPrimary,
                       ),
-                    ),
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: displayed.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFEEEEF0)),
-                      itemBuilder: (context, i) {
-                        final c = displayed[i];
-                        final isDue = c.currentDue > 0;
-                        final isOdd = i.isOdd;
-                        final status = c.currentDue <= 0 ? 'Paid' : (c.totalPaid > 0 ? 'Partial' : 'Unpaid');
-                        final statusColor = c.currentDue <= 0 ? AppTheme.success : (c.totalPaid > 0 ? AppTheme.info : AppTheme.error);
-
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          color: isOdd ? const Color(0xFFFAFAFC) : Colors.white,
-                          child: Row(
-                            children: [
-                              Expanded(
-                                flex: 25,
-                                child: Text(
-                                  c.name,
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Expanded(
-                                flex: 18,
-                                child: Text(
-                                  c.mobile,
-                                  style: TextStyle(fontSize: 12.5, color: Colors.grey.shade700),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Expanded(
-                                flex: 14,
-                                child: Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: statusColor.withAlpha(20),
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: statusColor.withAlpha(60)),
-                                    ),
-                                    child: Text(
-                                      status,
-                                      style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w600),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                flex: 18,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(right: 6),
-                                  child: Text(
-                                    AppUtils.formatCurrency(c.currentDue),
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDue ? AppTheme.error : Colors.grey.shade700,
-                                    ),
-                                    textAlign: TextAlign.right,
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                flex: 15,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(right: 6),
-                                  child: Text(
-                                    AppUtils.formatCurrency(c.totalPaid),
-                                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.success),
-                                    textAlign: TextAlign.right,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                flex: 16,
-                                child: SizedBox(
-                                  height: 32,
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: isDue ? AppTheme.primaryRed : const Color(0xFF1E2330),
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                                    ),
-                                    onPressed: () => _selectCustomer(c),
-                                    child: const Text('Collect', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
                     ),
                   ],
                 ),
               ),
-          ],
-        );
-      },
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Total Paid', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                    Text(
+                      AppUtils.formatCurrency(c.totalPaid),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.success),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 38,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDue ? AppTheme.primaryRed : const Color(0xFF1E2330),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              icon: const Icon(Icons.payments_outlined, size: 16),
+              label: Text(isDue ? 'Collect Payment' : 'Record Payment', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              onPressed: () => _selectCustomer(c),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopTableRow(Customer c, bool isOdd) {
+    final isDue = c.currentDue > 0;
+    final status = c.currentDue <= 0 ? 'Paid' : (c.totalPaid > 0 ? 'Partial' : 'Unpaid');
+    final statusColor = c.currentDue <= 0 ? AppTheme.success : (c.totalPaid > 0 ? AppTheme.info : AppTheme.error);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: isOdd ? const Color(0xFFFAFAFC) : Colors.white,
+      child: Row(
+        children: [
+          Expanded(
+            flex: 25,
+            child: Text(
+              c.name,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            flex: 18,
+            child: Text(
+              c.mobile,
+              style: TextStyle(fontSize: 12.5, color: Colors.grey.shade700),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            flex: 14,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: statusColor.withAlpha(60)),
+                ),
+                child: Text(
+                  status,
+                  style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 18,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Text(
+                AppUtils.formatCurrency(c.currentDue),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: isDue ? AppTheme.error : Colors.grey.shade700,
+                ),
+                textAlign: TextAlign.right,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 15,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Text(
+                AppUtils.formatCurrency(c.totalPaid),
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.success),
+                textAlign: TextAlign.right,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 16,
+            child: SizedBox(
+              height: 32,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isDue ? AppTheme.primaryRed : const Color(0xFF1E2330),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                ),
+                onPressed: () => _selectCustomer(c),
+                child: const Text('Collect', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -676,25 +690,62 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: Text(c.name, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold))),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                decoration: BoxDecoration(
-                  color: statusColor.withAlpha(20),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: statusColor.withAlpha(60)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            c.name,
+                            style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: statusColor.withAlpha(20),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: statusColor.withAlpha(60)),
+                          ),
+                          child: Text(status, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.phone, size: 14, color: Colors.grey.shade600),
+                        const SizedBox(width: 4),
+                        Text(c.mobile, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                      ],
+                    ),
+                  ],
                 ),
-                child: Text(status, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.w600)),
+              ),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.textPrimary,
+                  side: const BorderSide(color: AppTheme.border),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                icon: const Icon(Icons.swap_horiz, size: 16),
+                label: const Text('Change Customer', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                onPressed: () => setState(() => _selectedCustomer = null),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(c.mobile, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+          const SizedBox(height: 16),
+          const Divider(height: 1, color: AppTheme.border),
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: _statTile('Outstanding', AppUtils.formatCurrency(c.currentDue), AppTheme.textPrimary)),
+              Expanded(child: _statTile('Outstanding', AppUtils.formatCurrency(c.currentDue), c.currentDue > 0 ? AppTheme.error : AppTheme.textPrimary)),
               Container(width: 1, height: 36, color: AppTheme.border),
               Expanded(child: _statTile('Total Paid', AppUtils.formatCurrency(c.totalPaid), AppTheme.success)),
               Container(width: 1, height: 36, color: AppTheme.border),
