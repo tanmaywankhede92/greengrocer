@@ -13,6 +13,9 @@ class AppConstants {
   static const String accessTokenKey = 'access_token';
   static const String refreshTokenKey = 'refresh_token';
   static const String userKey = 'cached_user';
+  static const String rememberMeKey = 'remember_me';
+  static const String savedEmailKey = 'saved_email';
+  static const String savedPasswordKey = 'saved_password';
 
   static const double tabletBreakpoint = 768;
   static const double desktopBreakpoint = 1024;

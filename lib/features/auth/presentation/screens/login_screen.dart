@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../config/theme.dart';
 import '../../../../core/constants.dart';
@@ -14,15 +15,56 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _storage = const FlutterSecureStorage();
   bool _obscure = true;
+  bool _rememberMe = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    try {
+      final rememberMeVal = await _storage.read(key: AppConstants.rememberMeKey);
+      if (rememberMeVal == 'true') {
+        final email = await _storage.read(key: AppConstants.savedEmailKey);
+        final pass = await _storage.read(key: AppConstants.savedPasswordKey);
+        if (mounted) {
+          setState(() {
+            _rememberMe = true;
+            if (email != null) _emailCtrl.text = email;
+            if (pass != null) _passCtrl.text = pass;
+          });
+        }
+      } else if (rememberMeVal == 'false') {
+        if (mounted) setState(() => _rememberMe = false);
+      }
+    } catch (_) {}
+  }
 
   @override
   void dispose() { _emailCtrl.dispose(); _passCtrl.dispose(); super.dispose(); }
 
   Future<void> _login() async {
-    if (_emailCtrl.text.isEmpty || _passCtrl.text.isEmpty) return;
-    final error = await ref.read(authProvider.notifier).login(_emailCtrl.text.trim(), _passCtrl.text);
-    if (error == null && mounted) context.go('/dashboard');
+    final email = _emailCtrl.text.trim();
+    final password = _passCtrl.text;
+    if (email.isEmpty || password.isEmpty) return;
+
+    final error = await ref.read(authProvider.notifier).login(email, password);
+    if (error == null && mounted) {
+      if (_rememberMe) {
+        await _storage.write(key: AppConstants.rememberMeKey, value: 'true');
+        await _storage.write(key: AppConstants.savedEmailKey, value: email);
+        await _storage.write(key: AppConstants.savedPasswordKey, value: password);
+      } else {
+        await _storage.write(key: AppConstants.rememberMeKey, value: 'false');
+        await _storage.delete(key: AppConstants.savedEmailKey);
+        await _storage.delete(key: AppConstants.savedPasswordKey);
+      }
+      if (mounted) context.go('/dashboard');
+    }
   }
 
   @override
@@ -69,6 +111,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                   onSubmitted: (_) => _login(),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: Checkbox(
+                        value: _rememberMe,
+                        activeColor: AppTheme.primaryRed,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        onChanged: (val) => setState(() => _rememberMe = val ?? false),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => setState(() => _rememberMe = !_rememberMe),
+                      child: const Text(
+                        'Remember me',
+                        style: TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 if (state.error != null) ...[
                   const SizedBox(height: 12),
