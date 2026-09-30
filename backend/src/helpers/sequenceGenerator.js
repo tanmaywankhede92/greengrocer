@@ -1,21 +1,27 @@
 const Counter = require('../models/Counter');
 
-const getNextSequence = async (name) => {
-  const now = new Date();
-  const yy = now.getFullYear().toString().slice(-2);
-  const mm = (now.getMonth() + 1).toString().padStart(2, '0');
-  const yearMonth = `${yy}${mm}`;
-  const docId = `${name}_${yearMonth}`;
+const getNextSequence = async (name, { monthly = false } = {}) => {
+  let docId = name;
+  let yearMonth;
+  if (monthly) {
+    const now = new Date();
+    const yy = now.getFullYear().toString().slice(-2);
+    const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+    yearMonth = `${yy}${mm}`;
+    docId = `${name}_${yearMonth}`;
+  }
 
   const counter = await Counter.findOneAndUpdate(
     { _id: docId },
     { $inc: { seq: 1 } },
     { new: true },
   );
-  if (counter) return counter.seq.toString().padStart(4, '0');
+  if (counter) return counter.seq;
 
   try {
-    await Counter.create({ _id: docId, seq: 1, yearMonth });
+    const createData = { _id: docId, seq: 1 };
+    if (yearMonth) createData.yearMonth = yearMonth;
+    await Counter.create(createData);
   } catch (error) {
     if (error.code === 11000) {
       const retried = await Counter.findOneAndUpdate(
@@ -23,36 +29,46 @@ const getNextSequence = async (name) => {
         { $inc: { seq: 1 } },
         { new: true },
       );
-      if (retried) return retried.seq.toString().padStart(4, '0');
+      if (retried) return retried.seq;
     }
     throw error;
   }
 
-  return '0001';
+  return 1;
 };
 
-const generateBillNumber = async (prefix) => {
-  const now = new Date();
-  const yy = now.getFullYear().toString().slice(-2);
-  const mm = (now.getMonth() + 1).toString().padStart(2, '0');
-  const seq = await getNextSequence('bill_number');
-  return `${prefix || 'RE'}-${yy}${mm}-${seq}`;
+const generateBillNumber = async (prefix = '') => {
+  const seq = await getNextSequence('bill_number', { monthly: false });
+  const rawPrefix = prefix !== undefined && prefix !== null ? String(prefix).trim() : '';
+  if (!rawPrefix) {
+    return seq.toString().padStart(4, '0');
+  }
+  const sep = rawPrefix.endsWith('-') ? '' : '-';
+  return `${rawPrefix}${sep}${seq.toString().padStart(4, '0')}`;
+};
+
+const generateInvoiceNumber = async (prefix = 'INV') => {
+  const seq = await getNextSequence('invoice_number', { monthly: false });
+  const rawPrefix = prefix !== undefined && prefix !== null ? String(prefix).trim() : 'INV';
+  const cleanPrefix = rawPrefix || 'INV';
+  const sep = cleanPrefix.endsWith('-') ? '' : '-';
+  return `${cleanPrefix}${sep}${seq.toString().padStart(4, '0')}`;
 };
 
 const generateReceiptNumber = async () => {
   const now = new Date();
   const yy = now.getFullYear().toString().slice(-2);
   const mm = (now.getMonth() + 1).toString().padStart(2, '0');
-  const seq = await getNextSequence('receipt_number');
-  return `RCPT-${yy}${mm}-${seq}`;
+  const seq = await getNextSequence('receipt_number', { monthly: true });
+  return `RCPT-${yy}${mm}-${seq.toString().padStart(4, '0')}`;
 };
 
 const generateDraftId = async () => {
   const now = new Date();
   const yy = now.getFullYear().toString().slice(-2);
   const mm = (now.getMonth() + 1).toString().padStart(2, '0');
-  const seq = await getNextSequence('draft_id');
-  return `DFT-${yy}${mm}-${seq}`;
+  const seq = await getNextSequence('draft_id', { monthly: true });
+  return `DFT-${yy}${mm}-${seq.toString().padStart(4, '0')}`;
 };
 
-module.exports = { generateBillNumber, generateReceiptNumber, generateDraftId };
+module.exports = { generateBillNumber, generateInvoiceNumber, generateReceiptNumber, generateDraftId };

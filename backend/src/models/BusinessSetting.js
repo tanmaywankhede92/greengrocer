@@ -31,9 +31,15 @@ const businessSettingSchema = new mongoose.Schema({
     trim: true,
     maxlength: 20,
   },
+  billPrefix: {
+    type: String,
+    default: '',
+    trim: true,
+    maxlength: 10,
+  },
   invoicePrefix: {
     type: String,
-    default: 'RE',
+    default: 'INV',
     trim: true,
     maxlength: 10,
   },

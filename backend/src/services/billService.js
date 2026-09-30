@@ -9,6 +9,7 @@ const Bill = require('../models/Bill');
 const DraftBill = require('../models/DraftBill');
 const BillItem = require('../models/BillItem');
 const BillAdjustment = require('../models/BillAdjustment');
+const config = require('../config');
 const Payment = require('../models/Payment');
 const LedgerEntry = require('../models/LedgerEntry');
 
@@ -41,14 +42,14 @@ const createBill = async ({ customerId, billDate, items, deliveryCharge, notes, 
   const total = subtotal + (deliveryCharge || 0);
 
   const settings = await settingsRepository.findSettings();
-  const prefix = settings?.invoicePrefix || 'RE';
+  const billPrefix = settings?.billPrefix || '';
   const paid = paymentAmount || 0;
   const paymentType = paid >= total && paid > 0 ? 'cash' : paid > 0 ? 'partial' : 'credit';
 
   let lastError;
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      const billNumber = await generateBillNumber(prefix);
+      const billNumber = await generateBillNumber(billPrefix);
       const bill = await Bill.create({
         billNumber,
         customerId,

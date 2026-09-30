@@ -45,7 +45,10 @@ Future<Uint8List> buildPaymentInvoicePdf({
   final dateStr = DateFormat('dd MMM yyyy').format(paymentDate);
   final timeStr = DateFormat('hh:mm a').format(paymentDate);
 
-  final invoiceNumber = 'INV-${paymentDate.year}${paymentDate.month.toString().padLeft(2, '0')}${paymentDate.day.toString().padLeft(2, '0')}-${paymentDate.millisecond.toString().padLeft(4, '0')}';
+  final invPrefix = settings.invoicePrefix.trim().isNotEmpty ? settings.invoicePrefix.trim() : 'INV';
+  final sep = invPrefix.endsWith('-') ? '' : '-';
+  final receiptSeq = receiptNumber.contains('-') ? receiptNumber.split('-').last : receiptNumber;
+  final invoiceNumber = '$invPrefix$sep${receiptSeq.padLeft(4, '0')}';
 
   String money(double v) => '₹ ${v.toStringAsFixed(0)}';
 

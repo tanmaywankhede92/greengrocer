@@ -96,7 +96,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(height: 24),
                   const Text('Invoice Settings', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 16),
-                  TextField(controller: _prefixCtrl, decoration: const InputDecoration(labelText: 'Invoice Prefix', hintText: 'RE', prefixIcon: Icon(Icons.tag, size: 18))),
+                  TextField(controller: _prefixCtrl, decoration: const InputDecoration(labelText: 'Invoice Prefix', hintText: 'INV', prefixIcon: Icon(Icons.tag, size: 18))),
                   const SizedBox(height: 16),
                   TextField(controller: _footerCtrl, decoration: const InputDecoration(labelText: 'Footer Note', prefixIcon: Icon(Icons.notes, size: 18)), maxLines: 2),
                   const SizedBox(height: 32),

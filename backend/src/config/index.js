@@ -15,7 +15,7 @@ module.exports = {
     accessExpiry: process.env.JWT_ACCESS_EXPIRY || '15m',
     refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '7d',
   },
-  defaultPrefix: process.env.DEFAULT_PREFIX || 'RE',
+  defaultPrefix: process.env.DEFAULT_PREFIX || 'INV',
   defaultBusinessName: process.env.DEFAULT_BUSINESS_NAME || 'Rathod Enterprises',
   logLevel: process.env.LOG_LEVEL || 'debug',
 };

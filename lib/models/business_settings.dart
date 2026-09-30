@@ -7,6 +7,7 @@ class BusinessSettings extends Equatable {
   final String? address;
   final String? phone;
   final String? gstNumber;
+  final String billPrefix;
   final String invoicePrefix;
   final String? footerNote;
 
@@ -17,7 +18,8 @@ class BusinessSettings extends Equatable {
     this.address,
     this.phone,
     this.gstNumber,
-    this.invoicePrefix = 'RE',
+    this.billPrefix = '',
+    this.invoicePrefix = 'INV',
     this.footerNote,
   });
 
@@ -28,7 +30,8 @@ class BusinessSettings extends Equatable {
     address: json['address'],
     phone: json['phone'],
     gstNumber: json['gstNumber'],
-    invoicePrefix: json['invoicePrefix'] ?? 'RE',
+    billPrefix: json['billPrefix'] ?? '',
+    invoicePrefix: json['invoicePrefix'] ?? 'INV',
     footerNote: json['footerNote'],
   );
 
@@ -38,10 +41,11 @@ class BusinessSettings extends Equatable {
     'address': address,
     'phone': phone,
     'gstNumber': gstNumber,
+    'billPrefix': billPrefix,
     'invoicePrefix': invoicePrefix,
     'footerNote': footerNote,
   };
 
   @override
-  List<Object?> get props => [id, businessName, invoicePrefix];
+  List<Object?> get props => [id, businessName, billPrefix, invoicePrefix];
 }
