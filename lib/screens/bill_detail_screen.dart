@@ -69,18 +69,6 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
               onPressed: () => context.go('/bills'),
             ),
             title: Text(bill.billNumber, style: const TextStyle(fontWeight: FontWeight.w600)),
-            actions: [
-              if (isActive)
-                Container(
-                  margin: const EdgeInsets.only(right: 4),
-                  child: TextButton.icon(
-                    icon: const Icon(Icons.cancel_outlined, size: 18, color: Colors.red),
-                    label: const Text('Cancel', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
-                    onPressed: () => _cancelBill(bill),
-                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12)),
-                  ),
-                ),
-            ],
           ),
           body: Column(
             children: [
@@ -362,46 +350,6 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Product adjusted'), backgroundColor: AppTheme.success),
       );
-    }
-  }
-
-  Future<void> _cancelBill(Bill bill) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cancel Bill'),
-        content: Text('Cancel ${bill.billNumber}? This will reverse the ledger entries.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('No'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
-            child: const Text('Yes, Cancel'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      try {
-        await ref.read(billServiceProvider).cancel(bill.id);
-        ref.invalidate(billDetailProvider(widget.id));
-        ref.invalidate(billListProvider);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Bill cancelled'), backgroundColor: AppTheme.success),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
-          );
-        }
-      }
     }
   }
 

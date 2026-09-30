@@ -45,12 +45,12 @@ class RecentTransactionsTable extends StatelessWidget {
             ),
             child: const Row(
               children: [
-                Expanded(flex: 18, child: Text('Receipt No', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))),
+                Expanded(flex: 16, child: Text('Invoice No', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))),
                 Expanded(flex: 12, child: Text('Date', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))),
                 Expanded(flex: 20, child: Text('Customer', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))),
                 Expanded(flex: 10, child: Text('Mode', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))),
                 Expanded(flex: 14, child: Text('Amount', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700), textAlign: TextAlign.right)),
-                Expanded(flex: 12, child: Text('Collected By', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))),
+                Expanded(flex: 14, child: Text('Timing', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700), textAlign: TextAlign.center)),
                 Expanded(flex: 14, child: TableActionsHeader()),
               ],
             ),
@@ -127,34 +127,42 @@ class _TransactionRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(flex: 18, child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('#${p.receiptNumber}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF2D2D2D)), overflow: TextOverflow.ellipsis),
-              Text(timeStr, style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
-            ],
+          Expanded(flex: 16, child: Text(
+            p.receiptNumber.startsWith('#') ? p.receiptNumber : '#${p.receiptNumber}',
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF2D2D2D)),
+            overflow: TextOverflow.ellipsis,
           )),
           Expanded(flex: 12, child: Text(dateStr, style: TextStyle(fontSize: 12, color: Colors.grey.shade600))),
           Expanded(flex: 20, child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(customerName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
-              if (p.notes?.isNotEmpty == true)
-                Text(p.notes!, style: TextStyle(fontSize: 10, color: Colors.grey.shade500), overflow: TextOverflow.ellipsis, maxLines: 1),
+              Text(customerName, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary), overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 2),
+              Text(
+                p.receiptNumber,
+                style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           )),
           Expanded(flex: 10, child: Text(p.mode.displayName, style: TextStyle(fontSize: 11, color: Colors.grey.shade600), overflow: TextOverflow.ellipsis)),
-          Expanded(flex: 14, child: Text(
-            AppUtils.formatCurrency(p.amount),
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2D2D)),
-            textAlign: TextAlign.right,
+          Expanded(flex: 14, child: Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Text(
+              AppUtils.formatCurrency(p.amount),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF2D2D2D)),
+              textAlign: TextAlign.right,
+            ),
           )),
-          Expanded(flex: 12, child: Text(
-            customerName,
-            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-            overflow: TextOverflow.ellipsis,
+          Expanded(flex: 14, child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.access_time, size: 12, color: Colors.grey.shade500),
+              const SizedBox(width: 4),
+              Text(timeStr, style: TextStyle(fontSize: 11, color: Colors.grey.shade700, fontWeight: FontWeight.w500)),
+            ],
           )),
           Expanded(flex: 14, child: TableActions(actions: [
             TableAction(icon: Icons.visibility, tooltip: 'View Details', color: AppTheme.info, onPressed: () => onView(p)),

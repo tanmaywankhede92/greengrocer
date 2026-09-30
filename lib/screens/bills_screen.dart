@@ -157,8 +157,6 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
                   _filterChip('All', _periodFilter == 'all' || _periodFilter == null, () => _setPeriod('all')),
                   const Spacer(),
                   _filterChip('Active', _statusFilter == 'active', () => setState(() { _statusFilter = _statusFilter == 'active' ? null : 'active'; _page = 1; })),
-                  const SizedBox(width: 8),
-                  _filterChip('Cancelled', _statusFilter == 'cancelled', () => setState(() { _statusFilter = _statusFilter == 'cancelled' ? null : 'cancelled'; _page = 1; })),
                 ],
               ),
             ),
