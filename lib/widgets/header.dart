@@ -4,6 +4,7 @@ import '../config/theme.dart';
 import '../features/auth/presentation/providers/auth_provider.dart';
 import '../core/utils.dart';
 import '../core/constants.dart';
+import 'calculator_dialog.dart';
 
 class Header extends ConsumerWidget {
   final VoidCallback? onMenuTap;
@@ -38,21 +39,40 @@ class Header extends ConsumerWidget {
               style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
             ),
           ),
-          if (authState.user != null) ...[
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: AppTheme.primaryRed,
-              child: Text(
-                AppUtils.initials(authState.user!.fullName),
-                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+          // ── Calculator Button ──
+          Tooltip(
+            message: 'Calculator',
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => CalculatorDialog.show(context),
+              child: Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: AppTheme.background,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.border),
+                ),
+                child: const Icon(Icons.calculate_outlined, color: AppTheme.textPrimary, size: 20),
               ),
             ),
-            const SizedBox(width: 10),
-            Text(authState.user!.fullName, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
-            const SizedBox(width: 16),
-          ],
+          ),
+          const SizedBox(width: 12),
+          // ── Profile Avatar (Logo only, no name text) ──
+          if (authState.user != null)
+            Tooltip(
+              message: authState.user!.fullName,
+              child: CircleAvatar(
+                radius: 17,
+                backgroundColor: AppTheme.primaryRed,
+                child: Text(
+                  AppUtils.initials(authState.user!.fullName),
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 }
+
