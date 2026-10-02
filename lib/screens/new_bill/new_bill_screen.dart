@@ -31,6 +31,7 @@ class NewBillScreen extends ConsumerStatefulWidget {
 
 class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   Customer? _selectedCustomer;
+  DateTime _billDate = DateTime.now();
   final List<LineItem> _items = [];
   double _deliveryCharge = 0;
   Map<String, double> _defaultRates = {};
@@ -63,6 +64,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
       final draft = widget.initialDraft!;
       _draftId = draft.draftId;
       _draftMongoId = draft.id;
+      _billDate = draft.billDate;
       _selectedCustomer = draft.toCustomer();
       _items.addAll(draft.items.map((i) => LineItem(
         productId: i.productId,
@@ -263,10 +265,224 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     });
   }
 
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  bool get _isBillDateToday => _isSameDay(_billDate, DateTime.now());
+  bool get _isBillDateYesterday =>
+      _isSameDay(_billDate, DateTime.now().subtract(const Duration(days: 1)));
+
+  Future<void> _pickBillDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _billDate,
+      firstDate: DateTime(2020),
+      lastDate: now.add(const Duration(days: 365)),
+      helpText: 'Select Bill Date',
+      confirmText: 'SELECT',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+                  primary: AppTheme.primaryRed,
+                ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        _billDate = DateTime(
+          picked.year,
+          picked.month,
+          picked.day,
+          now.hour,
+          now.minute,
+          now.second,
+        );
+      });
+      _loadDefaultRates();
+    }
+  }
+
+  void _setBillDateToYesterday() {
+    final now = DateTime.now();
+    final yesterday = now.subtract(const Duration(days: 1));
+    setState(() {
+      _billDate = DateTime(
+        yesterday.year,
+        yesterday.month,
+        yesterday.day,
+        now.hour,
+        now.minute,
+        now.second,
+      );
+    });
+    _loadDefaultRates();
+  }
+
+  void _setBillDateToToday() {
+    final now = DateTime.now();
+    setState(() {
+      _billDate = now;
+    });
+    _loadDefaultRates();
+  }
+
+  Widget _buildDateSelector({required bool isCompact}) {
+    final isToday = _isBillDateToday;
+    final isYesterday = _isBillDateYesterday;
+
+    final badgeColor = isToday
+        ? AppTheme.success
+        : (isYesterday ? Colors.orange.shade800 : AppTheme.primaryRed);
+    final badgeLabel = isToday
+        ? 'Today'
+        : (isYesterday ? 'Yesterday' : 'Custom');
+
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isToday ? AppTheme.border : badgeColor.withAlpha(120),
+          width: isToday ? 1 : 1.2,
+        ),
+      ),
+      child: InkWell(
+        onTap: _pickBillDate,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: isCompact ? MainAxisSize.max : MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: badgeColor.withAlpha(25),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.calendar_month_outlined, size: 20, color: badgeColor),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Bill Date: ',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: badgeColor.withAlpha(25),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: badgeColor.withAlpha(80), width: 0.7),
+                        ),
+                        child: Text(
+                          badgeLabel,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: badgeColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    AppUtils.formatDate(_billDate),
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              if (isCompact) const Spacer(),
+              const SizedBox(width: 12),
+              if (isToday)
+                InkWell(
+                  onTap: _setBillDateToYesterday,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.history, size: 14, color: Colors.grey.shade700),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Yesterday',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                InkWell(
+                  onTap: _setBillDateToToday,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppTheme.success.withAlpha(20),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppTheme.success.withAlpha(80)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.today, size: 14, color: AppTheme.success),
+                        SizedBox(width: 4),
+                        Text(
+                          'Set Today',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 4),
+              const Icon(Icons.arrow_drop_down, size: 20, color: AppTheme.textSecondary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _loadDefaultRates() async {
     try {
       final rateService = ref.read(rateServiceProvider);
-      final rates = await rateService.getByDate(DateTime.now());
+      final rates = await rateService.getByDate(_billDate);
       if (mounted) {
         setState(() {
           _defaultRates =
@@ -298,6 +514,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
       'customer': _selectedCustomer!,
       'items': List.from(_items),
       'deliveryCharge': _deliveryCharge,
+      'billDate': _billDate,
       if (_draftId != null && _draftId!.isNotEmpty) 'draftId': _draftId,
     });
   }
@@ -337,7 +554,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
         'customerName': _selectedCustomer?.name ?? '',
         'customerMobile': _selectedCustomer?.mobile ?? '',
         'customerAddress': _selectedCustomer?.address ?? '',
-        'billDate': AppUtils.formatDateApi(DateTime.now()),
+        'billDate': AppUtils.formatDateApi(_billDate),
         'items': _items.map((i) => i.toJson()).toList(),
         'deliveryCharge': _deliveryCharge,
         'notes': '',
@@ -573,14 +790,42 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
           Crumb('Bills', route: '/bills'),
           Crumb('New Bill'),
         ]),
-        CustomerSection(
-          customer: _selectedCustomer,
-          onSelected: (c) {
-            setState(() => _selectedCustomer = c);
-            _loadDefaultRates();
-          },
-          onCleared: () => setState(() => _selectedCustomer = null),
-        ),
+        if (isWide)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: CustomerSection(
+                    padding: EdgeInsets.zero,
+                    customer: _selectedCustomer,
+                    onSelected: (c) {
+                      setState(() => _selectedCustomer = c);
+                      _loadDefaultRates();
+                    },
+                    onCleared: () => setState(() => _selectedCustomer = null),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _buildDateSelector(isCompact: false),
+              ],
+            ),
+          )
+        else ...[
+          CustomerSection(
+            customer: _selectedCustomer,
+            onSelected: (c) {
+              setState(() => _selectedCustomer = c);
+              _loadDefaultRates();
+            },
+            onCleared: () => setState(() => _selectedCustomer = null),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: _buildDateSelector(isCompact: true),
+          ),
+        ],
         Padding(
           key: _searchFieldKey,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),

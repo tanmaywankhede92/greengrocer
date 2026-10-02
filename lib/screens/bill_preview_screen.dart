@@ -26,6 +26,7 @@ class BillPreviewScreen extends ConsumerStatefulWidget {
   final double paymentAmount;
   final PaymentMode paymentMode;
   final String? draftId;
+  final DateTime? billDate;
 
   const BillPreviewScreen({
     super.key,
@@ -35,6 +36,7 @@ class BillPreviewScreen extends ConsumerStatefulWidget {
     this.paymentAmount = 0,
     this.paymentMode = PaymentMode.cash,
     this.draftId,
+    this.billDate,
   });
 
   @override
@@ -47,6 +49,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   late List<LineItem> _items;
   late double _paymentAmount;
   late PaymentMode _paymentMode;
+  late DateTime _billDate;
   /// Non-null while the bill is being saved, shared or printed. Doubles as a
   /// lock so the action cannot be started twice.
   String? _busyStage;
@@ -55,6 +58,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   @override
   void initState() {
     super.initState();
+    _billDate = widget.billDate ?? DateTime.now();
     _items = widget.items.map((i) => LineItem(
       productId: i.productId,
       productName: i.productName,
@@ -70,6 +74,40 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
     BillPdfFonts.preload();
   }
 
+  Future<void> _pickBillDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _billDate,
+      firstDate: DateTime(2020),
+      lastDate: now.add(const Duration(days: 365)),
+      helpText: 'Select Bill Date',
+      confirmText: 'SELECT',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+                  primary: AppTheme.primaryRed,
+                ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        _billDate = DateTime(
+          picked.year,
+          picked.month,
+          picked.day,
+          now.hour,
+          now.minute,
+          now.second,
+        );
+      });
+    }
+  }
+
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.amount);
   double get _total => _subtotal + widget.deliveryCharge;
 
@@ -77,7 +115,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
     final itemsJson = _items.map((i) => i.toJson()).toList();
     return {
       'customerId': widget.customer.id,
-      'billDate': AppUtils.formatDateApi(DateTime.now()),
+      'billDate': AppUtils.formatDateApi(_billDate),
       'items': itemsJson,
       'deliveryCharge': widget.deliveryCharge,
       'notes': '',
@@ -181,7 +219,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
       deliveryCharge: widget.deliveryCharge,
       paidNow: _paymentAmount,
       items: _items,
-      billDate: DateTime.now(),
+      billDate: _billDate,
       paymentMode: _paymentMode.displayName,
       isReprint: false,
     );
@@ -199,7 +237,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   Widget _buildCopy({required bool isCustomerCopy, required double maxWidth}) {
     final copySuffix = isCustomerCopy ? 'Customer Copy' : 'Office Copy';
     final copyLabel = isCustomerCopy ? 'ORIGINAL' : 'DUPLICATE';
-    final now = DateTime.now();
+    final billDateTime = _billDate;
     final grandTotal = _total > 0 ? _total : _subtotal;
 
     return Container(
@@ -276,9 +314,9 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _infoField('Date', AppUtils.formatDate(now)),
+                        _infoField('Date', AppUtils.formatDate(billDateTime)),
                         const SizedBox(height: 6),
-                        _infoField('Time', DateFormat('hh:mm a').format(now)),
+                        _infoField('Time', DateFormat('hh:mm a').format(billDateTime)),
                       ],
                     ),
                   ),
@@ -461,6 +499,23 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
       appBar: AppBar(
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
         title: const Text('Bill Preview'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.primaryRed,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              ),
+              icon: const Icon(Icons.calendar_month_outlined, size: 18),
+              label: Text(
+                AppUtils.formatDate(_billDate),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              onPressed: _busyStage != null ? null : _pickBillDate,
+            ),
+          ),
+        ],
       ),
       body: Stack(
         children: [

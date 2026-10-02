@@ -55,6 +55,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             items: List<LineItem>.from(extra['items'] as List),
             deliveryCharge: extra['deliveryCharge'] as double? ?? 0,
             draftId: extra['draftId'] as String?,
+            billDate: extra['billDate'] as DateTime?,
           );
         },
       ),

@@ -8,29 +8,33 @@ class CustomerSection extends StatelessWidget {
   final Customer? customer;
   final ValueChanged<Customer> onSelected;
   final VoidCallback onCleared;
+  final EdgeInsets? padding;
 
   const CustomerSection({
     super.key,
     required this.customer,
     required this.onSelected,
     required this.onCleared,
+    this.padding,
   });
 
   @override
   Widget build(BuildContext context) {
+    final effectivePadding = padding ?? const EdgeInsets.fromLTRB(16, 8, 16, 0);
     if (customer == null) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        padding: effectivePadding,
         child: CustomerSelect(onSelected: onSelected),
       );
     }
-    return _buildChip();
+    return _buildChip(effectivePadding);
   }
 
-  Widget _buildChip() {
+  Widget _buildChip(EdgeInsets effectivePadding) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: effectivePadding,
       child: Card(
+        margin: EdgeInsets.zero,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
