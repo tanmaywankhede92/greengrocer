@@ -30,9 +30,9 @@ class BillDetailScreen extends ConsumerStatefulWidget {
 
 class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
   static const _red = Color(0xFFB71C1C);
-  static const _muted = Color(0xFF757575);
-  static const _line = Color(0xFFBDBDBD);
-  static const _lightLine = Color(0xFFE0E0E0);
+  static const _muted = Color(0xFF6B7280);
+  static const _line = Color(0xFFE5E7EB);
+  static const _darkHeader = Color(0xFF2D2D3A);
 
   final _customerCopyKey = GlobalKey();
   final _officeCopyKey = GlobalKey();
@@ -69,6 +69,18 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
               onPressed: () => context.go('/bills'),
             ),
             title: Text(bill.billNumber, style: const TextStyle(fontWeight: FontWeight.w600)),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Edit Bill',
+                onPressed: () => context.push('/bills/${bill.id}/edit'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: AppTheme.error),
+                tooltip: 'Delete Bill',
+                onPressed: () => _confirmDeleteBill(bill),
+              ),
+            ],
           ),
           body: Column(
             children: [
@@ -216,140 +228,52 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
     );
   }
 
-  double _currentQuantity(BillItem item, List<BillAdjustment> adjustments) {
-    final itemAdj = adjustments.where((a) => a.billItemId == item.id).toList();
-    if (itemAdj.isEmpty) return item.quantity;
-    itemAdj.sort((a, b) => a.adjustmentDate.compareTo(b.adjustmentDate));
-    return itemAdj.last.adjustedQuantity ?? item.quantity;
-  }
-
-  double _currentAmount(BillItem item, List<BillAdjustment> adjustments) {
-    return _currentQuantity(item, adjustments) * item.appliedRate;
-  }
-
-  Future<void> _adjustProduct(BillItem item, List<BillAdjustment> adjustments, Bill bill) async {
-    final currentQty = _currentQuantity(item, adjustments);
-    final qtyCtrl = TextEditingController(text: currentQty.toStringAsFixed(currentQty == currentQty.roundToDouble() ? 0 : 1));
-    final noteCtrl = TextEditingController();
-    String reason = 'damaged';
-    bool saving = false;
-
-    final result = await showDialog<bool>(
+  Future<void> _confirmDeleteBill(Bill bill) async {
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text('Adjust ${item.productName}'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Current Quantity: ${currentQty.toStringAsFixed(currentQty == currentQty.roundToDouble() ? 0 : 1)} ${item.unit}',
-                  style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                ),
-                Text(
-                  'Rate: ₹${item.appliedRate.toStringAsFixed(0)} / ${item.unit}',
-                  style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: qtyCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: 'New Quantity (${item.unit})',
-                    hintText: 'Max: ${currentQty.toStringAsFixed(0)}',
-                    isDense: true,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: reason,
-                  decoration: const InputDecoration(labelText: 'Reason (optional)', isDense: true),
-                  items: const [
-                    DropdownMenuItem(value: 'damaged', child: Text('Damaged')),
-                    DropdownMenuItem(value: 'missing', child: Text('Missing')),
-                    DropdownMenuItem(value: 'short_supply', child: Text('Short Supply')),
-                    DropdownMenuItem(value: 'rate_diff', child: Text('Rate Difference')),
-                    DropdownMenuItem(value: 'other', child: Text('Other')),
-                  ],
-                  onChanged: (v) => setDialogState(() => reason = v ?? reason),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: noteCtrl,
-                  maxLines: 2,
-                  decoration: const InputDecoration(
-                    labelText: 'Note (optional)',
-                    hintText: 'e.g., 5 kg were rotten',
-                    isDense: true,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: saving ? null : () async {
-                final newQty = double.tryParse(qtyCtrl.text.trim());
-                if (newQty == null || newQty < 0) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('Enter a valid quantity'), backgroundColor: AppTheme.error),
-                  );
-                  return;
-                }
-                if (newQty > currentQty) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(content: Text('New quantity cannot exceed current (${currentQty.toStringAsFixed(0)})'), backgroundColor: AppTheme.error),
-                  );
-                  return;
-                }
-                if (newQty == currentQty) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('Quantity unchanged'), backgroundColor: AppTheme.error),
-                  );
-                  return;
-                }
-                setDialogState(() => saving = true);
-                try {
-                  await ref.read(billServiceProvider).adjust(
-                    bill.id,
-                    items: [{
-                      'billItemId': item.id,
-                      'adjustedQuantity': newQty,
-                      'reason': reason,
-                      'note': noteCtrl.text.trim(),
-                    }],
-                  );
-                  if (ctx.mounted) Navigator.pop(ctx, true);
-                } catch (e) {
-                  setDialogState(() => saving = false);
-                  if (ctx.mounted) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
-                    );
-                  }
-                }
-              },
-              child: saving
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Save'),
-            ),
-          ],
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Bill Permanently?'),
+        content: Text(
+          'Are you sure you want to delete bill "${bill.billNumber}"?\n\n'
+          'This will permanently erase all records of this bill, customer ledger entries, and payment history from the database. This action cannot be undone.',
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete Permanently', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
 
-    if (result == true && mounted) {
-      ref.invalidate(billDetailProvider(widget.id));
-      ref.invalidate(billListProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Product adjusted'), backgroundColor: AppTheme.success),
-      );
+    if (confirmed == true && mounted) {
+      try {
+        await ref.read(billServiceProvider).deleteBill(bill.id);
+        ref.invalidate(billListProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Bill "${bill.billNumber}" deleted successfully'),
+              backgroundColor: AppTheme.success,
+            ),
+          );
+          context.go('/bills');
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(ApiClient.humanizeError(e)),
+              backgroundColor: AppTheme.error,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -380,12 +304,11 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
       if (pdf == null) return;
       final settings = await ref.read(settingsProvider.future);
       final grandTotal = bill.total > 0 ? bill.total : bill.subtotal;
-      final totalAdjusted = adjustments.fold<double>(0, (sum, a) => sum + a.amount);
-      final balance = grandTotal - totalAdjusted - bill.paidNow;
+      final balance = grandTotal - bill.paidNow;
       final message = buildShareMessage(
         businessName: settings.businessName,
         docLabel: 'Sale Invoice',
-        amount: grandTotal - totalAdjusted,
+        amount: grandTotal,
         balance: balance < 0 ? 0 : balance,
       );
       await sharePdf(pdf, filename: bill.billNumber, message: message);
@@ -401,9 +324,6 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
   Future<Uint8List?> _buildBillPdf(Bill bill, List<BillItem> items, List<BillAdjustment> adjustments) async {
     final settings = await ref.read(settingsProvider.future);
     final lineItems = items.map((i) {
-      final curQty = _currentQuantity(i, adjustments);
-      final itemAdj = adjustments.where((a) => a.billItemId == i.id).toList();
-      final reason = itemAdj.isNotEmpty ? itemAdj.last.reasonLabel : null;
       return LineItem(
         productId: i.productId,
         productName: i.productName,
@@ -412,11 +332,8 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
         quantity: i.quantity,
         defaultRate: i.defaultRate,
         appliedRate: i.appliedRate,
-        adjustedQuantity: curQty != i.quantity ? curQty : null,
-        adjustmentReason: reason,
       );
     }).toList();
-    final totalAdjusted = adjustments.fold<double>(0, (sum, a) => sum + a.amount);
     return buildBillPdf(
       settings: settings,
       billNumber: bill.billNumber,
@@ -431,10 +348,12 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
       billDate: bill.billDate,
       paymentMode: bill.paymentType,
       isReprint: true,
-      adjustmentAmount: totalAdjusted,
-      adjustmentNote: adjustments.map((a) => '${a.reasonLabel}: ${a.note}'.trim()).join(', '),
+      adjustmentAmount: 0,
+      adjustmentNote: '',
     );
   }
+
+  Widget _thinLine({double thickness = 0.5}) => Container(height: thickness, color: _line);
 
   Widget _buildCopy({
     required bool isCustomerCopy,
@@ -448,128 +367,164 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
     final copyLabel = isCustomerCopy ? 'ORIGINAL' : 'DUPLICATE';
     final billDate = bill.billDate;
     final grandTotal = bill.total > 0 ? bill.total : bill.subtotal;
-    final totalAdjusted = adjustments.fold<double>(0, (sum, a) => sum + a.amount);
-    final adjustedTotal = grandTotal - totalAdjusted;
+
+    final settings = ref.watch(settingsProvider).valueOrNull;
+    final businessName = settings?.businessName.isNotEmpty == true ? settings!.businessName : 'RATHOD ENTERPRISES';
+    final tagline = settings?.tagline ?? 'Vegetable, Fruits Supplier & Commission Agent';
+    final phone = (settings?.phone != null && settings!.phone!.isNotEmpty) ? settings.phone! : '8087344819, 9529031540';
+    final address = (settings?.address != null && settings!.address!.isNotEmpty)
+        ? settings.address!
+        : 'Shop No.95 Kanji House, Phule Market, Cotton Market, Nagpur';
 
     return Container(
       constraints: BoxConstraints(maxWidth: maxWidth),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: _lightLine, width: 0.5),
+        border: Border.all(color: _line, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(height: 3, color: _red),
-          const SizedBox(height: 12),
+          Container(height: 2.5, color: _red),
 
-          const Center(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text('RATHOD ENTERPRISES',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _red, letterSpacing: 1)),
-                SizedBox(height: 4),
-                Text('Vegetable, Fruits Supplier & Commission Agent',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _muted)),
-                SizedBox(height: 2),
-                Text('Green & Fresh  •  Every Day',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 10, color: AppTheme.success, fontStyle: FontStyle.italic)),
-                SizedBox(height: 6),
-                Text('Shop No.95 Kanji House, Mahatma Phule Market,',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 10, color: _muted)),
-                Text('Cotton Market, Nagpur – 440018',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 10, color: _muted)),
-                SizedBox(height: 4),
-                Text('Nitesh : 8087344819   |   Vicky : 9529031540   |   7030914867',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 9.5, color: AppTheme.textPrimary)),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 14),
-          _thinLine(),
-          const SizedBox(height: 12),
-
+          // ── Top Bar (Bill No, Copy Badge, Contact Numbers) ──
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _infoField('Bill No.', bill.billNumber),
-                      const SizedBox(height: 6),
-                      _infoField('Customer', bill.customer?.name ?? '-'),
-                      const SizedBox(height: 6),
-                      _infoField('Mobile', bill.customer?.mobile ?? '-'),
-                      const SizedBox(height: 6),
-                      _infoField('Address', bill.customer?.address?.isNotEmpty == true ? bill.customer!.address! : '-'),
-                    ],
-                  ),
+                Text(
+                  'Bill No: ${bill.billNumber}',
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
                 ),
-                Container(width: 1, height: 80, color: _line),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _infoField('Date', AppUtils.formatDate(billDate)),
-                        const SizedBox(height: 6),
-                        _infoField('Time', DateFormat('hh:mm a').format(billDate)),
-                        if (bill.paymentType != null && bill.paymentType!.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          _infoField('Payment', bill.paymentType!),
-                        ],
-                      ],
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isCustomerCopy ? _red.withAlpha(20) : Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '$copyLabel – $copySuffix',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: isCustomerCopy ? _red : Colors.grey.shade700,
                     ),
                   ),
                 ),
+                Text(
+                  'Mob: $phone',
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                ),
               ],
             ),
           ),
+          _thinLine(thickness: 0.5),
 
-          const SizedBox(height: 12),
-          _thinLine(),
-          const SizedBox(height: 8),
-
+          // ── Compact Business Branding ──
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Table(
-              columnWidths: {
-                0: const FlexColumnWidth(0.55),
-                1: const FlexColumnWidth(2.25),
-                2: const FlexColumnWidth(0.85),
-                3: const FlexColumnWidth(0.85),
-                4: const FlexColumnWidth(1.0),
-                5: const FlexColumnWidth(1.15),
-                if (isActive) 6: const FlexColumnWidth(0.6),
-              },
-              border: TableBorder.all(color: _line, width: 0.7),
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Center(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    businessName,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: _red, letterSpacing: 0.8),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    '$tagline  •  $address',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 8.5, color: _muted, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          _thinLine(thickness: 0.5),
+
+          // ── Compact Customer Info Bar ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            child: Column(
               children: [
-                TableRow(
-                  decoration: const BoxDecoration(color: Color(0xFFF5F5F5)),
+                Row(
                   children: [
-                    'Sr.', 'Product', 'Unit', 'Qty', 'Rate (₹)', 'Amount (₹)',
-                    if (isActive) '',
-                  ].map((h) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                      child: Text(h,
-                          textAlign: h == 'Product' ? TextAlign.left : TextAlign.center,
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                    );
-                  }).toList(),
+                    Expanded(
+                      flex: 4,
+                      child: Row(
+                        children: [
+                          const Text('Customer: ', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700)),
+                          Expanded(
+                            child: Text(
+                              bill.customer?.name ?? '-',
+                              style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Text('Mob: ${bill.customer?.mobile ?? "-"}', style: const TextStyle(fontSize: 9.5)),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        'Date: ${AppUtils.formatDate(billDate)}  ${DateFormat("hh:mm a").format(billDate)}',
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(fontSize: 9.5),
+                      ),
+                    ),
+                  ],
                 ),
+                if (bill.customer?.address?.isNotEmpty == true || (bill.paymentType != null && bill.paymentType!.isNotEmpty))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Row(
+                      children: [
+                        if (bill.customer?.address?.isNotEmpty == true)
+                          Expanded(
+                            child: Text(
+                              'Address: ${bill.customer!.address!}',
+                              style: const TextStyle(fontSize: 8.5, color: _muted),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        if (bill.paymentType != null && bill.paymentType!.isNotEmpty)
+                          Text('Payment: ${bill.paymentType!}', style: const TextStyle(fontSize: 8.5, color: _muted)),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          _thinLine(thickness: 0.5),
+          const SizedBox(height: 4),
+
+          // ── Statement-Style Products Table (No vertical borders, compact) ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Column(
+              children: [
+                // Header row
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 6),
+                  decoration: const BoxDecoration(color: _darkHeader),
+                  child: const Row(
+                    children: [
+                      SizedBox(width: 24, child: Text('Sr.', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
+                      Expanded(flex: 30, child: Padding(padding: EdgeInsets.only(left: 6), child: Text('Product', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white)))),
+                      SizedBox(width: 44, child: Text('Unit', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
+                      SizedBox(width: 40, child: Text('Qty', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
+                      SizedBox(width: 55, child: Text('Rate (₹)', textAlign: TextAlign.right, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
+                      SizedBox(width: 65, child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
+                    ],
+                  ),
+                ),
+                // Data rows
                 ...items.asMap().entries.map((entry) {
                   final idx = entry.key;
                   final item = entry.value;
@@ -577,201 +532,120 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                       ? '${item.productName} (${item.productNameHindi})'
                       : item.productName;
 
-                  final itemAdj = adjustments.where((a) => a.billItemId == item.id).toList();
-                  final isAdjusted = itemAdj.isNotEmpty;
-                  final curQty = _currentQuantity(item, adjustments);
-                  final curAmt = _currentAmount(item, adjustments);
-                  final qtyStr = curQty.toStringAsFixed(curQty == curQty.roundToDouble() ? 0 : 1);
-                  final origQtyStr = item.quantity.toStringAsFixed(item.quantity == item.quantity.roundToDouble() ? 0 : 1);
+                  final qtyStr = item.quantity.toStringAsFixed(item.quantity == item.quantity.roundToDouble() ? 0 : 1);
+                  final amt = item.quantity * item.appliedRate;
+                  final isAlt = idx.isOdd;
 
-                  return TableRow(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text('${idx + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(productName, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
-                            if (isAdjusted) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                '$origQtyStr → $qtyStr (${itemAdj.last.reasonLabel})',
-                                style: TextStyle(fontSize: 8.5, color: Colors.orange.shade800, fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text(item.unit, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text(qtyStr, textAlign: TextAlign.center, style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: isAdjusted ? FontWeight.w700 : FontWeight.w400,
-                          color: isAdjusted ? Colors.orange.shade800 : null,
-                        )),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text(item.appliedRate.toStringAsFixed(2), textAlign: TextAlign.right, style: const TextStyle(fontSize: 10)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text(curAmt.toStringAsFixed(2), textAlign: TextAlign.right, style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: isAdjusted ? Colors.orange.shade800 : null,
-                        )),
-                      ),
-                      if (isActive)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-                          child: Center(
-                            child: GestureDetector(
-                              onTap: () => _adjustProduct(item, adjustments, bill),
-                              child: const Icon(Icons.edit_note, size: 16, color: AppTheme.primaryRed),
-                            ),
+                  return Container(
+                    padding: const EdgeInsets.symmetric(vertical: 3.5, horizontal: 6),
+                    color: isAlt ? const Color(0xFFF9FAFB) : Colors.white,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(width: 24, child: Text('${idx + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 9))),
+                        Expanded(
+                          flex: 30,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: Text(productName, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600)),
                           ),
                         ),
-                    ],
+                        SizedBox(width: 44, child: Text(item.unit, textAlign: TextAlign.center, style: const TextStyle(fontSize: 9))),
+                        SizedBox(
+                          width: 40,
+                          child: Text(
+                            qtyStr,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 9),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 55,
+                          child: Text(item.appliedRate.toStringAsFixed(2), textAlign: TextAlign.right, style: const TextStyle(fontSize: 9)),
+                        ),
+                        SizedBox(
+                          width: 65,
+                          child: Text(
+                            amt.toStringAsFixed(2),
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 }),
               ],
             ),
           ),
 
-          const SizedBox(height: 16),
+          _thinLine(thickness: 0.5),
 
-          // ── Summary & Stamp (in line with Grand Total, slightly to the left) ──
+          // ── Compact Summary & Stamp ──
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 110, bottom: 4),
-                  child: buildStampPreview(width: 150),
+                  padding: const EdgeInsets.only(left: 30, bottom: 2),
+                  child: buildStampPreview(width: 105),
                 ),
                 SizedBox(
-                  width: 220,
+                  width: 190,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _amountRow('Subtotal', bill.subtotal),
                       if (bill.deliveryCharge > 0)
                         _amountRow('Delivery Charge', bill.deliveryCharge),
-                      if (totalAdjusted > 0) ...[
-                        _amountRow('Grand Total', grandTotal),
-                        _amountRow('Total Adjustment', -totalAdjusted, isAdjustment: true),
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              top: BorderSide(color: _line, width: 0.7),
-                              bottom: BorderSide(color: _line, width: 0.7),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Final Amount', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primaryRed)),
-                              Text('₹ ${adjustedTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primaryRed)),
-                            ],
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        decoration: const BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: _line, width: 0.6),
+                            bottom: BorderSide(color: _line, width: 0.6),
                           ),
                         ),
-                      ] else
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              top: BorderSide(color: _line, width: 0.7),
-                              bottom: BorderSide(color: _line, width: 0.7),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Grand Total', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                              Text('₹ ${grandTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                            ],
-                          ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Grand Total', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                            Text('₹ ${grandTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                          ],
                         ),
+                      ),
                       if (bill.paidNow > 0) _amountRow('Paid', bill.paidNow),
-                      if (totalAdjusted > 0 && bill.paidNow > 0)
-                        _amountRow('Balance Due', adjustedTotal - bill.paidNow, isBold: true),
+                      if (bill.paidNow > 0 && grandTotal - bill.paidNow > 0)
+                        _amountRow('Balance Due', grandTotal - bill.paidNow, isBold: true),
                     ],
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 18),
-          _thinLine(),
-          const SizedBox(height: 10),
-
-          Center(
-            child: Column(
-              children: [
-                const Text('Thank You!  Visit Again',
-                    style: TextStyle(fontSize: 11, color: _muted)),
-                const SizedBox(height: 4),
-                const Text('RATHOD ENTERPRISES',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _red, letterSpacing: 1.2)),
-                const SizedBox(height: 8),
-                Container(height: 1, color: Colors.grey.shade400),
-                const SizedBox(height: 8),
-                Text('$copyLabel – $copySuffix',
-                    style: const TextStyle(fontSize: 10, color: _muted)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
         ],
       ),
     );
   }
 
-  Widget _thinLine() => Container(height: 0.7, color: _line);
-
-  Widget _infoField(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 72,
-          child: Text(label, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-        ),
-        const Text(':  ', style: TextStyle(fontSize: 10.5)),
-        Expanded(child: Text(value, style: const TextStyle(fontSize: 10.5, color: AppTheme.textPrimary))),
-      ],
-    );
-  }
-
   Widget _amountRow(String label, double value, {bool isAdjustment = false, bool isBold = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: TextStyle(
-            fontSize: isBold ? 12 : 11,
+            fontSize: isBold ? 11 : 9.5,
             fontWeight: isBold ? FontWeight.w700 : FontWeight.w400,
             color: isAdjustment ? Colors.orange.shade800 : AppTheme.textPrimary,
           )),
           Text(
-            '₹ ${value.abs().toStringAsFixed(0)}${isAdjustment ? '' : ''}',
+            '₹ ${value.abs().toStringAsFixed(0)}',
             style: TextStyle(
-              fontSize: isBold ? 12 : 11,
+              fontSize: isBold ? 11 : 9.5,
               fontWeight: isBold ? FontWeight.w700 : FontWeight.w400,
               color: isAdjustment ? Colors.orange.shade800 : AppTheme.textPrimary,
             ),

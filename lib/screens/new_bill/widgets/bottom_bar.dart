@@ -9,6 +9,7 @@ class BottomBar extends StatelessWidget {
   final VoidCallback onSave;
   final bool isWide;
   final bool canSave;
+  final String label;
 
   const BottomBar({
     super.key,
@@ -18,6 +19,7 @@ class BottomBar extends StatelessWidget {
     required this.onSave,
     required this.isWide,
     this.canSave = true,
+    this.label = 'Save Bill',
   });
 
   @override
@@ -66,7 +68,7 @@ class BottomBar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
-        child: const Text('Save Bill', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        child: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
       ),
     );
   }

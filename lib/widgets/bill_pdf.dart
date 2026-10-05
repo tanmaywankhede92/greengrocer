@@ -73,11 +73,11 @@ Future<Uint8List> buildBillPdf({
   }
 
   const red = PdfColor(0.717, 0.11, 0.11);
-  const muted = PdfColor(0.459, 0.459, 0.459);
-  const lineC = PdfColor(0.741, 0.741, 0.741);
-  const textPrimary = PdfColor(0.129, 0.129, 0.129);
-  const green = PdfColor(0.298, 0.686, 0.314);
-  const headerBg = PdfColor(0.961, 0.961, 0.961);
+  const muted = PdfColor(0.42, 0.42, 0.42);
+  const lineC = PdfColor(0.82, 0.82, 0.82);
+  const textPrimary = PdfColor(0.12, 0.12, 0.12);
+  const tableHeaderBg = PdfColor(0.18, 0.18, 0.23); // Statement dark slate header
+  const altRow = PdfColor(0.97, 0.97, 0.98);
 
   final businessName = settings.businessName.isNotEmpty ? settings.businessName : 'RATHOD ENTERPRISES';
   final tagline = settings.tagline ?? 'Vegetable, Fruits Supplier & Commission Agent';
@@ -87,70 +87,179 @@ Future<Uint8List> buildBillPdf({
 
   String money(double v) => '₹ ${v.toStringAsFixed(0)}';
 
-  pw.Widget thinLine({double thickness = 0.7}) {
+  pw.Widget thinLine({double thickness = 0.5}) {
     return pw.Container(height: thickness, color: lineC);
-  }
-
-  pw.Widget infoField(String label, String value) {
-    return pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.SizedBox(
-          width: 72,
-          child: pw.Text(label, style: pw.TextStyle(font: fontB, fontSize: 10.5, color: textPrimary)),
-        ),
-        pw.Text(':  ', style: const pw.TextStyle(fontSize: 10.5)),
-        pw.Expanded(child: pw.Text(value, style: pw.TextStyle(font: font, fontSize: 10.5, color: textPrimary))),
-      ],
-    );
   }
 
   pw.Widget amountRow(String label, double value) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 4),
+      padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Text(label, style: pw.TextStyle(font: font, fontSize: 11, color: textPrimary)),
-          pw.Text(money(value), style: pw.TextStyle(font: font, fontSize: 11, color: textPrimary)),
+          pw.Text(label, style: pw.TextStyle(font: font, fontSize: 8.5, color: textPrimary)),
+          pw.Text(money(value), style: pw.TextStyle(font: font, fontSize: 8.5, color: textPrimary)),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget buildTopBar(String copyLabel) {
+    final phone = (settings.phone != null && settings.phone!.isNotEmpty)
+        ? settings.phone!
+        : '8087344819, 9529031540';
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'Bill No: ${billNumber ?? 'N/A'}',
+            style: pw.TextStyle(font: fontB, fontSize: 9, color: textPrimary),
+          ),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+            decoration: const pw.BoxDecoration(
+              color: PdfColors.grey200,
+              borderRadius: pw.BorderRadius.all(pw.Radius.circular(3)),
+            ),
+            child: pw.Text(
+              copyLabel,
+              style: pw.TextStyle(font: fontB, fontSize: 7.5, color: textPrimary),
+            ),
+          ),
+          pw.Text(
+            'Mob: $phone',
+            style: pw.TextStyle(font: fontB, fontSize: 9, color: textPrimary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget buildBrandingHeader() {
+    final address = (settings.address != null && settings.address!.isNotEmpty)
+        ? settings.address!
+        : 'Shop No.95 Kanji House, Phule Market, Cotton Market, Nagpur';
+
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 2.5),
+      child: pw.Center(
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Text(
+              businessName,
+              style: pw.TextStyle(font: fontB, fontSize: 14, color: red, letterSpacing: 0.8),
+            ),
+            pw.SizedBox(height: 1.5),
+            pw.Text(
+              '$tagline  •  $address',
+              style: pw.TextStyle(font: font, fontSize: 7.5, color: muted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  pw.Widget buildCustomerBar() {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      child: pw.Column(
+        children: [
+          pw.Row(
+            children: [
+              pw.Expanded(
+                flex: 4,
+                child: pw.Row(
+                  children: [
+                    pw.Text('Customer: ', style: pw.TextStyle(font: fontB, fontSize: 8.5, color: textPrimary)),
+                    pw.Expanded(
+                      child: pw.Text(
+                        customerName,
+                        style: pw.TextStyle(font: fontB, fontSize: 8.5, color: textPrimary),
+                        maxLines: 1,
+                        overflow: pw.TextOverflow.clip,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              pw.Expanded(
+                flex: 3,
+                child: pw.Text('Mob: $customerMobile', style: pw.TextStyle(font: font, fontSize: 8.5, color: textPrimary)),
+              ),
+              pw.Expanded(
+                flex: 3,
+                child: pw.Text(
+                  'Date: $dateStr  $timeStr',
+                  textAlign: pw.TextAlign.right,
+                  style: pw.TextStyle(font: font, fontSize: 8.5, color: textPrimary),
+                ),
+              ),
+            ],
+          ),
+          if (customerAddress != null && customerAddress.isNotEmpty)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(top: 2),
+              child: pw.Row(
+                children: [
+                  pw.Expanded(
+                    child: pw.Text('Address: $customerAddress', style: pw.TextStyle(font: font, fontSize: 7.5, color: muted)),
+                  ),
+                  if (paymentMode != null && paymentMode.isNotEmpty)
+                    pw.Text('Payment: $paymentMode', style: pw.TextStyle(font: font, fontSize: 7.5, color: muted)),
+                ],
+              ),
+            ),
         ],
       ),
     );
   }
 
   pw.Widget buildTableHeader() {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 12),
-      child: pw.Table(
-        border: pw.TableBorder.all(color: lineC, width: 0.7),
-        columnWidths: {
-          0: const pw.FlexColumnWidth(0.55),
-          1: const pw.FlexColumnWidth(2.25),
-          2: const pw.FlexColumnWidth(1.0),
-          3: const pw.FlexColumnWidth(0.85),
-          4: const pw.FlexColumnWidth(1.0),
-          5: const pw.FlexColumnWidth(1.15),
-        },
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+      decoration: const pw.BoxDecoration(color: tableHeaderBg),
+      child: pw.Row(
         children: [
-          pw.TableRow(
-            decoration: const pw.BoxDecoration(color: headerBg),
-            children: ['Sr.', 'Product', 'Unit', 'Qty', 'Rate (₹)', 'Amount (₹)'].map((h) {
-              return pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                child: pw.Text(
-                  h,
-                  textAlign: h == 'Product' ? pw.TextAlign.left : pw.TextAlign.center,
-                  style: pw.TextStyle(font: fontB, fontSize: 10, color: textPrimary),
-                ),
-              );
-            }).toList(),
+          pw.SizedBox(
+            width: 22,
+            child: pw.Text('Sr.', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontB, fontSize: 8, color: PdfColors.white)),
+          ),
+          pw.Expanded(
+            flex: 30,
+            child: pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 4),
+              child: pw.Text('Product', style: pw.TextStyle(font: fontB, fontSize: 8, color: PdfColors.white)),
+            ),
+          ),
+          pw.SizedBox(
+            width: 38,
+            child: pw.Text('Unit', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontB, fontSize: 8, color: PdfColors.white)),
+          ),
+          pw.SizedBox(
+            width: 36,
+            child: pw.Text('Qty', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontB, fontSize: 8, color: PdfColors.white)),
+          ),
+          pw.SizedBox(
+            width: 48,
+            child: pw.Text('Rate (₹)', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 8, color: PdfColors.white)),
+          ),
+          pw.SizedBox(
+            width: 58,
+            child: pw.Text('Amount (₹)', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 8, color: PdfColors.white)),
           ),
         ],
       ),
     );
   }
+
   List<pw.Widget> buildTableRows() {
     final List<pw.Widget> result = [];
+
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
       final productName = item.productNameHindi.isNotEmpty
@@ -158,62 +267,85 @@ Future<Uint8List> buildBillPdf({
           : item.productName;
       final isAdjusted = item.adjustedQuantity != null;
       final displayQty = item.adjustedQuantity ?? item.quantity;
-      final qtyStr = displayQty == displayQty.roundToDouble() ? displayQty.toStringAsFixed(0) : displayQty.toStringAsFixed(1);
+      final qtyStr = displayQty == displayQty.roundToDouble()
+          ? displayQty.toStringAsFixed(0)
+          : displayQty.toStringAsFixed(1);
+
+      final bgColor = isAdjusted
+          ? const PdfColor(1.0, 0.96, 0.90)
+          : (i.isOdd ? altRow : null);
 
       result.add(
-        pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 12),
-          child: pw.Table(
-            border: pw.TableBorder.all(color: lineC, width: 0.7),
-            columnWidths: {
-              0: const pw.FlexColumnWidth(0.55),
-              1: const pw.FlexColumnWidth(2.25),
-              2: const pw.FlexColumnWidth(1.0),
-              3: const pw.FlexColumnWidth(0.85),
-              4: const pw.FlexColumnWidth(1.0),
-              5: const pw.FlexColumnWidth(1.15),
-            },
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(vertical: 2.2, horizontal: 4),
+          decoration: bgColor != null ? pw.BoxDecoration(color: bgColor) : null,
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
-              pw.TableRow(
-                children: [
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                    child: pw.Text('${i + 1}', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 10)),
+              pw.SizedBox(
+                width: 22,
+                child: pw.Text('${i + 1}', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 8, color: textPrimary)),
+              ),
+              pw.Expanded(
+                flex: 30,
+                child: pw.Padding(
+                  padding: const pw.EdgeInsets.only(left: 4),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    mainAxisSize: pw.MainAxisSize.min,
+                    children: [
+                      pw.Text(
+                        productName,
+                        style: pw.TextStyle(
+                          font: pickFont(productName, bold: false),
+                          fontSize: 8,
+                          color: textPrimary,
+                        ),
+                      ),
+                      if (isAdjusted)
+                        pw.Text(
+                          '${item.quantity.toStringAsFixed(0)} → $qtyStr (${item.adjustmentReason ?? "Adjusted"})',
+                          style: pw.TextStyle(font: font, fontSize: 6.5, color: const PdfColor(0.9, 0.5, 0.0)),
+                        ),
+                    ],
                   ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text(productName, style: pw.TextStyle(font: pickFont(productName, bold: false), fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                        if (isAdjusted)
-                          pw.Text(
-                            '${item.quantity.toStringAsFixed(0)} → $qtyStr (${item.adjustmentReason ?? "Adjusted"})',
-                            style: pw.TextStyle(font: font, fontSize: 8, color: const PdfColor(0.9, 0.5, 0.0)),
-                          ),
-                      ],
-                    ),
+                ),
+              ),
+              pw.SizedBox(
+                width: 38,
+                child: pw.Text(item.unit, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 8, color: textPrimary)),
+              ),
+              pw.SizedBox(
+                width: 36,
+                child: pw.Text(
+                  qtyStr,
+                  textAlign: pw.TextAlign.center,
+                  style: pw.TextStyle(
+                    font: font,
+                    fontSize: 8,
+                    color: isAdjusted ? const PdfColor(0.9, 0.5, 0.0) : textPrimary,
                   ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                    child: pw.Text(item.unit, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 10)),
+                ),
+              ),
+              pw.SizedBox(
+                width: 48,
+                child: pw.Text(
+                  item.appliedRate.toStringAsFixed(2),
+                  textAlign: pw.TextAlign.right,
+                  style: pw.TextStyle(font: font, fontSize: 8, color: textPrimary),
+                ),
+              ),
+              pw.SizedBox(
+                width: 58,
+                child: pw.Text(
+                  item.amount.toStringAsFixed(2),
+                  textAlign: pw.TextAlign.right,
+                  style: pw.TextStyle(
+                    font: fontB,
+                    fontSize: 8,
+                    color: isAdjusted ? const PdfColor(0.9, 0.5, 0.0) : textPrimary,
                   ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                    child: pw.Text(qtyStr,
-                      textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(font: font, fontSize: 10, color: isAdjusted ? const PdfColor(0.9, 0.5, 0.0) : null),
-                    ),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                    child: pw.Text(money(item.appliedRate), textAlign: pw.TextAlign.right, style: pw.TextStyle(font: font, fontSize: 10)),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                    child: pw.Text(money(item.amount), textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 10, color: isAdjusted ? const PdfColor(0.9, 0.5, 0.0) : null)),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
@@ -226,8 +358,8 @@ Future<Uint8List> buildBillPdf({
   pw.Widget buildSummary() {
     final adjustedTotal = grandTotal - adjustmentAmount;
     final totalsBlock = pw.Container(
-      width: 220,
-      padding: const pw.EdgeInsets.only(right: 12),
+      width: 190,
+      padding: const pw.EdgeInsets.only(right: 4),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
         children: [
@@ -236,50 +368,50 @@ Future<Uint8List> buildBillPdf({
           if (adjustmentAmount > 0) ...[
             amountRow('Grand Total', grandTotal),
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(vertical: 2),
+              padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Adjustment', style: pw.TextStyle(font: font, fontSize: 11, color: const PdfColor(0.9, 0.5, 0.0))),
-                  pw.Text('- ${money(adjustmentAmount)}', style: pw.TextStyle(font: font, fontSize: 11, color: const PdfColor(0.9, 0.5, 0.0))),
+                  pw.Text('Adjustment', style: pw.TextStyle(font: font, fontSize: 8.5, color: const PdfColor(0.9, 0.5, 0.0))),
+                  pw.Text('- ${money(adjustmentAmount)}', style: pw.TextStyle(font: font, fontSize: 8.5, color: const PdfColor(0.9, 0.5, 0.0))),
                 ],
               ),
             ),
             if (adjustmentNote.isNotEmpty)
               pw.Container(
-                padding: const pw.EdgeInsets.only(bottom: 4),
-                child: pw.Text(adjustmentNote, style: pw.TextStyle(font: fontI, fontSize: 8.5, color: muted)),
+                padding: const pw.EdgeInsets.only(bottom: 2),
+                child: pw.Text(adjustmentNote, style: pw.TextStyle(font: fontI, fontSize: 7, color: muted)),
               ),
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(vertical: 6),
+              padding: const pw.EdgeInsets.symmetric(vertical: 3.5),
               decoration: const pw.BoxDecoration(
                 border: pw.Border(
-                  top: pw.BorderSide(color: lineC, width: 0.7),
-                  bottom: pw.BorderSide(color: lineC, width: 0.7),
+                  top: pw.BorderSide(color: lineC, width: 0.6),
+                  bottom: pw.BorderSide(color: lineC, width: 0.6),
                 ),
               ),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Final Amount', style: pw.TextStyle(font: fontB, fontSize: 13, color: red)),
-                  pw.Text(money(adjustedTotal), style: pw.TextStyle(font: fontB, fontSize: 13, color: red)),
+                  pw.Text('Final Amount', style: pw.TextStyle(font: fontB, fontSize: 10.5, color: red)),
+                  pw.Text(money(adjustedTotal), style: pw.TextStyle(font: fontB, fontSize: 10.5, color: red)),
                 ],
               ),
             ),
           ] else
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(vertical: 6),
+              padding: const pw.EdgeInsets.symmetric(vertical: 3.5),
               decoration: const pw.BoxDecoration(
                 border: pw.Border(
-                  top: pw.BorderSide(color: lineC, width: 0.7),
-                  bottom: pw.BorderSide(color: lineC, width: 0.7),
+                  top: pw.BorderSide(color: lineC, width: 0.6),
+                  bottom: pw.BorderSide(color: lineC, width: 0.6),
                 ),
               ),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Grand Total', style: pw.TextStyle(font: fontB, fontSize: 13, color: textPrimary)),
-                  pw.Text(money(grandTotal), style: pw.TextStyle(font: fontB, fontSize: 13, color: textPrimary)),
+                  pw.Text('Grand Total', style: pw.TextStyle(font: fontB, fontSize: 10.5, color: textPrimary)),
+                  pw.Text(money(grandTotal), style: pw.TextStyle(font: fontB, fontSize: 10.5, color: textPrimary)),
                 ],
               ),
             ),
@@ -289,15 +421,15 @@ Future<Uint8List> buildBillPdf({
     );
 
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(top: 14),
+      padding: const pw.EdgeInsets.only(top: 6),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         crossAxisAlignment: pw.CrossAxisAlignment.end,
         children: [
           pw.Padding(
-            padding: const pw.EdgeInsets.only(left: 110, bottom: 4),
+            padding: const pw.EdgeInsets.only(left: 30, bottom: 2),
             child: stampBytes != null
-                ? buildStampPdf(stampBytes, width: 150)
+                ? buildStampPdf(stampBytes, width: 105)
                 : pw.SizedBox(),
           ),
           totalsBlock,
@@ -306,128 +438,29 @@ Future<Uint8List> buildBillPdf({
     );
   }
 
-  pw.Widget buildFooter(String copyLabel) {
-    return pw.Container(
-      width: PdfPageFormat.a4.width - 40,
-      child: pw.Column(
-        mainAxisSize: pw.MainAxisSize.min,
-        crossAxisAlignment: pw.CrossAxisAlignment.center,
-        children: [
-          thinLine(thickness: 0.7),
-          pw.SizedBox(height: 8),
-          pw.Text('Thank You!  Visit Again', style: pw.TextStyle(font: font, fontSize: 10.5, color: muted)),
-          pw.SizedBox(height: 4),
-          pw.Text(businessName, style: pw.TextStyle(font: fontB, fontSize: 11.5, color: red, letterSpacing: 1.2)),
-          pw.SizedBox(height: 8),
-          pw.Container(height: 1, color: lineC),
-          pw.SizedBox(height: 8),
-          pw.Text(copyLabel, style: pw.TextStyle(font: font, fontSize: 9.5, color: muted)),
-        ],
-      ),
-    );
-  }
-
-  // Returned as a flat list (not a single Column) so that MultiPage can break
-  // the content across as many pages as it needs. One copy always starts on a
-  // fresh page; anything that does not fit moves to the next page.
+  // One copy = MultiPage flat list so large bills can paginate cleanly
   List<pw.Widget> buildCopy(String copyLabel) {
     return <pw.Widget>[
-      pw.Container(height: 3, color: red),
-      pw.SizedBox(height: 12),
-      pw.Center(
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.center,
-          children: [
-            pw.Text(
-              businessName,
-              textAlign: pw.TextAlign.center,
-              style: pw.TextStyle(font: fontB, fontSize: 20, color: red, letterSpacing: 1),
-            ),
-            pw.SizedBox(height: 4),
-            pw.Text(
-              tagline,
-              textAlign: pw.TextAlign.center,
-              style: pw.TextStyle(font: fontB, fontSize: 11, color: muted),
-            ),
-            pw.SizedBox(height: 2),
-            pw.Text(
-              'Green & Fresh  •  Every Day',
-              textAlign: pw.TextAlign.center,
-              style: pw.TextStyle(font: fontI, fontSize: 10, color: green),
-            ),
-            pw.SizedBox(height: 6),
-            if (settings.address != null && settings.address!.isNotEmpty)
-              pw.Text(settings.address!, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 10, color: muted))
-            else ...[
-              pw.Text('Shop No.95 Kanji House, Mahatma Phule Market,', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 10, color: muted)),
-              pw.Text('Cotton Market, Nagpur – 440018', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 10, color: muted)),
-            ],
-            if (settings.phone != null && settings.phone!.isNotEmpty) ...[
-              pw.SizedBox(height: 4),
-              pw.Text(settings.phone!, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 9.5, color: textPrimary)),
-            ],
-          ],
-        ),
-      ),
-      pw.SizedBox(height: 14),
-      thinLine(thickness: 0.7),
-      pw.SizedBox(height: 12),
-      pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 12),
-        child: pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Expanded(
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  infoField('Bill No.', billNumber ?? 'N/A'),
-                  pw.SizedBox(height: 6),
-                  infoField('Customer', customerName),
-                  pw.SizedBox(height: 6),
-                  infoField('Mobile', customerMobile),
-                  pw.SizedBox(height: 6),
-                  infoField('Address', (customerAddress != null && customerAddress.isNotEmpty) ? customerAddress : '-'),
-                ],
-              ),
-            ),
-            pw.Container(width: 1, height: 80, color: lineC),
-            pw.Expanded(
-              child: pw.Padding(
-                padding: const pw.EdgeInsets.only(left: 12),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    infoField('Date', dateStr),
-                    pw.SizedBox(height: 6),
-                    infoField('Time', timeStr),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      pw.SizedBox(height: 12),
-      thinLine(thickness: 0.7),
-      pw.SizedBox(height: 8),
+      pw.Container(height: 2.5, color: red),
+      buildTopBar(copyLabel),
+      thinLine(thickness: 0.5),
+      buildBrandingHeader(),
+      thinLine(thickness: 0.5),
+      buildCustomerBar(),
+      thinLine(thickness: 0.5),
+      pw.SizedBox(height: 3),
       buildTableHeader(),
       ...buildTableRows(),
+      thinLine(thickness: 0.5),
       buildSummary(),
-      pw.SizedBox(height: 20),
-      buildFooter(copyLabel),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 6),
     ];
   }
 
-  // One copy = one MultiPage. It always begins on a fresh sheet, and a bill with
-  // a lot of items grows extra pages instead of being shrunk to fit, so the
-  // customer copy and the office copy never share a page.
-  // The office copy is the duplicate, not a second original.
   pw.MultiPage oneCopy(String copyLabel) {
     return pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      margin: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       build: (context) => buildCopy(copyLabel),
     );
   }

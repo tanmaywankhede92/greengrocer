@@ -64,4 +64,16 @@ const adjustBillSchema = Joi.object({
   items: Joi.array().items(adjustBillItemSchema).min(1).required(),
 });
 
-module.exports = { createBillSchema, adjustBillSchema, saveDraftSchema };
+const updateBillSchema = Joi.object({
+  customerId: Joi.string().required()
+    .messages({ 'string.empty': 'Customer is required' }),
+  billDate: Joi.date().required(),
+  items: Joi.array().items(itemSchema).min(1).required()
+    .messages({ 'array.min': 'At least one item is required' }),
+  deliveryCharge: Joi.number().min(0).default(0),
+  notes: Joi.string().trim().max(500).allow('').default(''),
+  paymentAmount: Joi.number().min(0).optional(),
+  paymentMode: Joi.string().valid(...PAYMENT_MODES).optional(),
+});
+
+module.exports = { createBillSchema, updateBillSchema, adjustBillSchema, saveDraftSchema };

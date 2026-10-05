@@ -56,6 +56,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             deliveryCharge: extra['deliveryCharge'] as double? ?? 0,
             draftId: extra['draftId'] as String?,
             billDate: extra['billDate'] as DateTime?,
+            editingBillId: extra['editingBillId'] as String?,
+            editingBillNumber: extra['editingBillNumber'] as String?,
           );
         },
       ),
@@ -75,13 +77,19 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final extra = state.extra;
               DraftBill? draft;
+              String? editBillId;
               if (extra is DraftBill) {
                 draft = extra;
-              } else if (extra is Map<String, dynamic> && extra['draft'] != null) {
-                draft = extra['draft'] as DraftBill;
+              } else if (extra is Map<String, dynamic>) {
+                if (extra['draft'] != null) draft = extra['draft'] as DraftBill;
+                if (extra['editBillId'] != null) editBillId = extra['editBillId'] as String;
               }
-              return NewBillScreen(initialDraft: draft);
+              return NewBillScreen(initialDraft: draft, editBillId: editBillId);
             },
+          ),
+          GoRoute(
+            path: '/bills/:id/edit',
+            builder: (context, state) => NewBillScreen(editBillId: state.pathParameters['id']),
           ),
           GoRoute(path: '/bills/:id', builder: (context, state) => BillDetailScreen(id: state.pathParameters['id']!)),
           GoRoute(path: '/payments', builder: (context, state) => const PaymentsScreen()),

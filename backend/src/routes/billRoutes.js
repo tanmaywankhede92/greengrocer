@@ -3,7 +3,7 @@ const router = express.Router();
 const billController = require('../controllers/billController');
 const authenticate = require('../middlewares/authenticate');
 const validate = require('../middlewares/validate');
-const { createBillSchema, adjustBillSchema, saveDraftSchema } = require('../validators/billValidator');
+const { createBillSchema, updateBillSchema, adjustBillSchema, saveDraftSchema } = require('../validators/billValidator');
 
 router.use(authenticate);
 
@@ -16,6 +16,8 @@ router.delete('/drafts/:id', billController.discardDraft);
 router.get('/', billController.list);
 router.get('/:id', billController.getById);
 router.post('/', validate(createBillSchema), billController.create);
+router.put('/:id', validate(updateBillSchema), billController.update);
+router.delete('/:id', billController.remove);
 router.post('/:id/cancel', billController.cancel);
 router.put('/:id/adjust', validate(adjustBillSchema), billController.adjust);
 

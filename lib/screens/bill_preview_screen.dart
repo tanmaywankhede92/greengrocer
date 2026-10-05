@@ -27,6 +27,8 @@ class BillPreviewScreen extends ConsumerStatefulWidget {
   final PaymentMode paymentMode;
   final String? draftId;
   final DateTime? billDate;
+  final String? editingBillId;
+  final String? editingBillNumber;
 
   const BillPreviewScreen({
     super.key,
@@ -37,6 +39,8 @@ class BillPreviewScreen extends ConsumerStatefulWidget {
     this.paymentMode = PaymentMode.cash,
     this.draftId,
     this.billDate,
+    this.editingBillId,
+    this.editingBillNumber,
   });
 
   @override
@@ -59,6 +63,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   void initState() {
     super.initState();
     _billDate = widget.billDate ?? DateTime.now();
+    _billNumber = widget.editingBillNumber;
     _items = widget.items.map((i) => LineItem(
       productId: i.productId,
       productName: i.productName,
@@ -179,6 +184,20 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
       }, stage: 'Preparing bill...');
 
 
+  Future<void> _saveOnly() => _runBusy(() async {
+        final billNumber = await _ensureBillSaved();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.editingBillId != null
+                ? 'Bill $billNumber updated successfully'
+                : 'Bill $billNumber saved successfully'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+        context.go('/bills');
+      }, stage: 'Saving bill...');
+
   /// Saves the bill once and returns its server-assigned number.
   ///
   /// Kept separate from printing because the number is what the printed copy
@@ -186,10 +205,24 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   /// is cached, so printing and sharing the same bill never creates a second
   /// bill, and no settings, font or PDF work happens here.
   Future<String> _ensureBillSaved() async {
+    final billService = ref.read(billServiceProvider);
+
+    if (widget.editingBillId != null) {
+      final result = await billService.update(widget.editingBillId!, _buildCreatePayload());
+      final billNumber = result['billNumber'] as String? ?? widget.editingBillNumber ?? _billNumber ?? 'Bill';
+      if (!mounted) return billNumber;
+
+      _billNumber = billNumber;
+      ref.invalidate(billListProvider);
+      ref.invalidate(billDetailProvider(widget.editingBillId!));
+      setState(() {});
+      await WidgetsBinding.instance.endOfFrame;
+      return billNumber;
+    }
+
     final existing = _billNumber;
     if (existing != null) return existing;
 
-    final billService = ref.read(billServiceProvider);
     final result = await billService.create(_buildCreatePayload());
     final billNumber = result['billNumber'] as String;
     if (!mounted) return billNumber;
@@ -226,11 +259,11 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   }
 
   static const _red = Color(0xFFB71C1C);
-  static const _muted = Color(0xFF757575);
-  static const _line = Color(0xFFBDBDBD);
-  static const _lightLine = Color(0xFFE0E0E0);
+  static const _muted = Color(0xFF6B7280);
+  static const _line = Color(0xFFE5E7EB);
+  static const _darkHeader = Color(0xFF2D2D3A);
 
-  Widget _thinLine({double thickness = 0.7}) {
+  Widget _thinLine({double thickness = 0.5}) {
     return Container(height: thickness, color: _line);
   }
 
@@ -239,121 +272,161 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
     final copyLabel = isCustomerCopy ? 'ORIGINAL' : 'DUPLICATE';
     final billDateTime = _billDate;
     final grandTotal = _total > 0 ? _total : _subtotal;
+    final settings = ref.watch(settingsProvider).valueOrNull;
+    final businessName = settings?.businessName.isNotEmpty == true ? settings!.businessName : 'RATHOD ENTERPRISES';
+    final tagline = settings?.tagline ?? 'Vegetable, Fruits Supplier & Commission Agent';
+    final phone = (settings?.phone != null && settings!.phone!.isNotEmpty) ? settings.phone! : '8087344819, 9529031540';
+    final address = (settings?.address != null && settings!.address!.isNotEmpty)
+        ? settings.address!
+        : 'Shop No.95 Kanji House, Phule Market, Cotton Market, Nagpur';
 
     return Container(
       constraints: BoxConstraints(maxWidth: maxWidth),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: _lightLine, width: 0.5),
+        border: Border.all(color: _line, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(height: 3, color: _red),
-          const SizedBox(height: 12),
+          Container(height: 2.5, color: _red),
 
-          // ── Header (centered) ──
-          const Center(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text('RATHOD ENTERPRISES',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _red, letterSpacing: 1)),
-                SizedBox(height: 4),
-                Text('Vegetable, Fruits Supplier & Commission Agent',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _muted)),
-                SizedBox(height: 2),
-                Text('Green & Fresh  •  Every Day',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 10, color: AppTheme.success, fontStyle: FontStyle.italic)),
-                SizedBox(height: 6),
-                Text('Shop No.95 Kanji House, Mahatma Phule Market,',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 10, color: _muted)),
-                Text('Cotton Market, Nagpur – 440018',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 10, color: _muted)),
-                SizedBox(height: 4),
-                Text('Nitesh : 8087344819   |   Vicky : 9529031540   |   7030914867',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 9.5, color: AppTheme.textPrimary)),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 14),
-          _thinLine(thickness: 0.7),
-          const SizedBox(height: 12),
-
-          // ── Info section (two columns with divider) ──
+          // ── Top Bar (Bill No, Copy Badge, Contact Numbers) ──
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _infoField('Bill No.', _billNumber ?? 'Will be generated on print'),
-                      const SizedBox(height: 6),
-                      _infoField('Customer', widget.customer.name),
-                      const SizedBox(height: 6),
-                      _infoField('Mobile', widget.customer.mobile),
-                      const SizedBox(height: 6),
-                      _infoField('Address', widget.customer.address?.isNotEmpty == true ? widget.customer.address! : '-'),
-                    ],
-                  ),
+                Text(
+                  'Bill No: ${_billNumber ?? "Pending"}',
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
                 ),
-                Container(width: 1, height: 80, color: _line),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _infoField('Date', AppUtils.formatDate(billDateTime)),
-                        const SizedBox(height: 6),
-                        _infoField('Time', DateFormat('hh:mm a').format(billDateTime)),
-                      ],
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isCustomerCopy ? _red.withAlpha(20) : Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '$copyLabel – $copySuffix',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: isCustomerCopy ? _red : Colors.grey.shade700,
                     ),
                   ),
                 ),
+                Text(
+                  'Mob: $phone',
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                ),
               ],
             ),
           ),
+          _thinLine(thickness: 0.5),
 
-          const SizedBox(height: 12),
-          _thinLine(thickness: 0.7),
-          const SizedBox(height: 8),
-
-          // ── Products table (6 columns, same as PDF) ──
+          // ── Compact Business Branding ──
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Table(
-              columnWidths: const {
-                0: FlexColumnWidth(0.55),
-                1: FlexColumnWidth(2.25),
-                2: FlexColumnWidth(1.0),
-                3: FlexColumnWidth(0.85),
-                4: FlexColumnWidth(1.0),
-                5: FlexColumnWidth(1.15),
-              },
-              border: TableBorder.all(color: _line, width: 0.7),
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Center(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    businessName,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: _red, letterSpacing: 0.8),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    '$tagline  •  $address',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 8.5, color: _muted, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          _thinLine(thickness: 0.5),
+
+          // ── Compact Customer Info Bar ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: Row(
+                        children: [
+                          const Text('Customer: ', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700)),
+                          Expanded(
+                            child: Text(
+                              widget.customer.name,
+                              style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Text('Mob: ${widget.customer.mobile}', style: const TextStyle(fontSize: 9.5)),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        'Date: ${AppUtils.formatDate(billDateTime)}  ${DateFormat("hh:mm a").format(billDateTime)}',
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(fontSize: 9.5),
+                      ),
+                    ),
+                  ],
+                ),
+                if (widget.customer.address?.isNotEmpty == true || _paymentMode.displayName.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Row(
+                      children: [
+                        if (widget.customer.address?.isNotEmpty == true)
+                          Expanded(
+                            child: Text(
+                              'Address: ${widget.customer.address!}',
+                              style: const TextStyle(fontSize: 8.5, color: _muted),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        if (_paymentMode.displayName.isNotEmpty)
+                          Text('Payment: ${_paymentMode.displayName}', style: const TextStyle(fontSize: 8.5, color: _muted)),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          _thinLine(thickness: 0.5),
+          const SizedBox(height: 4),
+
+          // ── Statement-Style Products Table (No vertical borders, compact) ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Column(
               children: [
                 // Header row
-                TableRow(
-                  decoration: const BoxDecoration(color: Color(0xFFF5F5F5)),
-                  children: ['Sr.', 'Product', 'Unit', 'Qty', 'Rate (₹)', 'Amount (₹)'].map((h) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                      child: Text(h,
-                          textAlign: h == 'Product' ? TextAlign.left : TextAlign.center,
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                    );
-                  }).toList(),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 6),
+                  decoration: const BoxDecoration(color: _darkHeader),
+                  child: const Row(
+                    children: [
+                      SizedBox(width: 24, child: Text('Sr.', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
+                      Expanded(flex: 30, child: Padding(padding: EdgeInsets.only(left: 6), child: Text('Product', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white)))),
+                      SizedBox(width: 44, child: Text('Unit', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
+                      SizedBox(width: 40, child: Text('Qty', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
+                      SizedBox(width: 55, child: Text('Rate (₹)', textAlign: TextAlign.right, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
+                      SizedBox(width: 65, child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
+                    ],
+                  ),
                 ),
                 // Data rows
                 ..._items.asMap().entries.map((entry) {
@@ -362,55 +435,62 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                   final productName = item.productNameHindi.isNotEmpty
                       ? '${item.productName} (${item.productNameHindi})'
                       : item.productName;
+                  final isAlt = idx.isOdd;
 
-                  return TableRow(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text('${idx + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text(productName, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text(item.unit, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text(item.quantity.toStringAsFixed(item.quantity == item.quantity.roundToDouble() ? 0 : 1), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text(item.appliedRate.toStringAsFixed(2), textAlign: TextAlign.right, style: const TextStyle(fontSize: 10)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                        child: Text(item.amount.toStringAsFixed(2), textAlign: TextAlign.right, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
-                      ),
-                    ],
+                  return Container(
+                    padding: const EdgeInsets.symmetric(vertical: 3.5, horizontal: 6),
+                    color: isAlt ? const Color(0xFFF9FAFB) : Colors.white,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(width: 24, child: Text('${idx + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 9))),
+                        Expanded(
+                          flex: 30,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: Text(productName, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600)),
+                          ),
+                        ),
+                        SizedBox(width: 44, child: Text(item.unit, textAlign: TextAlign.center, style: const TextStyle(fontSize: 9))),
+                        SizedBox(
+                          width: 40,
+                          child: Text(
+                            item.quantity.toStringAsFixed(item.quantity == item.quantity.roundToDouble() ? 0 : 1),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 9),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 55,
+                          child: Text(item.appliedRate.toStringAsFixed(2), textAlign: TextAlign.right, style: const TextStyle(fontSize: 9)),
+                        ),
+                        SizedBox(
+                          width: 65,
+                          child: Text(item.amount.toStringAsFixed(2), textAlign: TextAlign.right, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
                   );
                 }),
               ],
             ),
           ),
 
-          const SizedBox(height: 16),
+          _thinLine(thickness: 0.5),
 
-          // ── Summary & Stamp (in line with Grand Total, slightly to the left) ──
+          // ── Compact Summary & Stamp ──
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 110, bottom: 4),
-                  child: buildStampPreview(width: 150),
+                  padding: const EdgeInsets.only(left: 30, bottom: 2),
+                  child: buildStampPreview(width: 105),
                 ),
                 SizedBox(
-                  width: 220,
+                  width: 190,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -418,15 +498,18 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                       if (widget.deliveryCharge > 0)
                         _amountRow('Delivery Charge', widget.deliveryCharge),
                       Container(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        padding: const EdgeInsets.symmetric(vertical: 4),
                         decoration: const BoxDecoration(
-                          border: Border(top: BorderSide(color: _line, width: 0.7), bottom: BorderSide(color: _line, width: 0.7)),
+                          border: Border(
+                            top: BorderSide(color: _line, width: 0.6),
+                            bottom: BorderSide(color: _line, width: 0.6),
+                          ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Grand Total', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                            Text('₹ ${grandTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                            const Text('Grand Total', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                            Text('₹ ${grandTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
                           ],
                         ),
                       ),
@@ -437,48 +520,13 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
               ],
             ),
           ),
-
-          const SizedBox(height: 18),
-          _thinLine(thickness: 0.7),
-          const SizedBox(height: 10),
-
-          // ── Footer ──
-          Center(
-            child: Column(
-              children: [
-                const Text('Thank You!  Visit Again',
-                    style: TextStyle(fontSize: 11, color: _muted)),
-                const SizedBox(height: 4),
-                const Text('RATHOD ENTERPRISES',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _red, letterSpacing: 1.2)),
-                const SizedBox(height: 8),
-                Container(height: 1, color: Colors.grey.shade400),
-                const SizedBox(height: 8),
-                Text('$copyLabel – $copySuffix',
-                    style: const TextStyle(fontSize: 10, color: _muted)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
         ],
       ),
     );
   }
 
-  Widget _infoField(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 72,
-          child: Text(label, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-        ),
-        const Text(':  ', style: TextStyle(fontSize: 10.5)),
-        Expanded(child: Text(value, style: const TextStyle(fontSize: 10.5, color: AppTheme.textPrimary))),
-      ],
-    );
-  }
+
 
   Widget _amountRow(String label, double value) {
     return Padding(
@@ -555,7 +603,19 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                         style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
+                    if (widget.editingBillId != null) ...[
+                      Expanded(
+                        flex: 2,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.check, size: 18),
+                          label: const Text('Save Only'),
+                          onPressed: _busyStage == null ? () => _saveOnly() : null,
+                          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     Expanded(
                       flex: 2,
                       child: OutlinedButton.icon(
@@ -565,12 +625,12 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                         style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Expanded(
                       flex: 2,
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.print, size: 18),
-                        label: const Text('Print Both Copies'),
+                        label: Text(widget.editingBillId != null ? 'Update & Print' : 'Print Both Copies'),
                         onPressed: _busyStage == null ? () => _print() : null,
                         style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
                       ),

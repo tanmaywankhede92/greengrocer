@@ -37,6 +37,15 @@ class BillService {
     return response.data['data'] as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> update(String id, Map<String, dynamic> data) async {
+    final response = await _client.put('/bills/$id', data: data);
+    return response.data['data'] as Map<String, dynamic>;
+  }
+
+  Future<void> deleteBill(String id) async {
+    await _client.delete('/bills/$id');
+  }
+
   Future<void> cancel(String id) async {
     await _client.post('/bills/$id/cancel');
   }

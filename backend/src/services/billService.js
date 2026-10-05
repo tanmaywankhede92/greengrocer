@@ -438,10 +438,172 @@ const discardDraft = async (id) => {
   return draft;
 };
 
+const updateBill = async (billId, { customerId, billDate, items, deliveryCharge, notes, paymentAmount, paymentMode }, userId) => {
+  const bill = await Bill.findById(billId);
+  if (!bill) {
+    const error = new Error('Bill not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const customer = await customerRepository.findById(customerId);
+  if (!customer) {
+    const error = new Error('Customer not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  let subtotal = 0;
+  items.forEach((item) => {
+    subtotal += item.quantity * item.appliedRate;
+  });
+  const total = subtotal + (deliveryCharge || 0);
+
+  const prevCustomerId = bill.customerId;
+
+  bill.customerId = customerId;
+  bill.billDate = new Date(billDate);
+  bill.subtotal = subtotal;
+  bill.deliveryCharge = deliveryCharge || 0;
+  bill.total = total;
+  bill.notes = notes || '';
+  if (paymentAmount !== undefined) {
+    bill.paidNow = paymentAmount;
+    bill.paymentType = paymentAmount >= total && paymentAmount > 0 ? 'cash' : paymentAmount > 0 ? 'partial' : 'credit';
+  }
+  await bill.save();
+
+  // Replace bill items
+  await BillItem.deleteMany({ billId: bill._id });
+  const billItemsData = items.map((item) => ({
+    billId: bill._id,
+    productId: item.productId || null,
+    productName: item.productName,
+    productNameHindi: item.productNameHindi || '',
+    unit: item.unit,
+    quantity: item.quantity,
+    defaultRate: item.defaultRate || 0,
+    appliedRate: item.appliedRate,
+    amount: item.quantity * item.appliedRate,
+  }));
+  await BillItem.create(billItemsData);
+
+  // Clear any old adjustments for this bill
+  await BillAdjustment.deleteMany({ billId: bill._id });
+
+  // Update or re-create ledger entry for the bill
+  await LedgerEntry.findOneAndUpdate(
+    { referenceId: bill._id, entryType: 'bill' },
+    {
+      customerId,
+      entryDate: new Date(billDate),
+      description: `Bill ${bill.billNumber}`,
+      debit: total,
+      credit: 0,
+      createdBy: userId,
+    },
+    { upsert: true }
+  );
+
+  // Update any customer references in payments/ledger if customer changed
+  if (prevCustomerId.toString() !== customerId.toString()) {
+    await Payment.updateMany({ billId: bill._id }, { customerId });
+    await LedgerEntry.updateMany({ referenceId: bill._id }, { customerId });
+  }
+
+  // Handle payment update if provided
+  if (paymentAmount !== undefined) {
+    if (paymentAmount > 0) {
+      const existingPayment = await Payment.findOne({ billId: bill._id, isCancelled: false });
+      if (existingPayment) {
+        existingPayment.customerId = customerId;
+        existingPayment.amount = paymentAmount;
+        if (paymentMode) existingPayment.mode = paymentMode;
+        existingPayment.paymentDate = new Date(billDate);
+        await existingPayment.save();
+
+        await LedgerEntry.findOneAndUpdate(
+          { referenceId: bill._id, entryType: 'payment' },
+          {
+            customerId,
+            entryDate: new Date(billDate),
+            description: `Payment ${existingPayment.receiptNumber}`,
+            debit: 0,
+            credit: paymentAmount,
+            createdBy: userId,
+          }
+        );
+      } else {
+        const receiptNumber = await generateReceiptNumber();
+        await Payment.create({
+          receiptNumber,
+          customerId,
+          amount: paymentAmount,
+          mode: paymentMode || 'cash',
+          paymentDate: new Date(billDate),
+          billId: bill._id,
+          notes: `Paid with bill ${bill.billNumber}`,
+          createdBy: userId,
+        });
+
+        await LedgerEntry.create({
+          customerId,
+          entryType: 'payment',
+          entryDate: new Date(billDate),
+          description: `Payment ${receiptNumber}`,
+          debit: 0,
+          credit: paymentAmount,
+          referenceId: bill._id,
+          createdBy: userId,
+        });
+      }
+    } else {
+      await Payment.deleteMany({ billId: bill._id });
+      await LedgerEntry.deleteMany({ referenceId: bill._id, entryType: 'payment' });
+    }
+  }
+
+  return { id: bill._id, billNumber: bill.billNumber };
+};
+
+const deleteBill = async (billId, userId) => {
+  const bill = await Bill.findById(billId);
+  if (!bill) {
+    const error = new Error('Bill not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Delete all ledger entries tied to this bill (both debit and credit entries)
+  await LedgerEntry.deleteMany({ referenceId: bill._id });
+
+  // Delete all payments tied to this bill
+  await Payment.deleteMany({ billId: bill._id });
+
+  // Delete all bill items
+  await BillItem.deleteMany({ billId: bill._id });
+
+  // Delete any adjustments
+  await BillAdjustment.deleteMany({ billId: bill._id });
+
+  // If any draft was converted to this bill, unmark it
+  await DraftBill.updateMany(
+    { convertedBillId: bill._id },
+    { $unset: { convertedBillId: '', convertedBillNumber: '' }, status: 'draft' }
+  );
+
+  // Delete the bill itself
+  await Bill.deleteOne({ _id: bill._id });
+
+  return { id: billId, billNumber: bill.billNumber };
+};
+
 module.exports = {
   listBills,
   getBill,
   createBill,
+  updateBill,
+  deleteBill,
   cancelBill,
   adjustBill,
   saveDraft,

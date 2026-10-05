@@ -38,6 +38,25 @@ const create = asyncHandler(async (req, res) => {
   ApiResponse.created(res, result, messages.BILL.CREATED);
 });
 
+const update = asyncHandler(async (req, res) => {
+  const body = { ...req.body };
+  delete body._id;
+  delete body.id;
+  if (body.items && Array.isArray(body.items)) {
+    body.items = body.items.map((item) => {
+      const { _id, id, ...rest } = item;
+      return rest;
+    });
+  }
+  const result = await billService.updateBill(req.params.id, body, req.user.id);
+  ApiResponse.success(res, result, messages.BILL.UPDATED);
+});
+
+const remove = asyncHandler(async (req, res) => {
+  const result = await billService.deleteBill(req.params.id, req.user.id);
+  ApiResponse.success(res, result, messages.BILL.DELETED);
+});
+
 const cancel = asyncHandler(async (req, res) => {
   await billService.cancelBill(req.params.id, req.user.id);
   ApiResponse.success(res, null, messages.BILL.CANCELLED);
@@ -72,6 +91,8 @@ module.exports = {
   list,
   getById,
   create,
+  update,
+  remove,
   cancel,
   adjust,
   listDrafts,

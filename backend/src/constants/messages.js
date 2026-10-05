@@ -29,6 +29,8 @@ module.exports = {
   },
   BILL: {
     CREATED: 'Bill generated successfully',
+    UPDATED: 'Bill updated successfully',
+    DELETED: 'Bill deleted successfully',
     CANCELLED: 'Bill cancelled successfully',
     ADJUSTED: 'Bill adjusted successfully',
     NOT_FOUND: 'Bill not found',

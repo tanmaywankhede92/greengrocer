@@ -6,6 +6,7 @@ import '../core/utils.dart';
 import '../core/enums.dart';
 import '../core/params.dart';
 import '../providers/bill_provider.dart';
+import '../models/bill.dart';
 import '../services/api_client.dart';
 import 'bills/widgets/export_bills_excel_dialog.dart';
 
@@ -232,41 +233,74 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
                               ],
                             ),
                             isThreeLine: true,
-                            trailing: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.topRight,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    AppUtils.formatCurrency(b.adjustedTotal > 0 ? b.adjustedTotal : b.total),
-                                    style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
-                                  ),
-                                  if (b.totalAdjusted > 0)
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
                                     Text(
-                                      'Adj: -${AppUtils.formatCurrency(b.totalAdjusted)}',
-                                      style: const TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.w500),
+                                      AppUtils.formatCurrency(b.total),
+                                      style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
                                     ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: b.status == BillStatus.active
-                                          ? AppTheme.success.withAlpha(20)
-                                          : AppTheme.error.withAlpha(20),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      b.status == BillStatus.active ? 'Active' : 'Cancelled',
-                                      style: TextStyle(
-                                        color: b.status == BillStatus.active ? AppTheme.success : AppTheme.error,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
+                                    const SizedBox(height: 2),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: b.status == BillStatus.active
+                                            ? AppTheme.success.withAlpha(20)
+                                            : AppTheme.error.withAlpha(20),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        b.status == BillStatus.active ? 'Active' : 'Cancelled',
+                                        style: TextStyle(
+                                          color: b.status == BillStatus.active ? AppTheme.success : AppTheme.error,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
+                                const SizedBox(width: 4),
+                                PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_vert, size: 20, color: AppTheme.textSecondary),
+                                  padding: EdgeInsets.zero,
+                                  tooltip: 'Actions',
+                                  onSelected: (action) {
+                                    if (action == 'edit') {
+                                      context.push('/bills/${b.id}/edit');
+                                    } else if (action == 'delete') {
+                                      _confirmDeleteBill(b);
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem<String>(
+                                      value: 'edit',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.edit_outlined, size: 18, color: AppTheme.textPrimary),
+                                          SizedBox(width: 10),
+                                          Text('Edit Bill', style: TextStyle(fontSize: 13)),
+                                        ],
+                                      ),
+                                    ),
+                                    const PopupMenuItem<String>(
+                                      value: 'delete',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.delete_outline, size: 18, color: AppTheme.error),
+                                          SizedBox(width: 10),
+                                          Text('Delete Bill', style: TextStyle(fontSize: 13, color: AppTheme.error, fontWeight: FontWeight.w600)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                             onTap: () => context.go('/bills/${b.id}'),
                           ),
@@ -281,6 +315,76 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDeleteBill(Bill b) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.error.withAlpha(20),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.delete_outline, color: AppTheme.error, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Delete Bill?',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete bill "${b.billNumber}" for ${b.customer?.name ?? "Customer"} (${AppUtils.formatCurrency(b.total)})?\n\nThis will completely remove the bill, items, and ledger records from the database.',
+          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.error,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await ref.read(billServiceProvider).deleteBill(b.id);
+        ref.invalidate(billListProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Bill ${b.billNumber} deleted permanently'),
+              backgroundColor: AppTheme.success,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete bill: ${ApiClient.humanizeError(e)}'),
+              backgroundColor: AppTheme.error,
+            ),
+          );
+        }
+      }
+    }
   }
 
   Widget _filterChip(String label, bool selected, VoidCallback onTap) {

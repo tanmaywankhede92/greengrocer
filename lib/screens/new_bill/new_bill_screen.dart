@@ -24,7 +24,8 @@ import 'widgets/summary_card.dart';
 
 class NewBillScreen extends ConsumerStatefulWidget {
   final DraftBill? initialDraft;
-  const NewBillScreen({super.key, this.initialDraft});
+  final String? editBillId;
+  const NewBillScreen({super.key, this.initialDraft, this.editBillId});
   @override
   ConsumerState<NewBillScreen> createState() => _NewBillScreenState();
 }
@@ -38,6 +39,13 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   String? _draftId;
   String? _draftMongoId;
   bool _isSavingDraft = false;
+
+  bool _isLoadingBill = false;
+  String? _editingBillId;
+  String? _editingBillNumber;
+  double _paidNow = 0;
+  String _paymentType = 'cash';
+  bool _isSavingBill = false;
 
   final _searchCtrl = TextEditingController();
   final _searchFocusNode = FocusNode();
@@ -60,7 +68,9 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialDraft != null) {
+    if (widget.editBillId != null) {
+      _loadExistingBill(widget.editBillId!);
+    } else if (widget.initialDraft != null) {
       final draft = widget.initialDraft!;
       _draftId = draft.draftId;
       _draftMongoId = draft.id;
@@ -88,6 +98,60 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
         _searchFocusNode.requestFocus();
       }
     });
+  }
+
+  Future<void> _loadExistingBill(String id) async {
+    setState(() => _isLoadingBill = true);
+    try {
+      final billService = ref.read(billServiceProvider);
+      final detail = await billService.getById(id);
+      final bill = detail.bill;
+      final items = detail.items;
+
+      _editingBillId = bill.id;
+      _editingBillNumber = bill.billNumber;
+      _billDate = bill.billDate;
+      _selectedCustomer = bill.customer != null
+          ? Customer(
+              id: bill.customer!.id,
+              name: bill.customer!.name,
+              mobile: bill.customer!.mobile,
+              address: bill.customer!.address,
+            )
+          : null;
+      _deliveryCharge = bill.deliveryCharge;
+      if (_deliveryCharge > 0) {
+        _deliveryChargeCtrl.text = _deliveryCharge.toStringAsFixed(0);
+      }
+      _paidNow = bill.paidNow;
+      _paymentType = bill.paymentType ?? 'cash';
+
+      _items.clear();
+      _items.addAll(items.map((i) => LineItem(
+        productId: i.productId,
+        productName: i.productName,
+        productNameHindi: i.productNameHindi,
+        unit: i.unit,
+        quantity: i.quantity,
+        defaultRate: i.defaultRate,
+        appliedRate: i.appliedRate,
+      )));
+
+      if (_selectedCustomer != null) {
+        _loadDefaultRates();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load bill: ${ApiClient.humanizeError(e)}'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingBill = false);
+    }
   }
 
   @override
@@ -516,7 +580,63 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
       'deliveryCharge': _deliveryCharge,
       'billDate': _billDate,
       if (_draftId != null && _draftId!.isNotEmpty) 'draftId': _draftId,
+      if (_editingBillId != null) 'editingBillId': _editingBillId,
+      if (_editingBillNumber != null) 'editingBillNumber': _editingBillNumber,
     });
+  }
+
+  Future<void> _saveEditedBill() async {
+    if (_isSavingBill || _selectedCustomer == null || _editingBillId == null) return;
+    if (_editingProduct != null) _confirmEdit();
+    if (_items.isEmpty || _items.any((i) => i.productName.isEmpty || i.quantity <= 0)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add at least one valid item to the bill'), backgroundColor: AppTheme.error),
+      );
+      return;
+    }
+
+    setState(() => _isSavingBill = true);
+    try {
+      final billService = ref.read(billServiceProvider);
+      final payload = {
+        'customerId': _selectedCustomer!.id,
+        'billDate': AppUtils.formatDateApi(_billDate),
+        'items': _items.map((i) => i.toJson()).toList(),
+        'deliveryCharge': _deliveryCharge,
+        'notes': '',
+        'paymentAmount': _paidNow,
+        'paymentMode': _paymentType,
+      };
+
+      await billService.update(_editingBillId!, payload);
+      ref.invalidate(billListProvider);
+      ref.invalidate(billDetailProvider(_editingBillId!));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Bill $_editingBillNumber updated successfully'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/bills');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update bill: ${ApiClient.humanizeError(e)}'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSavingBill = false);
+    }
   }
 
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.amount);
@@ -598,6 +718,44 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   }
 
   Future<void> _handleBack() async {
+    if (_editingBillId != null) {
+      if (!_hasUnsavedData) {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/bills');
+        }
+        return;
+      }
+      final discard = await showDialog<bool>(
+        context: context,
+        builder: (dialogCtx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Discard Changes?'),
+          content: const Text('Are you sure you want to discard your changes to this bill?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(false),
+              child: const Text('Keep Editing', style: TextStyle(color: AppTheme.textSecondary)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error, foregroundColor: Colors.white),
+              onPressed: () => Navigator.of(dialogCtx).pop(true),
+              child: const Text('Discard'),
+            ),
+          ],
+        ),
+      );
+      if (discard == true && mounted) {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/bills');
+        }
+      }
+      return;
+    }
+
     if (!_hasUnsavedData) {
       if (context.canPop()) {
         context.pop();
@@ -700,6 +858,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
+    final isEditing = _editingBillId != null;
     return AppBar(
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
@@ -711,7 +870,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('New Bill'),
+            Text(isEditing ? 'Edit Bill (${_editingBillNumber ?? ""})' : 'New Bill'),
             if (_draftId != null) ...[
               const SizedBox(width: 8),
               Container(
@@ -735,7 +894,28 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
         ),
       ),
       actions: [
-        if (_hasUnsavedData)
+        if (isEditing)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryRed,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                minimumSize: const Size(0, 36),
+              ),
+              icon: _isSavingBill
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.check, size: 16),
+              label: Text(_isSavingBill ? 'Saving...' : 'Save Changes', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              onPressed: _isSavingBill ? null : _saveEditedBill,
+            ),
+          )
+        else if (_hasUnsavedData)
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: OutlinedButton.icon(
@@ -768,7 +948,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '${_items.length} items  \u2022  ${AppUtils.formatCurrency(_total)}',
+                  '${_items.length} items  •  ${AppUtils.formatCurrency(_total)}',
                   style: const TextStyle(
                     color: AppTheme.primaryRed,
                     fontSize: 13,
@@ -783,12 +963,25 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   }
 
   Widget _buildBody(bool isWide) {
+    if (_isLoadingBill) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Loading bill for editing...'),
+          ],
+        ),
+      );
+    }
+
     return Column(
       children: [
-        const Breadcrumb(crumbs: [
-          Crumb('Home', route: '/dashboard'),
-          Crumb('Bills', route: '/bills'),
-          Crumb('New Bill'),
+        Breadcrumb(crumbs: [
+          const Crumb('Home', route: '/dashboard'),
+          const Crumb('Bills', route: '/bills'),
+          Crumb(_editingBillId != null ? 'Edit Bill (${_editingBillNumber ?? ""})' : 'New Bill'),
         ]),
         if (isWide)
           Padding(
@@ -893,6 +1086,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
           onSave: _goToPreview,
           isWide: isWide,
           canSave: _canProceed,
+          label: _editingBillId != null ? 'Review & Update' : 'Save Bill',
         ),
       ],
     );
