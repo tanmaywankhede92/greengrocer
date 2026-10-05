@@ -70,7 +70,7 @@ class _SalesChartState extends ConsumerState<SalesChart>
           limit: 200,
         );
         for (final b in result.data) {
-          final month = b.billDate.month - 1;
+          final month = b.billDate.toLocal().month - 1;
           monthTotals[month] = (monthTotals[month] ?? 0) + b.total;
         }
         hasMore = result.data.isNotEmpty && result.data.length >= 200;

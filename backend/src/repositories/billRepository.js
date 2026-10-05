@@ -20,7 +20,13 @@ const findBills = async (filters, { page, limit, skip, sort }) => {
   if (filters.from || filters.to) {
     query.billDate = {};
     if (filters.from) query.billDate.$gte = new Date(filters.from);
-    if (filters.to) query.billDate.$lte = new Date(filters.to);
+    if (filters.to) {
+      const toDate = new Date(filters.to);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(filters.to).trim())) {
+        toDate.setUTCHours(23, 59, 59, 999);
+      }
+      query.billDate.$lte = toDate;
+    }
   }
 
   const [bills, total] = await Promise.all([

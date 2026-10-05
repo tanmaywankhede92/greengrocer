@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
+import '../core/utils.dart';
 import '../providers/dashboard_provider.dart';
 import '../services/api_client.dart';
 import '../widgets/stat_card.dart';
@@ -53,13 +54,29 @@ class DashboardScreen extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Dashboard', style: TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.bold)),
-                        if (isDesktop)
-                          IconButton(
-                            icon: const Icon(Icons.refresh, size: 20, color: AppTheme.textSecondary),
-                            onPressed: () => ref.invalidate(dashboardProvider),
-                            tooltip: 'Refresh',
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Dashboard', style: TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.calendar_today_outlined, size: 13, color: AppTheme.textSecondary),
+                                const SizedBox(width: 5),
+                                Text(
+                                  AppUtils.formatDate(DateTime.now()),
+                                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.refresh, size: 20, color: AppTheme.textSecondary),
+                          onPressed: () => ref.invalidate(dashboardProvider),
+                          tooltip: 'Refresh',
+                        ),
                       ],
                     ),
                     const SizedBox(height: 24),
