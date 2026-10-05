@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../core/print_pdf.dart';
 import '../core/share_pdf.dart';
 import '../config/theme.dart';
@@ -355,6 +354,34 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
 
   Widget _thinLine({double thickness = 0.5}) => Container(height: thickness, color: _line);
 
+  Widget _infoField(String label, String value, {bool isBold = false, Color? valueColor}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 58,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: _muted),
+          ),
+        ),
+        const Text(':  ', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: _muted)),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 9.5,
+              fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+              color: valueColor ?? AppTheme.textPrimary,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCopy({
     required bool isCustomerCopy,
     required double maxWidth,
@@ -367,14 +394,24 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
     final copyLabel = isCustomerCopy ? 'ORIGINAL' : 'DUPLICATE';
     final billDate = bill.billDate;
     final grandTotal = bill.total > 0 ? bill.total : bill.subtotal;
+    final totalAdjusted = adjustments.fold<double>(0, (sum, a) => sum + a.amount);
+    final adjustedTotal = grandTotal - totalAdjusted;
 
     final settings = ref.watch(settingsProvider).valueOrNull;
     final businessName = settings?.businessName.isNotEmpty == true ? settings!.businessName : 'RATHOD ENTERPRISES';
     final tagline = settings?.tagline ?? 'Vegetable, Fruits Supplier & Commission Agent';
-    final phone = (settings?.phone != null && settings!.phone!.isNotEmpty) ? settings.phone! : '8087344819, 9529031540';
+    final phone = (settings?.phone != null && settings!.phone!.isNotEmpty)
+        ? settings.phone!
+        : 'Nitesh : 8087344819   |   Vicky : 9529031540   |   7030914867';
     final address = (settings?.address != null && settings!.address!.isNotEmpty)
         ? settings.address!
-        : 'Shop No.95 Kanji House, Phule Market, Cotton Market, Nagpur';
+        : 'Shop No.95 Kanji House, Mahatma Phule Market, Cotton Market, Nagpur – 440018';
+
+    final paymentText = (bill.paymentType != null && bill.paymentType!.trim().isNotEmpty)
+        ? (bill.paymentType!.trim().toLowerCase() == 'upi'
+            ? 'UPI'
+            : bill.paymentType!.trim()[0].toUpperCase() + bill.paymentType!.trim().substring(1).toLowerCase())
+        : 'Credit';
 
     return Container(
       constraints: BoxConstraints(maxWidth: maxWidth),
@@ -387,122 +424,109 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
         children: [
           Container(height: 2.5, color: _red),
 
-          // ── Top Bar (Bill No, Copy Badge, Contact Numbers) ──
+          // ── Header (Branding) ──
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  'Bill No: ${bill.billNumber}',
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: isCustomerCopy ? _red.withAlpha(20) : Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    '$copyLabel – $copySuffix',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      color: isCustomerCopy ? _red : Colors.grey.shade700,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(width: 80),
+                    Text(
+                      businessName,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _red, letterSpacing: 1.0),
                     ),
-                  ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: isCustomerCopy ? _red.withAlpha(20) : Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '$copyLabel – $copySuffix',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: isCustomerCopy ? _red : Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 2),
                 Text(
-                  'Mob: $phone',
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                  tagline,
+                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: _muted),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  address,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 9.5, color: _muted),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  phone,
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
                 ),
               ],
             ),
           ),
           _thinLine(thickness: 0.5),
+          const SizedBox(height: 8),
 
-          // ── Compact Business Branding ──
+          // ── Systematic Customer & Bill Details Card (NO TIME!) ──
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Center(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                border: Border.all(color: _line, width: 0.6),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    businessName,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: _red, letterSpacing: 0.8),
+                  // Left Column: Customer Info
+                  Expanded(
+                    flex: 55,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _infoField('Customer', bill.customer?.name ?? '-', isBold: true),
+                        const SizedBox(height: 4),
+                        _infoField('Mobile', bill.customer?.mobile ?? '-'),
+                        const SizedBox(height: 4),
+                        _infoField('Address', (bill.customer?.address?.isNotEmpty == true) ? bill.customer!.address! : '-'),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 1),
-                  Text(
-                    '$tagline  •  $address',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 8.5, color: _muted, fontWeight: FontWeight.w500),
+                  const SizedBox(width: 12),
+                  Container(width: 0.6, height: 48, color: _line),
+                  const SizedBox(width: 12),
+                  // Right Column: Bill Info (NO TIME!)
+                  Expanded(
+                    flex: 45,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _infoField('Bill No.', bill.billNumber, isBold: true, valueColor: _red),
+                        const SizedBox(height: 4),
+                        _infoField('Date', AppUtils.formatDate(billDate), isBold: true),
+                        const SizedBox(height: 4),
+                        _infoField('Payment', paymentText),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          _thinLine(thickness: 0.5),
-
-          // ── Compact Customer Info Bar ──
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 4,
-                      child: Row(
-                        children: [
-                          const Text('Customer: ', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700)),
-                          Expanded(
-                            child: Text(
-                              bill.customer?.name ?? '-',
-                              style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      flex: 3,
-                      child: Text('Mob: ${bill.customer?.mobile ?? "-"}', style: const TextStyle(fontSize: 9.5)),
-                    ),
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        'Date: ${AppUtils.formatDate(billDate)}  ${DateFormat("hh:mm a").format(billDate)}',
-                        textAlign: TextAlign.right,
-                        style: const TextStyle(fontSize: 9.5),
-                      ),
-                    ),
-                  ],
-                ),
-                if (bill.customer?.address?.isNotEmpty == true || (bill.paymentType != null && bill.paymentType!.isNotEmpty))
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Row(
-                      children: [
-                        if (bill.customer?.address?.isNotEmpty == true)
-                          Expanded(
-                            child: Text(
-                              'Address: ${bill.customer!.address!}',
-                              style: const TextStyle(fontSize: 8.5, color: _muted),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        if (bill.paymentType != null && bill.paymentType!.isNotEmpty)
-                          Text('Payment: ${bill.paymentType!}', style: const TextStyle(fontSize: 8.5, color: _muted)),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          _thinLine(thickness: 0.5),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
 
           // ── Statement-Style Products Table (No vertical borders, compact) ──
           Padding(
@@ -532,7 +556,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                       ? '${item.productName} (${item.productNameHindi})'
                       : item.productName;
 
-                  final qtyStr = item.quantity.toStringAsFixed(item.quantity == item.quantity.roundToDouble() ? 0 : 1);
+                  final qtyStr = AppUtils.formatQuantity(item.quantity);
                   final amt = item.quantity * item.appliedRate;
                   final isAlt = idx.isOdd;
 
@@ -600,25 +624,45 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                       _amountRow('Subtotal', bill.subtotal),
                       if (bill.deliveryCharge > 0)
                         _amountRow('Delivery Charge', bill.deliveryCharge),
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        decoration: const BoxDecoration(
-                          border: Border(
-                            top: BorderSide(color: _line, width: 0.6),
-                            bottom: BorderSide(color: _line, width: 0.6),
+                      if (totalAdjusted > 0) ...[
+                        _amountRow('Grand Total', grandTotal),
+                        _amountRow('Adjustment', -totalAdjusted, isAdjustment: true),
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              top: BorderSide(color: _line, width: 0.6),
+                              bottom: BorderSide(color: _line, width: 0.6),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Final Amount', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.primaryRed)),
+                              Text('₹ ${adjustedTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.primaryRed)),
+                            ],
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Grand Total', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
-                            Text('₹ ${grandTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
-                          ],
+                      ] else
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              top: BorderSide(color: _line, width: 0.6),
+                              bottom: BorderSide(color: _line, width: 0.6),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Grand Total', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                              Text(AppUtils.formatCurrency(grandTotal), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
                         ),
-                      ),
                       if (bill.paidNow > 0) _amountRow('Paid', bill.paidNow),
-                      if (bill.paidNow > 0 && grandTotal - bill.paidNow > 0)
-                        _amountRow('Balance Due', grandTotal - bill.paidNow, isBold: true),
+                      if (bill.paidNow > 0 && (totalAdjusted > 0 ? (adjustedTotal - bill.paidNow > 0) : (grandTotal - bill.paidNow > 0)))
+                        _amountRow('Balance Due', (totalAdjusted > 0 ? adjustedTotal : grandTotal) - bill.paidNow, isBold: true),
                     ],
                   ),
                 ),
@@ -643,7 +687,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
             color: isAdjustment ? Colors.orange.shade800 : AppTheme.textPrimary,
           )),
           Text(
-            '₹ ${value.abs().toStringAsFixed(0)}',
+            AppUtils.formatCurrency(value.abs()),
             style: TextStyle(
               fontSize: isBold ? 11 : 9.5,
               fontWeight: isBold ? FontWeight.w700 : FontWeight.w400,

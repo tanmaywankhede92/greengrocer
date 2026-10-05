@@ -37,9 +37,10 @@ const createBill = async ({ customerId, billDate, items, deliveryCharge, notes, 
 
   let subtotal = 0;
   items.forEach((item) => {
-    subtotal += item.quantity * item.appliedRate;
+    subtotal += Math.round(item.quantity * item.appliedRate * 100) / 100;
   });
-  const total = subtotal + (deliveryCharge || 0);
+  subtotal = Math.round(subtotal * 100) / 100;
+  const total = Math.round((subtotal + (deliveryCharge || 0)) * 100) / 100;
 
   const settings = await settingsRepository.findSettings();
   const billPrefix = settings?.billPrefix || '';
@@ -73,7 +74,7 @@ const createBill = async ({ customerId, billDate, items, deliveryCharge, notes, 
         quantity: item.quantity,
         defaultRate: item.defaultRate || 0,
         appliedRate: item.appliedRate,
-        amount: item.quantity * item.appliedRate,
+        amount: Math.round(item.quantity * item.appliedRate * 100) / 100,
       }));
 
       await BillItem.create(billItemsData);
@@ -455,9 +456,10 @@ const updateBill = async (billId, { customerId, billDate, items, deliveryCharge,
 
   let subtotal = 0;
   items.forEach((item) => {
-    subtotal += item.quantity * item.appliedRate;
+    subtotal += Math.round(item.quantity * item.appliedRate * 100) / 100;
   });
-  const total = subtotal + (deliveryCharge || 0);
+  subtotal = Math.round(subtotal * 100) / 100;
+  const total = Math.round((subtotal + (deliveryCharge || 0)) * 100) / 100;
 
   const prevCustomerId = bill.customerId;
 
@@ -484,7 +486,7 @@ const updateBill = async (billId, { customerId, billDate, items, deliveryCharge,
     quantity: item.quantity,
     defaultRate: item.defaultRate || 0,
     appliedRate: item.appliedRate,
-    amount: item.quantity * item.appliedRate,
+    amount: Math.round(item.quantity * item.appliedRate * 100) / 100,
   }));
   await BillItem.create(billItemsData);
 

@@ -4,16 +4,41 @@ import 'package:intl/intl.dart';
 class AppUtils {
   AppUtils._();
 
-  static final currencyFormat = NumberFormat.currency(
+  static final _currencyIntegerFormat = NumberFormat.currency(
     symbol: '\u20B9',
     decimalDigits: 0,
   );
 
+  static final _currencyDecimalFormat = NumberFormat.currency(
+    symbol: '\u20B9',
+    decimalDigits: 2,
+  );
+
+  static String formatCurrency(double amount) {
+    if (amount == amount.roundToDouble()) {
+      return _currencyIntegerFormat.format(amount);
+    }
+    return _currencyDecimalFormat.format(amount);
+  }
+
+  static String formatQuantity(double qty) {
+    if (qty == qty.roundToDouble()) {
+      return qty.toStringAsFixed(0);
+    }
+    final str = qty.toStringAsFixed(3);
+    return str.replaceAll(RegExp(r'\.?0+$'), '');
+  }
+
+  static String formatRate(double rate) {
+    if (rate == rate.roundToDouble()) {
+      return rate.toStringAsFixed(0);
+    }
+    return rate.toStringAsFixed(2);
+  }
+
   static final dateFormat = DateFormat('dd MMM yyyy');
   static final dateFormatApi = DateFormat('yyyy-MM-dd');
   static final dateTimeFormat = DateFormat('dd MMM yyyy, hh:mm a');
-
-  static String formatCurrency(double amount) => currencyFormat.format(amount);
 
   static String formatDate(DateTime date) => dateFormat.format(date);
 

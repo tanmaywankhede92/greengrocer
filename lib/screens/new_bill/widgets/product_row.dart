@@ -26,10 +26,7 @@ class ProductRow extends StatelessWidget {
     return item.productName;
   }
 
-  String get _formattedQty {
-    final qty = item.quantity;
-    return qty == qty.roundToDouble() ? qty.toStringAsFixed(0) : qty.toStringAsFixed(1);
-  }
+  String get _formattedQty => AppUtils.formatQuantity(item.quantity);
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +70,7 @@ class ProductRow extends StatelessWidget {
             ),
           ),
           SizedBox(width: 60, child: Text(_formattedQty, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13), textAlign: TextAlign.center)),
-          SizedBox(width: 70, child: Text(item.appliedRate.toStringAsFixed(0), style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13), textAlign: TextAlign.center)),
+          SizedBox(width: 70, child: Text(AppUtils.formatRate(item.appliedRate), style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13), textAlign: TextAlign.center)),
           SizedBox(width: 90, child: Text(AppUtils.formatCurrency(item.amount), style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 14), textAlign: TextAlign.right)),
           SizedBox(
             width: 72,
@@ -141,7 +138,7 @@ class ProductRow extends StatelessWidget {
                 const SizedBox(width: 6),
                 _infoChip('Qty', _formattedQty),
                 const SizedBox(width: 6),
-                _infoChip('Rate', '\u20B9${item.appliedRate.toStringAsFixed(0)}'),
+                _infoChip('Rate', '\u20B9${AppUtils.formatRate(item.appliedRate)}'),
                 const Spacer(),
                 GestureDetector(
                   onTap: onEdit,

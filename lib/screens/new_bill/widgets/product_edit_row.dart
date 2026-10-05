@@ -31,6 +31,37 @@ class ProductEditRow extends StatefulWidget {
 }
 
 class _ProductEditRowState extends State<ProductEditRow> {
+  @override
+  void initState() {
+    super.initState();
+    widget.qtyCtrl.addListener(_onInputChanged);
+    widget.rateCtrl.addListener(_onInputChanged);
+  }
+
+  @override
+  void didUpdateWidget(ProductEditRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.qtyCtrl != widget.qtyCtrl) {
+      oldWidget.qtyCtrl.removeListener(_onInputChanged);
+      widget.qtyCtrl.addListener(_onInputChanged);
+    }
+    if (oldWidget.rateCtrl != widget.rateCtrl) {
+      oldWidget.rateCtrl.removeListener(_onInputChanged);
+      widget.rateCtrl.addListener(_onInputChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.qtyCtrl.removeListener(_onInputChanged);
+    widget.rateCtrl.removeListener(_onInputChanged);
+    super.dispose();
+  }
+
+  void _onInputChanged() {
+    if (mounted) setState(() {});
+  }
+
   String get _displayName {
     if (widget.item.productNameHindi.isNotEmpty) {
       return '${widget.item.productName} (${widget.item.productNameHindi})';
@@ -38,7 +69,9 @@ class _ProductEditRowState extends State<ProductEditRow> {
     return widget.item.productName;
   }
 
-  double get _amount => widget.item.quantity * widget.item.appliedRate;
+  double get _currentQty => double.tryParse(widget.qtyCtrl.text.trim()) ?? 0;
+  double get _currentRate => double.tryParse(widget.rateCtrl.text.trim()) ?? 0;
+  double get _amount => _currentQty * _currentRate;
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +120,7 @@ class _ProductEditRowState extends State<ProductEditRow> {
               ),
               const SizedBox(width: 8),
               SizedBox(
-                width: 70,
+                width: 85,
                 child: TextField(
                   controller: widget.qtyCtrl,
                   focusNode: widget.qtyFocusNode,
@@ -106,7 +139,7 @@ class _ProductEditRowState extends State<ProductEditRow> {
               ),
               const SizedBox(width: 8),
               SizedBox(
-                width: 85,
+                width: 90,
                 child: TextField(
                   controller: widget.rateCtrl,
                   focusNode: widget.rateFocusNode,
@@ -126,7 +159,7 @@ class _ProductEditRowState extends State<ProductEditRow> {
               ),
               const SizedBox(width: 8),
               SizedBox(
-                width: 80,
+                width: 90,
                 child: Text(
                   AppUtils.formatCurrency(_amount),
                   style: const TextStyle(

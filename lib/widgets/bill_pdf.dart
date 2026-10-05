@@ -82,10 +82,11 @@ Future<Uint8List> buildBillPdf({
   final businessName = settings.businessName.isNotEmpty ? settings.businessName : 'RATHOD ENTERPRISES';
   final tagline = settings.tagline ?? 'Vegetable, Fruits Supplier & Commission Agent';
   final dateStr = DateFormat('dd MMM yyyy').format(billDate);
-  final timeStr = DateFormat('hh:mm a').format(billDate);
   final grandTotal = total > 0 ? total : subtotal;
 
-  String money(double v) => '₹ ${v.toStringAsFixed(0)}';
+  String money(double v) => v == v.roundToDouble()
+      ? '₹ ${v.toStringAsFixed(0)}'
+      : '₹ ${v.toStringAsFixed(2)}';
 
   pw.Widget thinLine({double thickness = 0.5}) {
     return pw.Container(height: thickness, color: lineC);
@@ -104,116 +105,138 @@ Future<Uint8List> buildBillPdf({
     );
   }
 
-  pw.Widget buildTopBar(String copyLabel) {
+  pw.Widget buildHeader(String copyLabel) {
+    final address = (settings.address != null && settings.address!.isNotEmpty)
+        ? settings.address!
+        : 'Shop No.95 Kanji House, Mahatma Phule Market, Cotton Market, Nagpur – 440018';
     final phone = (settings.phone != null && settings.phone!.isNotEmpty)
         ? settings.phone!
-        : '8087344819, 9529031540';
+        : 'Nitesh : 8087344819   |   Vicky : 9529031540   |   7030914867';
 
-    return pw.Container(
+    return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
-          pw.Text(
-            'Bill No: ${billNumber ?? 'N/A'}',
-            style: pw.TextStyle(font: fontB, fontSize: 9, color: textPrimary),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.SizedBox(width: 80), // balance spacer
+              pw.Text(
+                businessName,
+                style: pw.TextStyle(font: fontB, fontSize: 16, color: red, letterSpacing: 1.0),
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: const pw.BoxDecoration(
+                  color: PdfColors.grey200,
+                  borderRadius: pw.BorderRadius.all(pw.Radius.circular(3)),
+                ),
+                child: pw.Text(
+                  copyLabel,
+                  style: pw.TextStyle(font: fontB, fontSize: 7, color: textPrimary),
+                ),
+              ),
+            ],
           ),
-          pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-            decoration: const pw.BoxDecoration(
-              color: PdfColors.grey200,
-              borderRadius: pw.BorderRadius.all(pw.Radius.circular(3)),
-            ),
-            child: pw.Text(
-              copyLabel,
-              style: pw.TextStyle(font: fontB, fontSize: 7.5, color: textPrimary),
-            ),
-          ),
+          pw.SizedBox(height: 2),
           pw.Text(
-            'Mob: $phone',
-            style: pw.TextStyle(font: fontB, fontSize: 9, color: textPrimary),
+            tagline,
+            style: pw.TextStyle(font: fontB, fontSize: 8.5, color: muted),
+          ),
+          pw.SizedBox(height: 2),
+          pw.Text(
+            address,
+            textAlign: pw.TextAlign.center,
+            style: pw.TextStyle(font: font, fontSize: 7.5, color: muted),
+          ),
+          pw.SizedBox(height: 3),
+          pw.Text(
+            phone,
+            style: pw.TextStyle(font: fontB, fontSize: 8, color: textPrimary),
           ),
         ],
       ),
     );
   }
 
-  pw.Widget buildBrandingHeader() {
-    final address = (settings.address != null && settings.address!.isNotEmpty)
-        ? settings.address!
-        : 'Shop No.95 Kanji House, Phule Market, Cotton Market, Nagpur';
+  pw.Widget buildInfoCard() {
+    final formattedPayment = (paymentMode != null && paymentMode.isNotEmpty)
+        ? (paymentMode.toLowerCase() == 'upi'
+            ? 'UPI'
+            : paymentMode[0].toUpperCase() + paymentMode.substring(1).toLowerCase())
+        : 'Credit';
 
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 2.5),
-      child: pw.Center(
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.center,
+    pw.Widget infoRow(String label, String value, {bool isBold = false, PdfColor? valueColor}) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
+        child: pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text(
-              businessName,
-              style: pw.TextStyle(font: fontB, fontSize: 14, color: red, letterSpacing: 0.8),
+            pw.SizedBox(
+              width: 52,
+              child: pw.Text(
+                label,
+                style: pw.TextStyle(font: fontB, fontSize: 8, color: muted),
+              ),
             ),
-            pw.SizedBox(height: 1.5),
-            pw.Text(
-              '$tagline  •  $address',
-              style: pw.TextStyle(font: font, fontSize: 7.5, color: muted),
+            pw.Text(': ', style: pw.TextStyle(font: fontB, fontSize: 8, color: muted)),
+            pw.Expanded(
+              child: pw.Text(
+                value,
+                style: pw.TextStyle(
+                  font: isBold ? fontB : font,
+                  fontSize: 8,
+                  color: valueColor ?? textPrimary,
+                ),
+                maxLines: 2,
+                overflow: pw.TextOverflow.clip,
+              ),
             ),
           ],
         ),
-      ),
-    );
-  }
+      );
+    }
 
-  pw.Widget buildCustomerBar() {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-      child: pw.Column(
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: pw.BoxDecoration(
+        color: const PdfColor(0.985, 0.985, 0.99),
+        border: pw.Border.all(color: lineC, width: 0.6),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+      ),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Row(
-            children: [
-              pw.Expanded(
-                flex: 4,
-                child: pw.Row(
-                  children: [
-                    pw.Text('Customer: ', style: pw.TextStyle(font: fontB, fontSize: 8.5, color: textPrimary)),
-                    pw.Expanded(
-                      child: pw.Text(
-                        customerName,
-                        style: pw.TextStyle(font: fontB, fontSize: 8.5, color: textPrimary),
-                        maxLines: 1,
-                        overflow: pw.TextOverflow.clip,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              pw.Expanded(
-                flex: 3,
-                child: pw.Text('Mob: $customerMobile', style: pw.TextStyle(font: font, fontSize: 8.5, color: textPrimary)),
-              ),
-              pw.Expanded(
-                flex: 3,
-                child: pw.Text(
-                  'Date: $dateStr  $timeStr',
-                  textAlign: pw.TextAlign.right,
-                  style: pw.TextStyle(font: font, fontSize: 8.5, color: textPrimary),
-                ),
-              ),
-            ],
-          ),
-          if (customerAddress != null && customerAddress.isNotEmpty)
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(top: 2),
-              child: pw.Row(
-                children: [
-                  pw.Expanded(
-                    child: pw.Text('Address: $customerAddress', style: pw.TextStyle(font: font, fontSize: 7.5, color: muted)),
-                  ),
-                  if (paymentMode != null && paymentMode.isNotEmpty)
-                    pw.Text('Payment: $paymentMode', style: pw.TextStyle(font: font, fontSize: 7.5, color: muted)),
-                ],
-              ),
+          // Left Column (Customer Details)
+          pw.Expanded(
+            flex: 55,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                infoRow('Customer', customerName, isBold: true),
+                infoRow('Mobile', customerMobile.isNotEmpty ? customerMobile : '-'),
+                infoRow('Address', (customerAddress != null && customerAddress.isNotEmpty) ? customerAddress : '-'),
+              ],
             ),
+          ),
+          pw.SizedBox(width: 12),
+          // Vertical divider between columns
+          pw.Container(width: 0.6, height: 42, color: lineC),
+          pw.SizedBox(width: 12),
+          // Right Column (Bill Details) - NO TIME!
+          pw.Expanded(
+            flex: 45,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                infoRow('Bill No.', billNumber ?? 'N/A', isBold: true, valueColor: red),
+                infoRow('Date', dateStr, isBold: true),
+                infoRow('Payment', formattedPayment),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -269,7 +292,7 @@ Future<Uint8List> buildBillPdf({
       final displayQty = item.adjustedQuantity ?? item.quantity;
       final qtyStr = displayQty == displayQty.roundToDouble()
           ? displayQty.toStringAsFixed(0)
-          : displayQty.toStringAsFixed(1);
+          : displayQty.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '');
 
       final bgColor = isAdjusted
           ? const PdfColor(1.0, 0.96, 0.90)
@@ -442,13 +465,11 @@ Future<Uint8List> buildBillPdf({
   List<pw.Widget> buildCopy(String copyLabel) {
     return <pw.Widget>[
       pw.Container(height: 2.5, color: red),
-      buildTopBar(copyLabel),
-      thinLine(thickness: 0.5),
-      buildBrandingHeader(),
-      thinLine(thickness: 0.5),
-      buildCustomerBar(),
-      thinLine(thickness: 0.5),
       pw.SizedBox(height: 3),
+      buildHeader(copyLabel),
+      pw.SizedBox(height: 4),
+      buildInfoCard(),
+      pw.SizedBox(height: 6),
       buildTableHeader(),
       ...buildTableRows(),
       thinLine(thickness: 0.5),

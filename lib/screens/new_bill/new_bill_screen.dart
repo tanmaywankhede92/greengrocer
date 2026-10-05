@@ -269,7 +269,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
 
     _removeDropdown();
     _qtyCtrl.text = '1';
-    _rateCtrl.text = defaultRate > 0 ? defaultRate.toStringAsFixed(0) : '';
+    _rateCtrl.text = defaultRate > 0 ? AppUtils.formatRate(defaultRate) : '';
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _qtyFocusNode.requestFocus();
@@ -321,11 +321,30 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
       nameHindi: item.productNameHindi,
       unit: ProductUnit.fromString(item.unit),
     );
-    final savedUnit = item.unit;
-    _selectProduct(product);
     setState(() {
       _items.removeAt(index);
-      _editingItem!.unit = savedUnit;
+      _editingProduct = product;
+      _editingItem = LineItem(
+        productId: item.productId,
+        productName: item.productName,
+        productNameHindi: item.productNameHindi,
+        unit: item.unit,
+        quantity: item.quantity,
+        defaultRate: item.defaultRate,
+        appliedRate: item.appliedRate,
+      );
+      _searchResults = [];
+      _searchCtrl.clear();
+    });
+    _removeDropdown();
+    _qtyCtrl.text = AppUtils.formatQuantity(item.quantity);
+    _rateCtrl.text = AppUtils.formatRate(item.appliedRate);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _qtyFocusNode.requestFocus();
+        _qtyCtrl.selection =
+            TextSelection(baseOffset: 0, extentOffset: _qtyCtrl.text.length);
+      }
     });
   }
 
