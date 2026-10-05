@@ -98,14 +98,14 @@ Future<Uint8List> buildPaymentInvoicePdf({
     );
   }
 
-  pw.Widget amountRow(String label, double value, {bool highlight = false}) {
+  pw.Widget amountRow(String label, double value, {bool highlight = false, PdfColor? valueColor, bool isBold = false}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 5),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Text(label, style: pw.TextStyle(font: highlight ? fontB : font, fontSize: highlight ? 12 : 10.5, color: textPrimary)),
-          pw.Text(money(value), style: pw.TextStyle(font: highlight ? fontB : font, fontSize: highlight ? 13 : 10.5, color: highlight ? green : textPrimary)),
+          pw.Text(label, style: pw.TextStyle(font: (highlight || isBold) ? fontB : font, fontSize: highlight ? 12 : 10.5, color: textPrimary)),
+          pw.Text(money(value), style: pw.TextStyle(font: (highlight || isBold) ? fontB : font, fontSize: highlight ? 13 : 10.5, color: valueColor ?? (highlight ? green : textPrimary))),
         ],
       ),
     );
@@ -257,7 +257,12 @@ Future<Uint8List> buildPaymentInvoicePdf({
                         thinLine(thickness: 0.3),
                         amountRow('Previous Outstanding', previousOutstanding),
                         thinLine(thickness: 0.3),
-                        amountRow('Remaining Outstanding', remainingOutstanding),
+                        amountRow(
+                          'Outstanding Balance',
+                          remainingOutstanding,
+                          highlight: true,
+                          valueColor: remainingOutstanding > 0 ? red : green,
+                        ),
                       ],
                     ),
                   ),

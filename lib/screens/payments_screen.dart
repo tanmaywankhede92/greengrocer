@@ -256,7 +256,9 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
       final pdf = await _buildInvoicePdf(customer, payment: payment);
       if (pdf == null) return;
       if (mounted) {
-        await printPdf(pdf, filename: 'Invoice-${_lastReceiptNumber}');
+        await printPdf(pdf, filename: 'Invoice-$_lastReceiptNumber');
+      }
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Invoice downloaded'), backgroundColor: AppTheme.success),
         );
@@ -287,7 +289,9 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
         balance: _lastRemainingOutstanding,
       );
       if (mounted) {
-        await sharePdf(pdf, filename: 'Invoice-${_lastReceiptNumber}', message: message);
+        await sharePdf(pdf, filename: 'Invoice-$_lastReceiptNumber', message: message);
+      }
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Invoice ready to share'), backgroundColor: AppTheme.success),
         );
@@ -322,9 +326,14 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
       pay = result.data.first;
     }
 
+    Customer cust = customer;
+    try {
+      cust = await ref.read(customerServiceProvider).getById(customer.id);
+    } catch (_) {}
+
     final settings = await ref.read(settingsProvider.future);
-    final previousOutstanding = customer.currentDue + pay.amount;
-    final remainingOutstanding = customer.currentDue;
+    final remainingOutstanding = cust.currentDue;
+    final previousOutstanding = remainingOutstanding + pay.amount;
     _lastInvoiceAmount = pay.amount;
     _lastRemainingOutstanding = remainingOutstanding;
     final prefix = settings.invoicePrefix.trim().isNotEmpty ? settings.invoicePrefix.trim() : 'INV';
@@ -340,7 +349,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     return buildPaymentInvoicePdf(
       settings: settings,
       receiptNumber: pay.receiptNumber,
-      customer: pay.customer ?? customer,
+      customer: cust,
       amount: pay.amount,
       paymentMode: pay.mode.displayName,
       previousOutstanding: previousOutstanding,

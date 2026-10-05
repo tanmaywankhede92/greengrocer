@@ -88,14 +88,19 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
 
   Future<void> _showInvoice(String customerId, {required double paidNow, required String paymentMode, required String receiptNumber}) async {
     try {
+      Customer customer = _selectedCustomer!;
+      try {
+        customer = await ref.read(customerServiceProvider).getById(customerId);
+      } catch (_) {}
+
       final settings = await ref.read(settingsProvider.future);
-      final previousOutstanding = _selectedCustomer!.currentDue + paidNow;
-      final remainingOutstanding = _selectedCustomer!.currentDue;
+      final remainingOutstanding = customer.currentDue;
+      final previousOutstanding = remainingOutstanding + paidNow;
       final now = DateTime.now();
       final pdf = await buildPaymentInvoicePdf(
         settings: settings,
         receiptNumber: receiptNumber,
-        customer: _selectedCustomer!,
+        customer: customer,
         amount: paidNow,
         paymentMode: paymentMode,
         previousOutstanding: previousOutstanding,

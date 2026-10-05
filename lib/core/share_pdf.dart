@@ -30,13 +30,17 @@ String buildShareMessage({
   required double amount,
   required double balance,
 }) {
-  final name = businessName.trim().isEmpty ? 'NARAYAN FOODS' : businessName.trim();
+  final name = businessName.trim().isEmpty ? 'RATHOD ENTERPRISES' : businessName.trim();
+  final isPayment = docLabel.toLowerCase().contains('payment');
+  final amountLine = isPayment
+      ? 'Amount Received: ₹ ${amount.toStringAsFixed(2)}'
+      : 'Invoice Amount: ₹ ${amount.toStringAsFixed(2)}';
   return 'Greetings from $name\n'
       'We are pleased to have you as a valuable customer. '
       'Please find the details of your transaction.\n\n'
       '$docLabel :\n'
-      'Invoice Amount: ${amount.toStringAsFixed(2)}\n'
-      'Balance: ${balance.toStringAsFixed(2)}\n\n'
+      '$amountLine\n'
+      'Outstanding Balance: ₹ ${balance.toStringAsFixed(2)}\n\n'
       'Thanks for doing business with us.\n'
       'Regards,\n'
       '$name';

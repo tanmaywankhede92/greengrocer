@@ -180,14 +180,19 @@ class _AddPaymentDialogState extends ConsumerState<AddPaymentDialog> {
 
   Future<void> _showInvoice(Customer customer, {required double paidNow, required String paymentMode, required String receiptNumber}) async {
     try {
+      Customer cust = customer;
+      try {
+        cust = await ref.read(customerServiceProvider).getById(customer.id);
+      } catch (_) {}
+
       final settings = await ref.read(settingsProvider.future);
-      final previousOutstanding = customer.currentDue + paidNow;
-      final remainingOutstanding = customer.currentDue;
+      final remainingOutstanding = cust.currentDue;
+      final previousOutstanding = remainingOutstanding + paidNow;
       final now = DateTime.now();
       final pdf = await buildPaymentInvoicePdf(
         settings: settings,
         receiptNumber: receiptNumber,
-        customer: customer,
+        customer: cust,
         amount: paidNow,
         paymentMode: paymentMode,
         previousOutstanding: previousOutstanding,

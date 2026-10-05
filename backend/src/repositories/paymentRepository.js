@@ -1,4 +1,6 @@
+const mongoose = require('mongoose');
 const Payment = require('../models/Payment');
+const LedgerEntry = require('../models/LedgerEntry');
 
 const DAY_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -40,7 +42,7 @@ const findPayments = async (customerId = null, filters = {}) => {
 
   const [payments, total] = await Promise.all([
     Payment.find(query)
-      .populate('customerId', 'name mobile')
+      .populate('customerId', 'name mobile address openingBalance')
       .sort(sort)
       .skip(skip)
       .limit(limit)
@@ -48,17 +50,56 @@ const findPayments = async (customerId = null, filters = {}) => {
     Payment.countDocuments(query),
   ]);
 
-  const mapped = payments.map((p) => ({
-    ...p,
-    id: p._id,
-    customer: p.customerId || null,
-  }));
+  const customerIds = [...new Set(payments.map((p) => p.customerId?._id?.toString()).filter(Boolean))];
+  const balances = await LedgerEntry.aggregate([
+    { $match: { customerId: { $in: customerIds.map((id) => new mongoose.Types.ObjectId(id)) } } },
+    { $group: { _id: '$customerId', balance: { $sum: { $subtract: ['$debit', '$credit'] } } } },
+  ]);
+  const balanceMap = Object.fromEntries(balances.map((b) => [b._id.toString(), b.balance]));
+
+  const mapped = payments.map((p) => {
+    let customer = null;
+    if (p.customerId && typeof p.customerId === 'object') {
+      const cId = p.customerId._id.toString();
+      const currentDue = (p.customerId.openingBalance || 0) + (balanceMap[cId] || 0);
+      customer = {
+        ...p.customerId,
+        id: p.customerId._id,
+        currentDue,
+      };
+    }
+    return {
+      ...p,
+      id: p._id,
+      customer,
+    };
+  });
 
   return { payments: mapped, total };
 };
 
 const findById = async (id) => {
-  return Payment.findById(id).populate('customerId', 'name mobile').lean();
+  const payment = await Payment.findById(id).populate('customerId', 'name mobile address openingBalance').lean();
+  if (!payment) return null;
+  let customer = null;
+  if (payment.customerId && typeof payment.customerId === 'object') {
+    const cId = payment.customerId._id;
+    const balance = await LedgerEntry.aggregate([
+      { $match: { customerId: new mongoose.Types.ObjectId(cId) } },
+      { $group: { _id: '$customerId', balance: { $sum: { $subtract: ['$debit', '$credit'] } } } },
+    ]);
+    const ledgerBal = balance.length > 0 ? balance[0].balance : 0;
+    customer = {
+      ...payment.customerId,
+      id: payment.customerId._id,
+      currentDue: (payment.customerId.openingBalance || 0) + ledgerBal,
+    };
+  }
+  return {
+    ...payment,
+    id: payment._id,
+    customer,
+  };
 };
 
 const createPayment = async (data) => {
