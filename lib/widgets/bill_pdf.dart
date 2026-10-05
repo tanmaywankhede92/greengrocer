@@ -156,6 +156,11 @@ Future<Uint8List> buildBillPdf({
             phone,
             style: pw.TextStyle(font: fontB, fontSize: 8, color: textPrimary),
           ),
+          pw.SizedBox(height: 2),
+          pw.Text(
+            'FSSAI No. : 21522056000645',
+            style: pw.TextStyle(font: fontB, fontSize: 8, color: textPrimary),
+          ),
         ],
       ),
     );
@@ -450,7 +455,7 @@ Future<Uint8List> buildBillPdf({
         crossAxisAlignment: pw.CrossAxisAlignment.end,
         children: [
           pw.Padding(
-            padding: const pw.EdgeInsets.only(left: 30, bottom: 2),
+            padding: const pw.EdgeInsets.only(left: 110, bottom: 2),
             child: stampBytes != null
                 ? buildStampPdf(stampBytes, width: 105)
                 : pw.SizedBox(),

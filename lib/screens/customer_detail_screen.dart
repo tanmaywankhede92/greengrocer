@@ -28,9 +28,10 @@ class CustomerDetailScreen extends ConsumerWidget {
             leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/customers')),
             title: Text(customer.name),
             actions: [
-              TextButton(
+              TextButton.icon(
+                icon: const Icon(Icons.description_outlined, size: 18),
                 onPressed: () => context.go('/customers/$id/statement'),
-                child: const Text('Statement'),
+                label: const Text('View Statement'),
               ),
               IconButton(
                 icon: const Icon(Icons.payment),

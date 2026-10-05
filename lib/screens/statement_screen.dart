@@ -15,6 +15,7 @@ import '../widgets/breadcrumb.dart';
 import '../services/api_client.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/statement_pdf.dart';
+import '../widgets/statement_preview_dialog.dart';
 
 class StatementScreen extends ConsumerStatefulWidget {
   final String customerId;
@@ -47,7 +48,20 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
         title: const Text('Statement'),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: 6),
+            child: TextButton.icon(
+              icon: _isDownloading
+                  ? const SizedBox(
+                      width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.visibility_outlined, size: 18),
+              label: Text(_isDownloading ? 'Generating...' : 'View Statement'),
+              onPressed: _isDownloading ? null : () => _viewStatement(customerAsync.value),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
             child: TextButton.icon(
               icon: _isDownloading
                   ? const SizedBox(
@@ -141,6 +155,23 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                           );
                         },
                       ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          icon: _isDownloading
+                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.visibility_outlined, size: 18),
+                          label: Text(_isDownloading ? 'Generating Statement...' : 'View Statement (Print Preview)'),
+                          onPressed: _isDownloading ? null : () => _viewStatement(customerAsync.value),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: AppTheme.primaryRed, width: 1.2),
+                            foregroundColor: AppTheme.primaryRed,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -180,6 +211,31 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _viewStatement(dynamic customer) async {
+    setState(() => _isDownloading = true);
+    try {
+      final result = await _buildStatementPdf(customer);
+      if (result == null) return;
+      if (mounted) {
+        setState(() => _isDownloading = false);
+        await StatementPdfPreviewDialog.show(
+          context,
+          pdfBytes: result.$1,
+          title: 'Statement - ${customer?.name ?? ''}',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isDownloading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
+        );
+      }
+    } finally {
+      if (mounted && _isDownloading) setState(() => _isDownloading = false);
+    }
   }
 
   Future<void> _downloadStatement(dynamic customer) async {
@@ -242,8 +298,10 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
     final totalCredit = ((data['totalCredit'] ?? 0) as num).toDouble();
 
     final castRows = rows.map((r) => Map<String, dynamic>.from(r as Map)).toList();
+    final settings = await ref.read(settingsProvider.future);
 
     final pdf = await buildStatementPdf(
+      settings: settings,
       customerName: customer.name,
       customerMobile: customer.mobile,
       customerAddress: customer.address,

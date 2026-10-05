@@ -472,6 +472,11 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                   phone,
                   style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
                 ),
+                const SizedBox(height: 3),
+                const Text(
+                  'FSSAI No. : 21522056000645',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                ),
               ],
             ),
           ),

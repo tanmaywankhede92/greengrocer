@@ -12,6 +12,7 @@ import '../../../providers/statement_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../services/api_client.dart';
 import '../../../widgets/statement_pdf.dart';
+import '../../../widgets/statement_preview_dialog.dart';
 
 class StatementDownloadDialog extends ConsumerStatefulWidget {
   final Customer customer;
@@ -111,11 +112,27 @@ class _StatementDownloadDialogState extends ConsumerState<StatementDownloadDialo
                 child: FilledButton.icon(
                   icon: _loading
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.visibility_outlined, size: 18),
+                  label: Text(_loading ? 'Generating Statement...' : 'View Statement', style: const TextStyle(fontSize: 14)),
+                  onPressed: _loading ? null : () => _view(),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.primaryRed,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: OutlinedButton.icon(
+                  icon: _loading
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.download, size: 18),
                   label: Text(_loading ? 'Generating Statement...' : 'Download Statement', style: const TextStyle(fontSize: 14)),
                   onPressed: _loading ? null : () => _download(),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppTheme.info,
+                  style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
@@ -142,6 +159,27 @@ class _StatementDownloadDialogState extends ConsumerState<StatementDownloadDialo
         ),
       ),
     );
+  }
+
+  Future<void> _view() async {
+    setState(() => _loading = true);
+    try {
+      final result = await _buildStatementPdf();
+      if (result == null) return;
+      if (mounted) {
+        setState(() => _loading = false);
+        await StatementPdfPreviewDialog.show(
+          context,
+          pdfBytes: result.$1,
+          title: 'Statement - ${widget.customer.name}',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));
+      }
+    }
   }
 
   Future<void> _download() async {
@@ -187,7 +225,9 @@ class _StatementDownloadDialogState extends ConsumerState<StatementDownloadDialo
     final data = await service.getStatement(c.id,
       from: AppUtils.formatDateApi(_from), to: AppUtils.formatDateApi(_to));
     final closingBalance = ((data['closingBalance'] ?? 0) as num).toDouble();
+    final settings = await ref.read(settingsProvider.future);
     final pdf = await buildStatementPdf(
+      settings: settings,
       customerName: data['customer']['name'] ?? c.name,
       customerMobile: data['customer']['mobile'] ?? c.mobile,
       customerAddress: c.address,
