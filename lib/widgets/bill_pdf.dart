@@ -80,6 +80,12 @@ Future<Uint8List> buildBillPdf({
   final tagline = settings.tagline ?? 'Vegetable, Fruits Supplier & Commission Agent';
   final dateStr = DateFormat('dd MMM yyyy').format(billDate);
   final grandTotal = total > 0 ? total : subtotal;
+  final address = (settings.address != null && settings.address!.isNotEmpty)
+      ? settings.address!
+      : 'Shop No.95 Kanji House, Mahatma Phule Market, Cotton Market, Nagpur – 440018';
+  final phone = (settings.phone != null && settings.phone!.contains('9529031540'))
+      ? settings.phone!
+      : 'Nitesh : 8087344819   |   Vicky : 9529031540   |   7030914867';
 
   String money(double v) => v == v.roundToDouble()
       ? '₹ ${v.toStringAsFixed(0)}'
@@ -103,13 +109,6 @@ Future<Uint8List> buildBillPdf({
   }
 
   pw.Widget buildHeader(String copyLabel) {
-    final address = (settings.address != null && settings.address!.isNotEmpty)
-        ? settings.address!
-        : 'Shop No.95 Kanji House, Mahatma Phule Market, Cotton Market, Nagpur – 440018';
-    final phone = (settings.phone != null && settings.phone!.isNotEmpty && settings.phone != '8087344819')
-        ? settings.phone!
-        : 'Nitesh : 8087344819   |   Vicky : 9529031540   |   7030914867';
-
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
       child: pw.Column(
@@ -149,13 +148,22 @@ Future<Uint8List> buildBillPdf({
             style: pw.TextStyle(font: font, fontSize: 7.5, color: muted),
           ),
           pw.SizedBox(height: 3),
-          pw.Text(
-            phone,
-            style: pw.TextStyle(font: fontB, fontSize: 9, color: textPrimary),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+            decoration: const pw.BoxDecoration(
+              color: PdfColors.grey100,
+              borderRadius: pw.BorderRadius.all(pw.Radius.circular(3)),
+            ),
+            child: pw.Text(
+              phone,
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(font: fontB, fontSize: 10, color: textPrimary),
+            ),
           ),
           pw.SizedBox(height: 2),
           pw.Text(
             'FSSAI No. : 21522056000645',
+            textAlign: pw.TextAlign.center,
             style: pw.TextStyle(font: fontB, fontSize: 9, color: textPrimary),
           ),
         ],
@@ -485,6 +493,62 @@ Future<Uint8List> buildBillPdf({
     return pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      header: (context) {
+        if (context.pageNumber == 1) return pw.SizedBox();
+        return pw.Container(
+          margin: const pw.EdgeInsets.only(bottom: 6),
+          padding: const pw.EdgeInsets.only(bottom: 4),
+          decoration: const pw.BoxDecoration(
+            border: pw.Border(bottom: pw.BorderSide(color: lineC, width: 0.6)),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    businessName,
+                    style: pw.TextStyle(font: fontB, fontSize: 13, color: red),
+                  ),
+                  pw.Text(
+                    phone,
+                    style: pw.TextStyle(font: fontB, fontSize: 9.5, color: textPrimary),
+                  ),
+                  pw.Text(
+                    copyLabel,
+                    style: pw.TextStyle(font: fontB, fontSize: 8, color: muted),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 4),
+              buildTableHeader(),
+            ],
+          ),
+        );
+      },
+      footer: (context) {
+        return pw.Container(
+          margin: const pw.EdgeInsets.only(top: 6),
+          padding: const pw.EdgeInsets.only(top: 3),
+          decoration: const pw.BoxDecoration(
+            border: pw.Border(top: pw.BorderSide(color: lineC, width: 0.5)),
+          ),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                phone,
+                style: pw.TextStyle(font: fontB, fontSize: 8.5, color: textPrimary),
+              ),
+              pw.Text(
+                'Page ${context.pageNumber} of ${context.pagesCount}',
+                style: pw.TextStyle(font: font, fontSize: 8, color: muted),
+              ),
+            ],
+          ),
+        );
+      },
       build: (context) => buildCopy(copyLabel),
     );
   }

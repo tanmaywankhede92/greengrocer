@@ -303,7 +303,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
     final settings = ref.watch(settingsProvider).valueOrNull;
     final businessName = settings?.businessName.isNotEmpty == true ? settings!.businessName : 'RATHOD ENTERPRISES';
     final tagline = settings?.tagline ?? 'Vegetable, Fruits Supplier & Commission Agent';
-    final phone = (settings?.phone != null && settings!.phone!.isNotEmpty && settings.phone != '8087344819')
+    final phone = (settings?.phone != null && settings!.phone!.contains('9529031540'))
         ? settings.phone!
         : 'Nitesh : 8087344819   |   Vicky : 9529031540   |   7030914867';
     final address = (settings?.address != null && settings!.address!.isNotEmpty)
@@ -365,13 +365,22 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                   style: const TextStyle(fontSize: 9.5, color: _muted),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  phone,
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: Text(
+                    phone,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                  ),
                 ),
                 const SizedBox(height: 3),
                 const Text(
                   'FSSAI No. : 21522056000645',
+                  textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
                 ),
               ],
