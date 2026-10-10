@@ -68,7 +68,7 @@ Future<Uint8List> buildStatementPdf({
   final address = (settings != null && settings.address != null && settings.address!.isNotEmpty)
       ? settings.address!
       : 'Shop No.95 Kanji House, Mahatma Phule Market, Cotton Market, Nagpur – 440018';
-  final phone = (settings != null && settings.phone != null && settings.phone!.isNotEmpty)
+  final phone = (settings != null && settings.phone != null && settings.phone!.isNotEmpty && settings.phone != '8087344819')
       ? settings.phone!
       : 'Nitesh : 8087344819   |   Vicky : 9529031540   |   7030914867';
 

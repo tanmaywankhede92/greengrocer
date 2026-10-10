@@ -267,6 +267,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   }
 
   Widget _infoField(String label, String value, {bool isBold = false, Color? valueColor}) {
+    final cleanValue = value.replaceFirst(RegExp(r'^:\s*'), '');
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -280,7 +281,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
         const Text(':  ', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: _muted)),
         Expanded(
           child: Text(
-            value,
+            cleanValue,
             style: TextStyle(
               fontSize: 9.5,
               fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
@@ -302,7 +303,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
     final settings = ref.watch(settingsProvider).valueOrNull;
     final businessName = settings?.businessName.isNotEmpty == true ? settings!.businessName : 'RATHOD ENTERPRISES';
     final tagline = settings?.tagline ?? 'Vegetable, Fruits Supplier & Commission Agent';
-    final phone = (settings?.phone != null && settings!.phone!.isNotEmpty)
+    final phone = (settings?.phone != null && settings!.phone!.isNotEmpty && settings.phone != '8087344819')
         ? settings.phone!
         : 'Nitesh : 8087344819   |   Vicky : 9529031540   |   7030914867';
     final address = (settings?.address != null && settings!.address!.isNotEmpty)
@@ -440,12 +441,12 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                   decoration: const BoxDecoration(color: _darkHeader),
                   child: const Row(
                     children: [
-                      SizedBox(width: 24, child: Text('Sr.', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
-                      Expanded(flex: 30, child: Padding(padding: EdgeInsets.only(left: 6), child: Text('Product', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white)))),
-                      SizedBox(width: 44, child: Text('Unit', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
-                      SizedBox(width: 40, child: Text('Qty', textAlign: TextAlign.center, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
-                      SizedBox(width: 55, child: Text('Rate (₹)', textAlign: TextAlign.right, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
-                      SizedBox(width: 65, child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
+                      SizedBox(width: 26, child: Text('Sr.', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white))),
+                      Expanded(flex: 32, child: Padding(padding: EdgeInsets.only(left: 6), child: Text('Product', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)))),
+                      SizedBox(width: 42, child: Text('Unit', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white))),
+                      SizedBox(width: 44, child: Text('Qty', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white))),
+                      SizedBox(width: 56, child: Text('Rate (₹)', textAlign: TextAlign.right, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white))),
+                      SizedBox(width: 68, child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white))),
                     ],
                   ),
                 ),
@@ -459,35 +460,35 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                   final isAlt = idx.isOdd;
 
                   return Container(
-                    padding: const EdgeInsets.symmetric(vertical: 3.5, horizontal: 6),
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
                     color: isAlt ? const Color(0xFFF9FAFB) : Colors.white,
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        SizedBox(width: 24, child: Text('${idx + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 9))),
+                        SizedBox(width: 26, child: Text('${idx + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 10.5))),
                         Expanded(
-                          flex: 30,
+                          flex: 32,
                           child: Padding(
                             padding: const EdgeInsets.only(left: 6),
-                            child: Text(productName, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600)),
+                            child: Text(productName, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600)),
                           ),
                         ),
-                        SizedBox(width: 44, child: Text(item.unit, textAlign: TextAlign.center, style: const TextStyle(fontSize: 9))),
+                        SizedBox(width: 42, child: Text(item.unit, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10.5))),
                         SizedBox(
-                          width: 40,
+                          width: 44,
                           child: Text(
                             AppUtils.formatQuantity(item.quantity),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 9),
+                            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
                           ),
                         ),
                         SizedBox(
-                          width: 55,
-                          child: Text(item.appliedRate.toStringAsFixed(2), textAlign: TextAlign.right, style: const TextStyle(fontSize: 9)),
+                          width: 56,
+                          child: Text(item.appliedRate.toStringAsFixed(2), textAlign: TextAlign.right, style: const TextStyle(fontSize: 10.5)),
                         ),
                         SizedBox(
-                          width: 65,
-                          child: Text(item.amount.toStringAsFixed(2), textAlign: TextAlign.right, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
+                          width: 68,
+                          child: Text(item.amount.toStringAsFixed(2), textAlign: TextAlign.right, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700)),
                         ),
                       ],
                     ),
