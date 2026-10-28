@@ -55,6 +55,8 @@ const billSchema = new mongoose.Schema({
 
 
 billSchema.index({ customerId: 1, createdAt: -1 });
+billSchema.index({ customerId: 1, billDate: -1 });
+billSchema.index({ status: 1, billDate: -1 });
 billSchema.index({ billDate: 1 });
 billSchema.index({ status: 1 });
 billSchema.index({ customerId: 1, status: 1 });

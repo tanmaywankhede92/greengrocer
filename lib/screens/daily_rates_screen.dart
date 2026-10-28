@@ -181,11 +181,12 @@ class _DailyRatesScreenState extends ConsumerState<DailyRatesScreen> {
                                     onSubmitted: (v) async {
                                       final rate = double.tryParse(v);
                                       if (rate != null) {
+                                        final messenger = ScaffoldMessenger.of(context);
                                         try {
                                           await _saveRate(p.id, rate);
-                                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rate saved'), duration: Duration(seconds: 1)));
+                                          if (mounted) messenger.showSnackBar(const SnackBar(content: Text('Rate saved'), duration: Duration(seconds: 1)));
                                         } catch (e) {
-                                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));
+                                          if (mounted) messenger.showSnackBar(SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error));
                                         }
                                       }
                                     },

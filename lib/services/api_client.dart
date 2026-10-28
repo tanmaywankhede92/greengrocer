@@ -35,14 +35,49 @@ class ApiClient {
 
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final token = await _storage.read(key: AppConstants.accessTokenKey);
-        if (token != null) {
-          options.headers['Authorization'] = 'Bearer $token';
+        final path = options.path;
+        final isAuthEndpoint = path.contains('/auth/login') ||
+            path.contains('/auth/register') ||
+            path.contains('/auth/refresh') ||
+            path.contains('/health');
+
+        if (!isAuthEndpoint) {
+          final token = await _storage.read(key: AppConstants.accessTokenKey);
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
         }
         handler.next(options);
       },
       onError: (error, handler) async {
-        if (error.response?.statusCode == 401) {
+        final path = error.requestOptions.path;
+        final isAuthEndpoint = path.contains('/auth/login') ||
+            path.contains('/auth/register') ||
+            path.contains('/auth/refresh') ||
+            path.contains('/health');
+
+        // Handle server cold-start / wake-up resilience (Render free tier sleeps)
+        final statusCode = error.response?.statusCode;
+        final isGatewayOrTimeout = error.type == DioExceptionType.connectionTimeout ||
+            error.type == DioExceptionType.receiveTimeout ||
+            error.type == DioExceptionType.connectionError ||
+            statusCode == 502 ||
+            statusCode == 503 ||
+            statusCode == 504;
+
+        final retryCount = error.requestOptions.extra['coldStartRetry'] as int? ?? 0;
+        if (isGatewayOrTimeout && retryCount < 2) {
+          try {
+            error.requestOptions.extra['coldStartRetry'] = retryCount + 1;
+            await Future.delayed(Duration(milliseconds: 1200 * (retryCount + 1)));
+            final retryResponse = await _dio.fetch(error.requestOptions);
+            return handler.resolve(retryResponse);
+          } catch (_) {
+            // Proceed to standard error flow if retry fails
+          }
+        }
+
+        if (statusCode == 401 && !isAuthEndpoint) {
           final refreshed = await _tryRefreshToken();
           if (refreshed) {
             final retryResponse = await _retry(error.requestOptions);

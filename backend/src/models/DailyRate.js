@@ -21,6 +21,7 @@ const dailyRateSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
+dailyRateSchema.index({ rateDate: -1, productId: 1 });
 dailyRateSchema.index({ productId: 1, rateDate: 1 }, { unique: true });
 dailyRateSchema.index({ rateDate: 1 });
 dailyRateSchema.index({ productId: 1 });

@@ -23,6 +23,7 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
   List<Customer> _results = [];
   Customer? _selected;
   OverlayEntry? _dropdownOverlay;
+  final _debouncer = Debouncer(delay: const Duration(milliseconds: 300));
 
   @override
   void initState() {
@@ -35,6 +36,7 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
 
   @override
   void dispose() {
+    _debouncer.cancel();
     _removeDropdown();
     _controller.dispose();
     super.dispose();
@@ -132,22 +134,27 @@ class _CustomerSelectState extends ConsumerState<CustomerSelect> {
     _dropdownOverlay = null;
   }
 
-  void _onSearchChanged(String query) async {
+  void _onSearchChanged(String query) {
     final q = query.trim();
     if (q.isEmpty) {
+      _debouncer.cancel();
       setState(() {
         _results = [];
       });
       _removeDropdown();
       return;
     }
-    final result = await ref.read(customerSearchProvider(q).future);
-    if (mounted) {
-      setState(() {
-        _results = result;
-      });
-      _showDropdown();
-    }
+    _debouncer.run(() async {
+      try {
+        final result = await ref.read(customerSearchProvider(q).future);
+        if (mounted) {
+          setState(() {
+            _results = result;
+          });
+          _showDropdown();
+        }
+      } catch (_) {}
+    });
   }
 
   Future<void> _showAddCustomerDialog() async {

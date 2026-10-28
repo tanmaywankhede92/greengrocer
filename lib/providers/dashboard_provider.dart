@@ -5,6 +5,7 @@ import '../services/dashboard_service.dart';
 final dashboardServiceProvider = Provider<DashboardService>((ref) => DashboardService());
 
 final dashboardProvider = FutureProvider<DashboardStats>((ref) async {
+  ref.keepAlive();
   final service = ref.read(dashboardServiceProvider);
   return service.get();
 });

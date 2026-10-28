@@ -63,15 +63,15 @@ const getDashboard = async (clientDateStr, clientTzOffset = 330) => {
         { billDate: { $gte: localDayStart, $lte: localDayEnd } },
         { billDate: { $gte: utcDayStart, $lte: utcDayEnd } },
       ],
-    }).lean(),
+    }).select('total').lean(),
     Payment.find({
       isCancelled: false,
       $or: [
         { paymentDate: { $gte: localMonthStart, $lte: localMonthEnd } },
         { paymentDate: { $gte: utcMonthStart, $lte: utcMonthEnd } },
       ],
-    }).lean(),
-    Customer.find({ isDeleted: false }).lean(),
+    }).select('amount').lean(),
+    Customer.find({ isDeleted: false }).select('_id name mobile openingBalance').lean(),
     Bill.find()
       .populate('customerId', 'name mobile')
       .sort({ createdAt: -1 })

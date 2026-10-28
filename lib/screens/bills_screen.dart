@@ -21,6 +21,8 @@ class BillsScreen extends ConsumerStatefulWidget {
 
 class _BillsScreenState extends ConsumerState<BillsScreen> {
   final _searchCtrl = TextEditingController();
+  final _debouncer = Debouncer(delay: const Duration(milliseconds: 300));
+  String _searchQuery = '';
   String? _statusFilter;
   DateTime? _fromDate;
   DateTime? _toDate;
@@ -28,7 +30,11 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
   int _page = 1;
 
   @override
-  void dispose() { _searchCtrl.dispose(); super.dispose(); }
+  void dispose() {
+    _debouncer.cancel();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   void _setPeriod(String period) {
     final now = DateTime.now();
@@ -48,7 +54,7 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
   @override
   Widget build(BuildContext context) {
     final params = BillListParams(
-      search: _searchCtrl.text.trim(),
+      search: _searchQuery,
       status: _statusFilter ?? 'all',
       page: _page,
       limit: 50,
@@ -146,7 +152,16 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
               child: TextField(
                 controller: _searchCtrl,
                 decoration: const InputDecoration(hintText: 'Search by bill no. or customer name...', prefixIcon: Icon(Icons.search), isDense: true),
-                onChanged: (_) => setState(() => _page = 1),
+                onChanged: (v) {
+                  _debouncer.run(() {
+                    if (mounted) {
+                      setState(() {
+                        _searchQuery = v.trim();
+                        _page = 1;
+                      });
+                    }
+                  });
+                },
               ),
             ),
             Padding(

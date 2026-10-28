@@ -6,6 +6,8 @@ import '../../../../config/theme.dart';
 import '../../../../core/constants.dart';
 import '../providers/auth_provider.dart';
 
+import '../../../../services/api_client.dart';
+
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
   @override
@@ -23,6 +25,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void initState() {
     super.initState();
     _loadSavedCredentials();
+    ApiClient().get('/health').catchError((_) => null as dynamic);
   }
 
   Future<void> _loadSavedCredentials() async {

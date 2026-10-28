@@ -44,6 +44,7 @@ const customerSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
+customerSchema.index({ isDeleted: 1, name: 1 });
 customerSchema.index({ mobile: 1, isDeleted: 1 });
 customerSchema.index({ name: 1 });
 customerSchema.index({ isDeleted: 1 });

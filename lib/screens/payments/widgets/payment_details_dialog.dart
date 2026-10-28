@@ -158,7 +158,7 @@ class PaymentDetailsDialog extends StatelessWidget {
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.share, size: 18),
                   label: const Text('Share Invoice'),
-                  onPressed: onShare == null ? null : onShare,
+                  onPressed: onShare,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),

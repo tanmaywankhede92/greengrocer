@@ -6,6 +6,7 @@ import '../services/customer_service.dart';
 final customerServiceProvider = Provider<CustomerService>((ref) => CustomerService());
 
 final customerListProvider = FutureProvider.family<({List<Customer> data, Map<String, dynamic>? meta}), CustomerListParams>((ref, params) async {
+  ref.keepAlive();
   final service = ref.read(customerServiceProvider);
   return service.getAll(
     search: params.search.isNotEmpty ? params.search : null,

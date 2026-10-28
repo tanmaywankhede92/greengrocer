@@ -4,7 +4,7 @@ class ApiConfig {
   // static const String baseUrl = 'http://localhost:5000/api/v1';          // LOCAL
   static const String baseUrl = 'https://greengrocer-903c.onrender.com/api/v1'; // PRODUCTION
 
-  static const Duration connectTimeout = Duration(seconds: 20);
-  static const Duration receiveTimeout = Duration(seconds: 25);
+  static const Duration connectTimeout = Duration(seconds: 35);
+  static const Duration receiveTimeout = Duration(seconds: 35);
   static const Duration tokenRefreshBuffer = Duration(minutes: 5);
 }

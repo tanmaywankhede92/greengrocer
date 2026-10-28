@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
+import '../core/utils.dart';
 import '../models/product.dart';
 import '../providers/product_provider.dart';
 import '../services/api_client.dart';
-
 import '../widgets/empty_state.dart';
 
 class ProductsScreen extends ConsumerStatefulWidget {
@@ -18,24 +18,29 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   final _searchCtrl = TextEditingController();
   final _searchFocusNode = FocusNode();
   List<Product>? _searchResults;
+  final _debouncer = Debouncer(delay: const Duration(milliseconds: 300));
 
   @override
   void dispose() {
+    _debouncer.cancel();
     _searchCtrl.dispose();
     _searchFocusNode.dispose();
     super.dispose();
   }
 
-  void _onSearchChanged(String query) async {
+  void _onSearchChanged(String query) {
     final q = query.trim();
     if (q.isEmpty) {
+      _debouncer.cancel();
       setState(() => _searchResults = null);
       return;
     }
-    try {
-      final results = await ref.read(productServiceProvider).getAll(activeOnly: true, search: q);
-      if (mounted) setState(() => _searchResults = results);
-    } catch (_) {}
+    _debouncer.run(() async {
+      try {
+        final results = await ref.read(productServiceProvider).getAll(activeOnly: true, search: q);
+        if (mounted) setState(() => _searchResults = results);
+      } catch (_) {}
+    });
   }
 
   @override
@@ -73,6 +78,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                           onPressed: () {
                             _searchCtrl.clear();
                             _searchFocusNode.requestFocus();
+                            _onSearchChanged('');
                           },
                         )
                       : null,

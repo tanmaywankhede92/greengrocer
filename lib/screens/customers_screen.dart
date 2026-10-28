@@ -19,15 +19,21 @@ class CustomersScreen extends ConsumerStatefulWidget {
 
 class _CustomersScreenState extends ConsumerState<CustomersScreen> {
   final _searchCtrl = TextEditingController();
+  final _debouncer = Debouncer(delay: const Duration(milliseconds: 300));
+  String _searchQuery = '';
   int _page = 1;
   static const _limit = 20;
 
   @override
-  void dispose() { _searchCtrl.dispose(); super.dispose(); }
+  void dispose() {
+    _debouncer.cancel();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final params = CustomerListParams(search: _searchCtrl.text.trim(), page: _page, limit: _limit);
+    final params = CustomerListParams(search: _searchQuery, page: _page, limit: _limit);
     final customersAsync = ref.watch(customerListProvider(params));
 
     return Scaffold(
@@ -53,7 +59,16 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
               child: TextField(
                 controller: _searchCtrl,
                 decoration: const InputDecoration(hintText: 'Search by name or mobile...', prefixIcon: Icon(Icons.search)),
-                onChanged: (_) => setState(() => _page = 1),
+                onChanged: (v) {
+                  _debouncer.run(() {
+                    if (mounted) {
+                      setState(() {
+                        _searchQuery = v.trim();
+                        _page = 1;
+                      });
+                    }
+                  });
+                },
               ),
             ),
             customersAsync.when(
@@ -235,9 +250,11 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                 ref.invalidate(customerListProvider);
               } catch (e) {
                 if (ctx.mounted) Navigator.pop(ctx);
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
-                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(ApiClient.humanizeError(e)), backgroundColor: AppTheme.error),
+                  );
+                }
               }
             },
             child: const Text('Delete'),

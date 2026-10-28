@@ -5,6 +5,7 @@ import '../services/rate_service.dart';
 final rateServiceProvider = Provider<RateService>((ref) => RateService());
 
 final rateByDateProvider = FutureProvider.family<Map<String, DailyRate>, DateTime>((ref, date) async {
+  ref.keepAlive();
   final service = ref.read(rateServiceProvider);
   return service.getByDate(date);
 });

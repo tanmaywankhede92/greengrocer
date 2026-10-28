@@ -9,6 +9,7 @@ import '../services/bill_service.dart';
 final billServiceProvider = Provider<BillService>((ref) => BillService());
 
 final billListProvider = FutureProvider.family<({List<Bill> data, Map<String, dynamic>? meta}), BillListParams>((ref, params) async {
+  ref.keepAlive();
   final service = ref.read(billServiceProvider);
   return service.getAll(
     search: params.search.isNotEmpty ? params.search : null,

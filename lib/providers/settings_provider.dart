@@ -5,6 +5,7 @@ import '../services/settings_service.dart';
 final settingsServiceProvider = Provider<SettingsService>((ref) => SettingsService());
 
 final settingsProvider = FutureProvider<BusinessSettings>((ref) async {
+  ref.keepAlive();
   final service = ref.read(settingsServiceProvider);
   return service.get();
 });

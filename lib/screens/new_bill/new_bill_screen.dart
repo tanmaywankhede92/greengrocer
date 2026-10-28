@@ -56,6 +56,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   final _rateCtrl = TextEditingController();
   final _rateFocusNode = FocusNode();
   final _deliveryChargeCtrl = TextEditingController();
+  final _searchDebouncer = Debouncer(delay: const Duration(milliseconds: 200));
 
   List<Product> _searchResults = [];
   bool _isSearching = false;
@@ -92,6 +93,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        ref.read(productListProvider);
         if (_selectedCustomer != null) {
           _loadDefaultRates();
         }
@@ -156,6 +158,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
 
   @override
   void dispose() {
+    _searchDebouncer.cancel();
     _removeDropdown();
     _searchCtrl.dispose();
     _searchFocusNode.dispose();
@@ -221,32 +224,61 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     _dropdownOverlay = null;
   }
 
-  void _onSearchChanged(String query) async {
+  void _onSearchChanged(String query) {
     final q = query.trim();
     if (q.isEmpty) {
+      _searchDebouncer.cancel();
       setState(() {
         _searchResults = [];
+        _isSearching = false;
       });
       _removeDropdown();
       return;
     }
-    setState(() => _isSearching = true);
-    try {
-      final results = await ref.read(productServiceProvider).getAll(search: q);
-      if (mounted) {
-        setState(() {
-          _searchResults = results.where((p) => p.isActive).toList();
-          _isSearching = false;
-        });
-        if (_searchResults.isNotEmpty || q.isNotEmpty) {
-          _showDropdown();
-        } else {
-          _removeDropdown();
-        }
+
+    // Instant in-memory search across active products if available
+    final cached = ref.read(productListProvider).valueOrNull;
+    if (cached != null && cached.isNotEmpty) {
+      final qLower = q.toLowerCase();
+      final localMatches = cached.where((p) {
+        if (!p.isActive) return false;
+        final nameMatch = p.name.toLowerCase().contains(qLower);
+        final hindiMatch = p.nameHindi.isNotEmpty && p.nameHindi.toLowerCase().contains(qLower);
+        return nameMatch || hindiMatch;
+      }).toList();
+
+      setState(() {
+        _searchResults = localMatches;
+        _isSearching = false;
+      });
+      if (_searchResults.isNotEmpty || q.isNotEmpty) {
+        _showDropdown();
+      } else {
+        _removeDropdown();
       }
-    } catch (_) {
-      if (mounted) setState(() => _isSearching = false);
+      return;
     }
+
+    // Fallback debounced server search
+    setState(() => _isSearching = true);
+    _searchDebouncer.run(() async {
+      try {
+        final results = await ref.read(productServiceProvider).getAll(search: q);
+        if (mounted) {
+          setState(() {
+            _searchResults = results.where((p) => p.isActive).toList();
+            _isSearching = false;
+          });
+          if (_searchResults.isNotEmpty || q.isNotEmpty) {
+            _showDropdown();
+          } else {
+            _removeDropdown();
+          }
+        }
+      } catch (_) {
+        if (mounted) setState(() => _isSearching = false);
+      }
+    });
   }
 
   void _selectProduct(Product product) {

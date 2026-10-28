@@ -26,6 +26,7 @@ const productSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
+productSchema.index({ isDeleted: 1, isActive: 1, name: 1 });
 productSchema.index({ name: 1, isDeleted: 1 }, { unique: true });
 productSchema.index({ isActive: 1 });
 productSchema.index({ isDeleted: 1 });
