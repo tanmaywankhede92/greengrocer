@@ -13,8 +13,8 @@ const MONGO_URI = config.mongodb.uri;
 
 // ── Single admin user ──
 const ADMIN = {
-  email: 'admin@re.com',
-  password: 'Admin@re2026',
+  email: 'admin',
+  password: '123456',
   fullName: 'RATHOD ENTERPRISES',
   role: 'admin',
   isActive: true,
