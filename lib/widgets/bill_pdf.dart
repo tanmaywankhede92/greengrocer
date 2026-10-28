@@ -51,6 +51,8 @@ Future<Uint8List> buildBillPdf({
   required bool isReprint,
   double adjustmentAmount = 0,
   String adjustmentNote = '',
+  bool isEstimate = false,
+  String? estimateTitle = 'DELIVERY SLIP',
 }) async {
   // Use Noto Sans Devanagari as primary font for regular and bold text.
   // It provides complete, reliable glyph coverage for English letters, Western digits (0-9),
@@ -109,6 +111,27 @@ Future<Uint8List> buildBillPdf({
   }
 
   pw.Widget buildHeader(String copyLabel) {
+    if (isEstimate) {
+      final cleanTitle = estimateTitle?.trim() ?? '';
+      if (cleanTitle.isEmpty) {
+        return pw.SizedBox(height: 6);
+      }
+      return pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: pw.Center(
+          child: pw.Text(
+            cleanTitle,
+            style: pw.TextStyle(
+              font: fontB,
+              fontSize: 15,
+              color: textPrimary,
+              letterSpacing: 1.5,
+            ),
+          ),
+        ),
+      );
+    }
+
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
       child: pw.Column(
@@ -462,7 +485,7 @@ Future<Uint8List> buildBillPdf({
         children: [
           pw.Padding(
             padding: const pw.EdgeInsets.only(left: 110, bottom: 2),
-            child: stampBytes != null
+            child: (stampBytes != null && !isEstimate)
                 ? buildStampPdf(stampBytes, width: 115)
                 : pw.SizedBox(),
           ),
@@ -475,7 +498,7 @@ Future<Uint8List> buildBillPdf({
   // One copy = MultiPage flat list so large bills can paginate cleanly
   List<pw.Widget> buildCopy(String copyLabel) {
     return <pw.Widget>[
-      pw.Container(height: 2.5, color: red),
+      pw.Container(height: 2.5, color: isEstimate ? const PdfColor(0.25, 0.25, 0.3) : red),
       pw.SizedBox(height: 3),
       buildHeader(copyLabel),
       pw.SizedBox(height: 4),
@@ -508,15 +531,16 @@ Future<Uint8List> buildBillPdf({
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text(
-                    businessName,
-                    style: pw.TextStyle(font: fontB, fontSize: 13, color: red),
+                    isEstimate ? 'ESTIMATE SLIP' : businessName,
+                    style: pw.TextStyle(font: fontB, fontSize: 13, color: isEstimate ? textPrimary : red),
                   ),
+                  if (!isEstimate)
+                    pw.Text(
+                      phone,
+                      style: pw.TextStyle(font: fontB, fontSize: 9.5, color: textPrimary),
+                    ),
                   pw.Text(
-                    phone,
-                    style: pw.TextStyle(font: fontB, fontSize: 9.5, color: textPrimary),
-                  ),
-                  pw.Text(
-                    copyLabel,
+                    isEstimate ? 'ESTIMATE' : copyLabel,
                     style: pw.TextStyle(font: fontB, fontSize: 8, color: muted),
                   ),
                 ],
@@ -537,10 +561,16 @@ Future<Uint8List> buildBillPdf({
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Text(
-                phone,
-                style: pw.TextStyle(font: fontB, fontSize: 8.5, color: textPrimary),
-              ),
+              if (!isEstimate)
+                pw.Text(
+                  phone,
+                  style: pw.TextStyle(font: fontB, fontSize: 8.5, color: textPrimary),
+                )
+              else
+                pw.Text(
+                  estimateTitle?.trim().isNotEmpty == true ? estimateTitle!.trim() : 'MEMO',
+                  style: pw.TextStyle(font: fontB, fontSize: 8.5, color: muted),
+                ),
               pw.Text(
                 'Page ${context.pageNumber} of ${context.pagesCount}',
                 style: pw.TextStyle(font: font, fontSize: 8, color: muted),
@@ -554,8 +584,12 @@ Future<Uint8List> buildBillPdf({
   }
 
   final doc = pw.Document();
-  doc.addPage(oneCopy('ORIGINAL – Customer Copy'));
-  doc.addPage(oneCopy('DUPLICATE – Office Copy'));
+  if (isEstimate) {
+    doc.addPage(oneCopy(estimateTitle?.trim().isNotEmpty == true ? estimateTitle!.trim() : 'DELIVERY SLIP'));
+  } else {
+    doc.addPage(oneCopy('ORIGINAL – Customer Copy'));
+    doc.addPage(oneCopy('DUPLICATE – Office Copy'));
+  }
 
   return doc.save();
 }

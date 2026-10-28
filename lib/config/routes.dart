@@ -58,6 +58,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             billDate: extra['billDate'] as DateTime?,
             editingBillId: extra['editingBillId'] as String?,
             editingBillNumber: extra['editingBillNumber'] as String?,
+            isEstimate: extra['isEstimate'] as bool? ?? false,
           );
         },
       ),

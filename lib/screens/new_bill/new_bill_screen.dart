@@ -636,6 +636,31 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
     });
   }
 
+  void _goToEstimatePreview() {
+    if (_editingProduct != null) _confirmEdit();
+    if (_items.isEmpty ||
+        _items.any((i) => i.productName.isEmpty || i.quantity <= 0)) {
+      return;
+    }
+
+    final customer = _selectedCustomer ??
+        const Customer(
+          id: '',
+          name: 'Cash Customer',
+          mobile: '',
+          address: '',
+        );
+
+    context.push('/bills/preview', extra: {
+      'customer': customer,
+      'items': List.from(_items),
+      'deliveryCharge': _deliveryCharge,
+      'billDate': _billDate,
+      'isEstimate': true,
+      if (_draftId != null && _draftId!.isNotEmpty) 'draftId': _draftId,
+    });
+  }
+
   Future<void> _saveEditedBill() async {
     if (_isSavingBill || _selectedCustomer == null || _editingBillId == null) return;
     if (_editingProduct != null) _confirmEdit();
@@ -694,6 +719,10 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
   double get _total => _subtotal + _deliveryCharge;
   bool get _canProceed =>
       _selectedCustomer != null &&
+      _items.isNotEmpty &&
+      !_items.any((i) => i.quantity <= 0);
+
+  bool get _canProceedEstimate =>
       _items.isNotEmpty &&
       !_items.any((i) => i.quantity <= 0);
 
@@ -1135,6 +1164,7 @@ class _NewBillScreenState extends ConsumerState<NewBillScreen> {
           total: _total,
           allItemsValid: _canProceed,
           onSave: _goToPreview,
+          onEstimate: _canProceedEstimate ? _goToEstimatePreview : null,
           isWide: isWide,
           canSave: _canProceed,
           label: _editingBillId != null ? 'Review & Update' : 'Save Bill',
