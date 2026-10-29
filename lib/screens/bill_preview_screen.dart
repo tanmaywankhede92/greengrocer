@@ -1,6 +1,4 @@
-
 import 'dart:typed_data';
-import 'package:intl/intl.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,7 +28,6 @@ class BillPreviewScreen extends ConsumerStatefulWidget {
   final DateTime? billDate;
   final String? editingBillId;
   final String? editingBillNumber;
-  final bool isEstimate;
 
   const BillPreviewScreen({
     super.key,
@@ -43,7 +40,6 @@ class BillPreviewScreen extends ConsumerStatefulWidget {
     this.billDate,
     this.editingBillId,
     this.editingBillNumber,
-    this.isEstimate = false,
   });
 
   @override
@@ -57,8 +53,6 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   late double _paymentAmount;
   late PaymentMode _paymentMode;
   late DateTime _billDate;
-  late bool _isEstimate;
-  String _estimateTitle = 'DELIVERY SLIP';
   /// Non-null while the bill is being saved, shared or printed. Doubles as a
   /// lock so the action cannot be started twice.
   String? _busyStage;
@@ -67,7 +61,6 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   @override
   void initState() {
     super.initState();
-    _isEstimate = widget.isEstimate;
     _billDate = widget.billDate ?? DateTime.now();
     _billNumber = widget.editingBillNumber;
     _items = widget.items.map((i) => LineItem(
@@ -160,21 +153,6 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
   }
 
   Future<void> _print() => _runBusy(() async {
-        if (_isEstimate) {
-          final billNumber = 'EST-${DateFormat('ddMMyy-HHmm').format(_billDate)}';
-          final pdf = await _buildPdf(billNumber);
-          await printPdf(pdf, filename: billNumber);
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Estimate slip printed (Not saved to ledger/sales)'),
-              backgroundColor: AppTheme.success,
-            ),
-          );
-          context.go('/bills');
-          return;
-        }
-
         final billNumber = await _ensureBillSaved();
         if (!mounted) return;
         final pdf = await _buildPdf(billNumber);
@@ -184,22 +162,9 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
           const SnackBar(content: Text('Bill saved & printed'), backgroundColor: AppTheme.success),
         );
         context.go('/bills');
-      }, stage: _isEstimate ? 'Printing estimate slip...' : 'Printing bill...');
+      }, stage: 'Printing bill...');
 
   Future<void> _share() => _runBusy(() async {
-        if (_isEstimate) {
-          final billNumber = 'EST-${DateFormat('ddMMyy-HHmm').format(_billDate)}';
-          final pdf = await _buildPdf(billNumber);
-          final message = 'Estimate Slip\nCustomer: ${widget.customer.name}\nTotal: ${AppUtils.formatCurrency(_total)}\nDate: ${DateFormat('dd MMM yyyy').format(_billDate)}';
-          await sharePdf(pdf, filename: billNumber, message: message);
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Estimate slip ready to share'), backgroundColor: AppTheme.success),
-          );
-          context.go('/bills');
-          return;
-        }
-
         final billNumber = await _ensureBillSaved();
         if (!mounted) return;
         final balance = (_total - _paymentAmount) < 0 ? 0.0 : (_total - _paymentAmount);
@@ -215,7 +180,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
           const SnackBar(content: Text('Bill saved & ready to share'), backgroundColor: AppTheme.success),
         );
         context.go('/bills');
-      }, stage: _isEstimate ? 'Preparing estimate slip...' : 'Preparing bill...');
+      }, stage: 'Preparing bill...');
 
 
   Future<void> _saveOnly() => _runBusy(() async {
@@ -289,8 +254,6 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
       billDate: _billDate,
       paymentMode: _paymentMode.displayName,
       isReprint: false,
-      isEstimate: _isEstimate,
-      estimateTitle: _isEstimate ? _estimateTitle : null,
     );
   }
 
@@ -334,7 +297,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
 
   Widget _buildCopy({required bool isCustomerCopy, required double maxWidth}) {
     final copySuffix = isCustomerCopy ? 'Customer Copy' : 'Office Copy';
-    final copyLabel = _isEstimate ? 'ESTIMATE' : (isCustomerCopy ? 'ORIGINAL' : 'DUPLICATE');
+    final copyLabel = isCustomerCopy ? 'ORIGINAL' : 'DUPLICATE';
     final billDateTime = _billDate;
     final grandTotal = _total > 0 ? _total : _subtotal;
     final settings = ref.watch(settingsProvider).valueOrNull;
@@ -356,92 +319,73 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(height: 2.5, color: _isEstimate ? const Color(0xFF2D2D3A) : _red),
+          Container(height: 2.5, color: _red),
 
-          // ── Header (Branding or Estimate) ──
-          if (_isEstimate)
-            if (_estimateTitle.trim().isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Center(
-                  child: Text(
-                    _estimateTitle.trim(),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF2D2D3A),
-                      letterSpacing: 1.5,
+          // ── Header (Branding) ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(width: 80),
+                    Text(
+                      businessName,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _red, letterSpacing: 1.0),
                     ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: isCustomerCopy ? _red.withAlpha(20) : Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '$copyLabel – $copySuffix',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: isCustomerCopy ? _red : Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  tagline,
+                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: _muted),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  address,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 9.5, color: _muted),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: Text(
+                    phone,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
                   ),
                 ),
-              )
-            else
-              const SizedBox(height: 8)
-          else
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(width: 80),
-                      Text(
-                        businessName,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _red, letterSpacing: 1.0),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: isCustomerCopy ? _red.withAlpha(20) : Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          '$copyLabel – $copySuffix',
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                            color: isCustomerCopy ? _red : Colors.grey.shade700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    tagline,
-                    style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: _muted),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    address,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 9.5, color: _muted),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      phone,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  const Text(
-                    'FSSAI No. : 21522056000645',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
-                  ),
-                ],
-              ),
+                const SizedBox(height: 3),
+                const Text(
+                  'FSSAI No. : 21522056000645',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                ),
+              ],
             ),
+          ),
           _thinLine(thickness: 0.5),
           const SizedBox(height: 8),
 
@@ -481,12 +425,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _infoField(
-                          'Bill No.',
-                          _billNumber ?? (_isEstimate ? 'EST-${DateFormat('ddMMyy-HHmm').format(billDateTime)}' : 'Will be generated on print'),
-                          isBold: true,
-                          valueColor: _isEstimate ? AppTheme.textPrimary : _red,
-                        ),
+                        _infoField('Bill No.', _billNumber ?? 'Will be generated on print', isBold: true, valueColor: _red),
                         const SizedBox(height: 4),
                         _infoField('Date', AppUtils.formatDate(billDateTime), isBold: true),
                         const SizedBox(height: 4),
@@ -579,9 +518,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
               children: [
                 Padding(
                   padding: const EdgeInsets.only(left: 30, bottom: 2),
-                  child: !_isEstimate
-                      ? buildStampPreview(width: 105)
-                      : const SizedBox(width: 105, height: 20),
+                  child: buildStampPreview(width: 105),
                 ),
                 SizedBox(
                   width: 190,
@@ -638,7 +575,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
-        title: Text(_isEstimate ? 'Estimate Slip Preview (कच्चा)' : 'Bill Preview'),
+        title: const Text('Bill Preview'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -662,88 +599,6 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
           Column(
             children: [
               const Breadcrumb(crumbs: [Crumb('Home', route: '/dashboard'), Crumb('Bills', route: '/bills'), Crumb('Preview')]),
-              if (_isEstimate) ...[
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.amber.shade300),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.shield_outlined, size: 18, color: Colors.amber.shade900),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Plain Slip (कच्चा पर्चा) — No Rathod header/stamp. Won\'t be added to sales/ledger.',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.amber.shade900),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () => setState(() => _isEstimate = false),
-                        style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-                        child: const Text('Official Bill', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        const Text(
-                          'Slip Heading: ',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
-                        ),
-                        ...['DELIVERY SLIP', 'CASH MEMO', 'ESTIMATE', 'NO HEADING'].map((title) {
-                          final isSelected = (title == 'NO HEADING' && _estimateTitle.isEmpty) || _estimateTitle == title;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: ChoiceChip(
-                              label: Text(
-                                title,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                ),
-                              ),
-                              selected: isSelected,
-                              onSelected: (_) {
-                                setState(() {
-                                  _estimateTitle = title == 'NO HEADING' ? '' : title;
-                                });
-                              },
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-                ),
-              ]
-              else
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: () => setState(() => _isEstimate = true),
-                        icon: const Icon(Icons.receipt_long_outlined, size: 14),
-                        label: const Text('Switch to Estimate (कच्चा पर्चा)', style: TextStyle(fontSize: 11.5)),
-                        style: OutlinedButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          foregroundColor: Colors.grey.shade800,
-                          side: BorderSide(color: Colors.grey.shade300),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -754,13 +609,11 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                           key: _customerCopyKey,
                           child: _buildCopy(isCustomerCopy: true, maxWidth: 700),
                         ),
-                        if (!_isEstimate) ...[
-                          const SizedBox(height: 24),
-                          RepaintBoundary(
-                            key: _officeCopyKey,
-                            child: _buildCopy(isCustomerCopy: false, maxWidth: 700),
-                          ),
-                        ],
+                        const SizedBox(height: 24),
+                        RepaintBoundary(
+                          key: _officeCopyKey,
+                          child: _buildCopy(isCustomerCopy: false, maxWidth: 700),
+                        ),
                       ],
                     ),
                   ),
@@ -780,7 +633,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    if (!_isEstimate && widget.editingBillId != null) ...[
+                    if (widget.editingBillId != null) ...[
                       Expanded(
                         flex: 2,
                         child: OutlinedButton.icon(
@@ -796,7 +649,7 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                       flex: 2,
                       child: OutlinedButton.icon(
                         icon: const Icon(Icons.share, size: 18),
-                        label: Text(_isEstimate ? 'Share Slip' : 'Share'),
+                        label: const Text('Share'),
                         onPressed: _busyStage == null ? () => _share() : null,
                         style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
                       ),
@@ -806,15 +659,9 @@ class _BillPreviewScreenState extends ConsumerState<BillPreviewScreen> {
                       flex: 2,
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.print, size: 18),
-                        label: Text(_isEstimate
-                            ? 'Print Slip'
-                            : (widget.editingBillId != null ? 'Update & Print' : 'Print Both Copies')),
+                        label: Text(widget.editingBillId != null ? 'Update & Print' : 'Print Both Copies'),
                         onPressed: _busyStage == null ? () => _print() : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _isEstimate ? const Color(0xFF2D2D3A) : null,
-                          foregroundColor: _isEstimate ? Colors.white : null,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
+                        style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
                       ),
                     ),
                   ],

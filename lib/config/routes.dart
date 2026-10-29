@@ -20,6 +20,7 @@ import '../screens/payments_screen.dart';
 import '../screens/add_payment_screen.dart';
 import '../screens/statement_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/estimate_bill/estimate_bill_screen.dart';
 import '../widgets/layout.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -58,7 +59,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             billDate: extra['billDate'] as DateTime?,
             editingBillId: extra['editingBillId'] as String?,
             editingBillNumber: extra['editingBillNumber'] as String?,
-            isEstimate: extra['isEstimate'] as bool? ?? false,
           );
         },
       ),
@@ -73,6 +73,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/rates', builder: (context, state) => const DailyRatesScreen()),
           GoRoute(path: '/bills', builder: (context, state) => const BillsScreen()),
           GoRoute(path: '/bills/drafts', builder: (context, state) => const DraftBillsScreen()),
+          GoRoute(path: '/estimate-bill', builder: (context, state) => const EstimateBillScreen()),
           GoRoute(
             path: '/bills/new',
             builder: (context, state) {

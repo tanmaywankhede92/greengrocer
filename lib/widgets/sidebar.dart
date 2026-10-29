@@ -50,6 +50,7 @@ class Sidebar extends ConsumerWidget {
                 const _MenuItem(icon: Icons.dashboard, label: 'Dashboard', route: '/dashboard'),
                 const _MenuItem(icon: Icons.receipt_long, label: 'Bills', route: '/bills'),
                 const _MenuItem(icon: Icons.drafts_outlined, label: 'Draft Bills', route: '/bills/drafts'),
+                const _MenuItem(icon: Icons.receipt_outlined, label: 'Estimate / Dummy Bill', route: '/estimate-bill'),
                 const _MenuItem(icon: Icons.people, label: 'Customers', route: '/customers'),
                 const _MenuItem(icon: Icons.inventory, label: 'Products', route: '/products'),
                 const _MenuItem(icon: Icons.trending_up, label: 'Daily Rates', route: '/rates'),

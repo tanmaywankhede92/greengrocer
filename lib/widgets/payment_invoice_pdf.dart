@@ -355,21 +355,6 @@ Future<Uint8List> buildPaymentInvoicePdf({
           ],
         ),
       ],
-      footer: (context) => pw.Column(
-        mainAxisSize: pw.MainAxisSize.min,
-        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-        children: [
-          thinLine(thickness: 0.3),
-          pw.SizedBox(height: 3),
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text('ORIGINAL – Payment Invoice', style: pw.TextStyle(font: font, fontSize: 7.5, color: muted)),
-              pw.Text('Page ${context.pageNumber} of ${context.pagesCount}', style: pw.TextStyle(font: fontB, fontSize: 7.5, color: muted)),
-            ],
-          ),
-        ],
-      ),
     ),
   );
 
