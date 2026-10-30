@@ -92,6 +92,8 @@ class ApiClient {
 
   void setOnUnauthorized(VoidCallback callback) => _onUnauthorized = callback;
 
+  Future<bool> tryRefreshToken() => _tryRefreshToken();
+
   Future<bool> _tryRefreshToken() async {
     try {
       final refreshToken = await _storage.read(key: AppConstants.refreshTokenKey);
@@ -196,5 +198,9 @@ class ApiClient {
          error.type == DioExceptionType.sendTimeout ||
          error.type == DioExceptionType.receiveTimeout ||
          error.type == DioExceptionType.connectionError);
+  }
+
+  static bool isAuthError(Object error) {
+    return error is DioException && error.response?.statusCode == 401;
   }
 }

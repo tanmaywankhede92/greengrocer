@@ -33,6 +33,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/dashboard',
     redirect: (context, state) {
+      if (authState.isLoading) return null;
       final isLoggedIn = authState.isAuthenticated;
       final isAuthRoute = state.matchedLocation == '/login';
 

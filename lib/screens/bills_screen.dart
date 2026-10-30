@@ -92,6 +92,21 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
           ),
         ),
         Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.amber.shade900,
+              backgroundColor: Colors.amber.shade50,
+              side: BorderSide(color: Colors.amber.shade700),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              minimumSize: const Size(0, 36),
+            ),
+            icon: const Icon(Icons.receipt_outlined, size: 17),
+            label: const Text('Dummy Bill', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            onPressed: () => context.go('/estimate-bill'),
+          ),
+        ),
+        Padding(
           padding: const EdgeInsets.only(right: 8),
           child: TextButton.icon(
             icon: const Icon(Icons.add, size: 18),

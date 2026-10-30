@@ -50,7 +50,7 @@ class Sidebar extends ConsumerWidget {
                 const _MenuItem(icon: Icons.dashboard, label: 'Dashboard', route: '/dashboard'),
                 const _MenuItem(icon: Icons.receipt_long, label: 'Bills', route: '/bills'),
                 const _MenuItem(icon: Icons.drafts_outlined, label: 'Draft Bills', route: '/bills/drafts'),
-                const _MenuItem(icon: Icons.receipt_outlined, label: 'Estimate / Dummy Bill', route: '/estimate-bill'),
+                const _MenuItem(icon: Icons.receipt_outlined, label: 'Dummy Bill (कच्चा पर्चा)', route: '/estimate-bill', isHighlight: true),
                 const _MenuItem(icon: Icons.people, label: 'Customers', route: '/customers'),
                 const _MenuItem(icon: Icons.inventory, label: 'Products', route: '/products'),
                 const _MenuItem(icon: Icons.trending_up, label: 'Daily Rates', route: '/rates'),
@@ -81,8 +81,14 @@ class _MenuItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final String route;
+  final bool isHighlight;
 
-  const _MenuItem({required this.icon, required this.label, required this.route});
+  const _MenuItem({
+    required this.icon,
+    required this.label,
+    required this.route,
+    this.isHighlight = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -94,24 +100,36 @@ class _MenuItem extends StatelessWidget {
       isActive = loc == route ||
           loc.startsWith(route + (route == '/' ? '' : '/'));
     }
+    final highlightColor = isHighlight ? Colors.amber.shade900 : AppTheme.primaryRed;
+    final highlightBg = isHighlight ? Colors.amber.shade50 : AppTheme.primaryRed.withAlpha(15);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(
-        color: isActive ? AppTheme.primaryRed.withAlpha(15) : Colors.transparent,
+        color: isActive ? highlightBg : (isHighlight ? Colors.amber.shade50.withAlpha(80) : Colors.transparent),
         borderRadius: BorderRadius.circular(10),
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
-          onTap: () => context.go(route),
+          onTap: () {
+            Navigator.of(context).maybePop();
+            context.go(route);
+          },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Row(
               children: [
-                Icon(icon, color: isActive ? AppTheme.primaryRed : AppTheme.textSecondary, size: 22),
+                Icon(icon, color: isActive || isHighlight ? highlightColor : AppTheme.textSecondary, size: 22),
                 const SizedBox(width: 14),
-                Text(label, style: TextStyle(
-                  color: isActive ? AppTheme.primaryRed : AppTheme.textSecondary,
-                  fontSize: 14, fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                )),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: isActive || isHighlight ? highlightColor : AppTheme.textSecondary,
+                      fontSize: 14,
+                      fontWeight: isActive || isHighlight ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

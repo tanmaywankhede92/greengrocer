@@ -99,12 +99,12 @@ Future<Uint8List> buildBillPdf({
 
   pw.Widget amountRow(String label, double value) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
+      padding: const pw.EdgeInsets.symmetric(vertical: 2),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Text(label, style: pw.TextStyle(font: font, fontSize: 8.5, color: textPrimary)),
-          pw.Text(money(value), style: pw.TextStyle(font: fontB, fontSize: 9, color: textPrimary)),
+          pw.Text(label, style: pw.TextStyle(font: font, fontSize: 10, color: textPrimary)),
+          pw.Text(money(value), style: pw.TextStyle(font: fontB, fontSize: 10.5, color: textPrimary)),
         ],
       ),
     );
@@ -114,18 +114,18 @@ Future<Uint8List> buildBillPdf({
     if (isEstimate) {
       final cleanTitle = estimateTitle?.trim() ?? '';
       if (cleanTitle.isEmpty) {
-        return pw.SizedBox(height: 4);
+        return pw.SizedBox(height: 6);
       }
       return pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         child: pw.Center(
           child: pw.Text(
             cleanTitle,
             style: pw.TextStyle(
               font: fontB,
-              fontSize: 14,
+              fontSize: 15,
               color: textPrimary,
-              letterSpacing: 1.2,
+              letterSpacing: 1.5,
             ),
           ),
         ),
@@ -133,7 +133,7 @@ Future<Uint8List> buildBillPdf({
     }
 
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
@@ -141,38 +141,38 @@ Future<Uint8List> buildBillPdf({
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.SizedBox(width: 70), // balance spacer
+              pw.SizedBox(width: 80), // balance spacer
               pw.Text(
                 businessName,
-                style: pw.TextStyle(font: fontB, fontSize: 14, color: red, letterSpacing: 0.8),
+                style: pw.TextStyle(font: fontB, fontSize: 16, color: red, letterSpacing: 1.0),
               ),
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: const pw.BoxDecoration(
                   color: PdfColors.grey200,
                   borderRadius: pw.BorderRadius.all(pw.Radius.circular(3)),
                 ),
                 child: pw.Text(
                   copyLabel,
-                  style: pw.TextStyle(font: fontB, fontSize: 6.5, color: textPrimary),
+                  style: pw.TextStyle(font: fontB, fontSize: 7, color: textPrimary),
                 ),
               ),
             ],
           ),
-          pw.SizedBox(height: 1.5),
+          pw.SizedBox(height: 2),
           pw.Text(
             tagline,
-            style: pw.TextStyle(font: fontB, fontSize: 7.5, color: muted),
+            style: pw.TextStyle(font: fontB, fontSize: 8.5, color: muted),
           ),
-          pw.SizedBox(height: 1.5),
+          pw.SizedBox(height: 2),
           pw.Text(
             address,
             textAlign: pw.TextAlign.center,
-            style: pw.TextStyle(font: font, fontSize: 7, color: muted),
+            style: pw.TextStyle(font: font, fontSize: 7.5, color: muted),
           ),
-          pw.SizedBox(height: 2),
+          pw.SizedBox(height: 3),
           pw.Container(
-            padding: const pw.EdgeInsets.symmetric(vertical: 1.5, horizontal: 6),
+            padding: const pw.EdgeInsets.symmetric(vertical: 2, horizontal: 8),
             decoration: const pw.BoxDecoration(
               color: PdfColors.grey100,
               borderRadius: pw.BorderRadius.all(pw.Radius.circular(3)),
@@ -180,14 +180,14 @@ Future<Uint8List> buildBillPdf({
             child: pw.Text(
               phone,
               textAlign: pw.TextAlign.center,
-              style: pw.TextStyle(font: fontB, fontSize: 8.5, color: textPrimary),
+              style: pw.TextStyle(font: fontB, fontSize: 10, color: textPrimary),
             ),
           ),
-          pw.SizedBox(height: 1.5),
+          pw.SizedBox(height: 2),
           pw.Text(
             'FSSAI No. : 21522056000645',
             textAlign: pw.TextAlign.center,
-            style: pw.TextStyle(font: fontB, fontSize: 8, color: textPrimary),
+            style: pw.TextStyle(font: fontB, fontSize: 9.5, color: textPrimary),
           ),
         ],
       ),
@@ -204,24 +204,24 @@ Future<Uint8List> buildBillPdf({
     pw.Widget infoRow(String label, String value, {bool isBold = false, PdfColor? valueColor}) {
       final cleanValue = value.replaceFirst(RegExp(r'^:\s*'), '');
       return pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(vertical: 1),
+        padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
         child: pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.SizedBox(
-              width: 50,
+              width: 54,
               child: pw.Text(
                 label,
-                style: pw.TextStyle(font: fontB, fontSize: 8, color: muted),
+                style: pw.TextStyle(font: fontB, fontSize: 9.5, color: muted),
               ),
             ),
-            pw.Text(': ', style: pw.TextStyle(font: fontB, fontSize: 8, color: muted)),
+            pw.Text(': ', style: pw.TextStyle(font: fontB, fontSize: 9.5, color: muted)),
             pw.Expanded(
               child: pw.Text(
                 cleanValue,
                 style: pw.TextStyle(
                   font: isBold ? fontB : font,
-                  fontSize: 8,
+                  fontSize: 9.5,
                   color: valueColor ?? textPrimary,
                 ),
                 maxLines: 2,
@@ -234,10 +234,10 @@ Future<Uint8List> buildBillPdf({
     }
 
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: pw.BoxDecoration(
         color: const PdfColor(0.985, 0.985, 0.99),
-        border: pw.Border.all(color: lineC, width: 0.5),
+        border: pw.Border.all(color: lineC, width: 0.6),
         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
       ),
       child: pw.Row(
@@ -255,10 +255,10 @@ Future<Uint8List> buildBillPdf({
               ],
             ),
           ),
-          pw.SizedBox(width: 8),
+          pw.SizedBox(width: 10),
           // Vertical divider between columns
-          pw.Container(width: 0.5, height: 38, color: lineC),
-          pw.SizedBox(width: 8),
+          pw.Container(width: 0.6, height: 44, color: lineC),
+          pw.SizedBox(width: 10),
           // Right Column (Bill Details)
           pw.Expanded(
             flex: 45,
@@ -278,36 +278,36 @@ Future<Uint8List> buildBillPdf({
 
   pw.Widget buildTableHeader() {
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 5),
+      padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 6),
       decoration: const pw.BoxDecoration(color: tableHeaderBg),
       child: pw.Row(
         children: [
           pw.SizedBox(
-            width: 24,
-            child: pw.Text('Sr.', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontB, fontSize: 8.5, color: PdfColors.white)),
+            width: 26,
+            child: pw.Text('Sr.', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontB, fontSize: 10, color: PdfColors.white)),
           ),
           pw.Expanded(
             flex: 32,
             child: pw.Padding(
-              padding: const pw.EdgeInsets.only(left: 4),
-              child: pw.Text('Product', style: pw.TextStyle(font: fontB, fontSize: 8.5, color: PdfColors.white)),
+              padding: const pw.EdgeInsets.only(left: 6),
+              child: pw.Text('Product', style: pw.TextStyle(font: fontB, fontSize: 10, color: PdfColors.white)),
             ),
           ),
           pw.SizedBox(
-            width: 38,
-            child: pw.Text('Unit', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontB, fontSize: 8.5, color: PdfColors.white)),
-          ),
-          pw.SizedBox(
             width: 42,
-            child: pw.Text('Qty', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontB, fontSize: 8.5, color: PdfColors.white)),
+            child: pw.Text('Unit', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontB, fontSize: 10, color: PdfColors.white)),
           ),
           pw.SizedBox(
-            width: 52,
-            child: pw.Text('Rate (₹)', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 8.5, color: PdfColors.white)),
+            width: 44,
+            child: pw.Text('Qty', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontB, fontSize: 10, color: PdfColors.white)),
           ),
           pw.SizedBox(
-            width: 64,
-            child: pw.Text('Amount (₹)', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 8.5, color: PdfColors.white)),
+            width: 56,
+            child: pw.Text('Rate (₹)', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 10, color: PdfColors.white)),
+          ),
+          pw.SizedBox(
+            width: 68,
+            child: pw.Text('Amount (₹)', textAlign: pw.TextAlign.right, style: pw.TextStyle(font: fontB, fontSize: 10, color: PdfColors.white)),
           ),
         ],
       ),
@@ -334,19 +334,19 @@ Future<Uint8List> buildBillPdf({
 
       result.add(
         pw.Container(
-          padding: const pw.EdgeInsets.symmetric(vertical: 1.2, horizontal: 5),
+          padding: const pw.EdgeInsets.symmetric(vertical: 2.8, horizontal: 6),
           decoration: bgColor != null ? pw.BoxDecoration(color: bgColor) : null,
           child: pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
               pw.SizedBox(
-                width: 24,
-                child: pw.Text('${i + 1}', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 8, color: textPrimary)),
+                width: 26,
+                child: pw.Text('${i + 1}', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 10, color: textPrimary)),
               ),
               pw.Expanded(
                 flex: 32,
                 child: pw.Padding(
-                  padding: const pw.EdgeInsets.only(left: 4),
+                  padding: const pw.EdgeInsets.only(left: 6),
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     mainAxisSize: pw.MainAxisSize.min,
@@ -355,51 +355,51 @@ Future<Uint8List> buildBillPdf({
                         productName,
                         style: pw.TextStyle(
                           font: font,
-                          fontSize: 8,
+                          fontSize: 10,
                           color: textPrimary,
                         ),
                       ),
                       if (isAdjusted)
                         pw.Text(
                           '${item.quantity.toStringAsFixed(0)} → $qtyStr (${item.adjustmentReason ?? "Adjusted"})',
-                          style: pw.TextStyle(font: font, fontSize: 7, color: const PdfColor(0.9, 0.5, 0.0)),
+                          style: pw.TextStyle(font: font, fontSize: 8, color: const PdfColor(0.9, 0.5, 0.0)),
                         ),
                     ],
                   ),
                 ),
               ),
               pw.SizedBox(
-                width: 38,
-                child: pw.Text(item.unit, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 8, color: textPrimary)),
+                width: 42,
+                child: pw.Text(item.unit, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: font, fontSize: 10, color: textPrimary)),
               ),
               pw.SizedBox(
-                width: 42,
+                width: 44,
                 child: pw.Text(
                   qtyStr,
                   textAlign: pw.TextAlign.center,
                   style: pw.TextStyle(
                     font: font,
-                    fontSize: 8,
+                    fontSize: 10,
                     color: isAdjusted ? const PdfColor(0.9, 0.5, 0.0) : textPrimary,
                   ),
                 ),
               ),
               pw.SizedBox(
-                width: 52,
+                width: 56,
                 child: pw.Text(
                   item.appliedRate.toStringAsFixed(2),
                   textAlign: pw.TextAlign.right,
-                  style: pw.TextStyle(font: font, fontSize: 8, color: textPrimary),
+                  style: pw.TextStyle(font: font, fontSize: 10, color: textPrimary),
                 ),
               ),
               pw.SizedBox(
-                width: 64,
+                width: 68,
                 child: pw.Text(
                   item.amount.toStringAsFixed(2),
                   textAlign: pw.TextAlign.right,
                   style: pw.TextStyle(
                     font: fontB,
-                    fontSize: 8,
+                    fontSize: 10,
                     color: isAdjusted ? const PdfColor(0.9, 0.5, 0.0) : textPrimary,
                   ),
                 ),
@@ -415,7 +415,7 @@ Future<Uint8List> buildBillPdf({
   pw.Widget buildSummary() {
     final adjustedTotal = grandTotal - adjustmentAmount;
     final totalsBlock = pw.Container(
-      width: 180,
+      width: 190,
       padding: const pw.EdgeInsets.only(right: 4),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
@@ -425,50 +425,50 @@ Future<Uint8List> buildBillPdf({
           if (adjustmentAmount > 0) ...[
             amountRow('Grand Total', grandTotal),
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
+              padding: const pw.EdgeInsets.symmetric(vertical: 2),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Adjustment', style: pw.TextStyle(font: font, fontSize: 8, color: const PdfColor(0.9, 0.5, 0.0))),
-                  pw.Text('- ${money(adjustmentAmount)}', style: pw.TextStyle(font: font, fontSize: 8, color: const PdfColor(0.9, 0.5, 0.0))),
+                  pw.Text('Adjustment', style: pw.TextStyle(font: font, fontSize: 9.5, color: const PdfColor(0.9, 0.5, 0.0))),
+                  pw.Text('- ${money(adjustmentAmount)}', style: pw.TextStyle(font: font, fontSize: 9.5, color: const PdfColor(0.9, 0.5, 0.0))),
                 ],
               ),
             ),
             if (adjustmentNote.isNotEmpty)
               pw.Container(
-                padding: const pw.EdgeInsets.only(bottom: 1.5),
-                child: pw.Text(adjustmentNote, style: pw.TextStyle(font: fontI, fontSize: 7, color: muted)),
+                padding: const pw.EdgeInsets.only(bottom: 2),
+                child: pw.Text(adjustmentNote, style: pw.TextStyle(font: fontI, fontSize: 8, color: muted)),
               ),
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(vertical: 2.5),
+              padding: const pw.EdgeInsets.symmetric(vertical: 3),
               decoration: const pw.BoxDecoration(
                 border: pw.Border(
-                  top: pw.BorderSide(color: lineC, width: 0.6),
-                  bottom: pw.BorderSide(color: lineC, width: 0.6),
+                  top: pw.BorderSide(color: lineC, width: 0.8),
+                  bottom: pw.BorderSide(color: lineC, width: 0.8),
                 ),
               ),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Final Amount', style: pw.TextStyle(font: fontB, fontSize: 10.5, color: red)),
-                  pw.Text(money(adjustedTotal), style: pw.TextStyle(font: fontB, fontSize: 10.5, color: red)),
+                  pw.Text('Final Amount', style: pw.TextStyle(font: fontB, fontSize: 13, color: red)),
+                  pw.Text(money(adjustedTotal), style: pw.TextStyle(font: fontB, fontSize: 13, color: red)),
                 ],
               ),
             ),
           ] else
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(vertical: 2.5),
+              padding: const pw.EdgeInsets.symmetric(vertical: 3),
               decoration: const pw.BoxDecoration(
                 border: pw.Border(
-                  top: pw.BorderSide(color: lineC, width: 0.6),
-                  bottom: pw.BorderSide(color: lineC, width: 0.6),
+                  top: pw.BorderSide(color: lineC, width: 0.8),
+                  bottom: pw.BorderSide(color: lineC, width: 0.8),
                 ),
               ),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Grand Total', style: pw.TextStyle(font: fontB, fontSize: 10.5, color: textPrimary)),
-                  pw.Text(money(grandTotal), style: pw.TextStyle(font: fontB, fontSize: 10.5, color: textPrimary)),
+                  pw.Text('Grand Total', style: pw.TextStyle(font: fontB, fontSize: 13, color: textPrimary)),
+                  pw.Text(money(grandTotal), style: pw.TextStyle(font: fontB, fontSize: 13, color: textPrimary)),
                 ],
               ),
             ),
@@ -478,15 +478,15 @@ Future<Uint8List> buildBillPdf({
     );
 
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(top: 4),
+      padding: const pw.EdgeInsets.only(top: 6),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         crossAxisAlignment: pw.CrossAxisAlignment.end,
         children: [
           pw.Padding(
-            padding: const pw.EdgeInsets.only(left: 80, bottom: 2),
+            padding: const pw.EdgeInsets.only(left: 90, bottom: 2),
             child: (stampBytes != null && !isEstimate)
-                ? buildStampPdf(stampBytes, width: 95)
+                ? buildStampPdf(stampBytes, width: 110)
                 : pw.SizedBox(),
           ),
           totalsBlock,
@@ -498,24 +498,24 @@ Future<Uint8List> buildBillPdf({
   // One copy = MultiPage flat list so large bills can paginate cleanly
   List<pw.Widget> buildCopy(String copyLabel) {
     return <pw.Widget>[
-      pw.Container(height: 2, color: isEstimate ? const PdfColor(0.25, 0.25, 0.3) : red),
-      pw.SizedBox(height: 2),
-      buildHeader(copyLabel),
+      pw.Container(height: 2.5, color: isEstimate ? const PdfColor(0.25, 0.25, 0.3) : red),
       pw.SizedBox(height: 3),
-      buildInfoCard(),
+      buildHeader(copyLabel),
       pw.SizedBox(height: 4),
+      buildInfoCard(),
+      pw.SizedBox(height: 5),
       buildTableHeader(),
       ...buildTableRows(),
       thinLine(thickness: 0.5),
       buildSummary(),
-      pw.SizedBox(height: 4),
+      pw.SizedBox(height: 5),
     ];
   }
 
   pw.MultiPage oneCopy(String copyLabel) {
     return pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      margin: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       build: (context) => buildCopy(copyLabel),
     );
   }

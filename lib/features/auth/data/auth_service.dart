@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../services/api_client.dart';
 import '../../../core/constants.dart';
@@ -18,7 +19,7 @@ class AuthService {
     final data = response.data['data'];
     final user = User.fromJson(data['user']);
     await _saveTokens(data['accessToken'], data['refreshToken']);
-    await _storage.write(key: AppConstants.userKey, value: data['user'].toString());
+    await cacheUser(user);
     return (user: user, accessToken: data['accessToken'] as String, refreshToken: data['refreshToken'] as String);
   }
 
@@ -35,11 +36,29 @@ class AuthService {
     final data = response.data['data'];
     final user = User.fromJson(data['user']);
     await _saveTokens(data['accessToken'], data['refreshToken']);
+    await cacheUser(user);
     return (user: user, accessToken: data['accessToken'] as String, refreshToken: data['refreshToken'] as String);
+  }
+
+  Future<void> cacheUser(User user) async {
+    try {
+      await _storage.write(key: AppConstants.userKey, value: jsonEncode(user.toJson()));
+    } catch (_) {}
+  }
+
+  Future<User?> getCachedUser() async {
+    try {
+      final jsonStr = await _storage.read(key: AppConstants.userKey);
+      if (jsonStr != null && jsonStr.isNotEmpty) {
+        return User.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<void> logout() async {
     await _client.clearTokens();
+    await _storage.delete(key: AppConstants.userKey);
   }
 
   Future<User> getProfile() async {
@@ -52,7 +71,7 @@ class AuthService {
 
   Future<bool> isLoggedIn() async {
     final token = await _storage.read(key: AppConstants.accessTokenKey);
-    return token != null;
+    return token != null && token.isNotEmpty;
   }
 
   Future<void> _saveTokens(String access, String refresh) async {

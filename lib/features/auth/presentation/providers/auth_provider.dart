@@ -35,7 +35,7 @@ class AuthState {
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthService _authService;
 
-  AuthNotifier(this._authService) : super(const AuthState()) {
+  AuthNotifier(this._authService) : super(const AuthState(isLoading: true)) {
     _checkAuth();
   }
 
@@ -43,16 +43,51 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       const storage = FlutterSecureStorage();
       final token = await storage.read(key: AppConstants.accessTokenKey);
-      if (token != null) {
-        final user = await _authService.getProfile();
-        state = AuthState(isAuthenticated: true, user: user);
+      if (token != null && token.isNotEmpty) {
+        final cachedUser = await _authService.getCachedUser();
+        // Immediately restore authenticated state from secure storage
+        state = AuthState(
+          isLoading: false,
+          isAuthenticated: true,
+          user: cachedUser,
+        );
+
+        // Background profile sync
+        try {
+          final user = await _authService.getProfile();
+          await _authService.cacheUser(user);
+          state = AuthState(
+            isLoading: false,
+            isAuthenticated: true,
+            user: user,
+          );
+        } catch (e) {
+          // If explicitly 401 Unauthorized, try refresh token
+          if (ApiClient.isAuthError(e)) {
+            final refreshed = await ApiClient().tryRefreshToken();
+            if (refreshed) {
+              try {
+                final user = await _authService.getProfile();
+                await _authService.cacheUser(user);
+                state = AuthState(
+                  isLoading: false,
+                  isAuthenticated: true,
+                  user: user,
+                );
+                return;
+              } catch (_) {}
+            }
+            // Only if refresh genuinely failed, log out
+            await _authService.logout();
+            state = const AuthState(isLoading: false, isAuthenticated: false);
+          }
+          // If network / timeout / server sleeping, KEEP user logged in!
+        }
+      } else {
+        state = const AuthState(isLoading: false, isAuthenticated: false);
       }
-    } catch (e) {
-      if (ApiClient.isNetworkError(e)) {
-        state = state.copyWith(serverReachable: false);
-        return;
-      }
-      await _authService.logout();
+    } catch (_) {
+      state = const AuthState(isLoading: false, isAuthenticated: false);
     }
   }
 
