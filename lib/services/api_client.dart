@@ -9,6 +9,16 @@ class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
   factory ApiClient() => _instance;
 
+  static void warmUpServer() {
+    try {
+      final host = ApiConfig.baseUrl.replaceAll('/api/v1', '');
+      Dio(BaseOptions(
+        baseUrl: host,
+        connectTimeout: const Duration(seconds: 20),
+      )).get('/health').catchError((_) {});
+    } catch (_) {}
+  }
+
   late Dio _dio;
   late Dio _refreshDio;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
