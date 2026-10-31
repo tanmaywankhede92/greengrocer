@@ -430,7 +430,7 @@ class _EstimateBillScreenState extends ConsumerState<EstimateBillScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Estimate / Dummy Bill (कच्चा पर्चा)'),
+        title: const Text('Dummy Bill'),
         actions: [
           TextButton.icon(
             style: TextButton.styleFrom(foregroundColor: AppTheme.primaryRed),
@@ -453,7 +453,7 @@ class _EstimateBillScreenState extends ConsumerState<EstimateBillScreen> {
         children: [
           const Breadcrumb(crumbs: [
             Crumb('Home', route: '/dashboard'),
-            Crumb('Estimate Slip'),
+            Crumb('Dummy Bill'),
           ]),
 
           // ── Module Banner ──
@@ -471,7 +471,7 @@ class _EstimateBillScreenState extends ConsumerState<EstimateBillScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Estimate / Dummy Module: No Rathod branding or stamp. Zero impact on sales or khata.',
+                    'Dummy Bill: No Rathod branding or stamp. Zero impact on sales or khata.',
                     style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.amber.shade900),
                   ),
                 ),

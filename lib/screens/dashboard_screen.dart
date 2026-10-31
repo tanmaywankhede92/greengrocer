@@ -111,19 +111,6 @@ class DashboardScreen extends ConsumerWidget {
                           const SizedBox(width: 10),
                           OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.amber.shade900,
-                              backgroundColor: Colors.amber.shade50,
-                              side: BorderSide(color: Colors.amber.shade700),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            icon: const Icon(Icons.receipt_outlined, size: 18),
-                            label: const Text('Dummy Bill (कच्चा पर्चा)', style: TextStyle(fontWeight: FontWeight.bold)),
-                            onPressed: () => context.go('/estimate-bill'),
-                          ),
-                          const SizedBox(width: 10),
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
                               foregroundColor: AppTheme.textPrimary,
                               side: const BorderSide(color: AppTheme.border),
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
