@@ -9,13 +9,13 @@ class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
   factory ApiClient() => _instance;
 
-  static void warmUpServer() {
+  static void warmUpServer() async {
     try {
       final host = ApiConfig.baseUrl.replaceAll('/api/v1', '');
-      Dio(BaseOptions(
+      await Dio(BaseOptions(
         baseUrl: host,
         connectTimeout: const Duration(seconds: 20),
-      )).get('/health').catchError((_) {});
+      )).get('/health');
     } catch (_) {}
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/constants.dart';
 import '../../../../models/user.dart';
+import '../../../../providers/dashboard_provider.dart';
 import '../../../../services/api_client.dart';
 import '../../data/auth_service.dart';
 
@@ -34,8 +35,9 @@ class AuthState {
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthService _authService;
+  final Ref _ref;
 
-  AuthNotifier(this._authService) : super(const AuthState(isLoading: true)) {
+  AuthNotifier(this._authService, this._ref) : super(const AuthState(isLoading: true)) {
     _checkAuth();
   }
 
@@ -51,6 +53,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           isAuthenticated: true,
           user: cachedUser,
         );
+        _ref.invalidate(dashboardProvider);
 
         // Background profile sync
         try {
@@ -74,6 +77,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
                   isAuthenticated: true,
                   user: user,
                 );
+                _ref.invalidate(dashboardProvider);
                 return;
               } catch (_) {}
             }
@@ -96,6 +100,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final result = await _authService.login(email: email, password: password);
       state = AuthState(isAuthenticated: true, user: result.user);
+      _ref.invalidate(dashboardProvider);
       return null;
     } catch (e) {
       final msg = ApiClient.humanizeError(e);
@@ -109,6 +114,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final result = await _authService.register(email: email, password: password, fullName: fullName);
       state = AuthState(isAuthenticated: true, user: result.user);
+      _ref.invalidate(dashboardProvider);
       return null;
     } catch (e) {
       final msg = ApiClient.humanizeError(e);
@@ -126,5 +132,5 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.read(authServiceProvider));
+  return AuthNotifier(ref.read(authServiceProvider), ref);
 });

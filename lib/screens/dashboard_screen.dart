@@ -30,6 +30,18 @@ class DashboardScreen extends ConsumerWidget {
               const Text('Failed to load dashboard', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
               const SizedBox(height: 8),
               Text(ApiClient.humanizeError(e), style: const TextStyle(color: AppTheme.error, fontSize: 13)),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryRed,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Retry'),
+                onPressed: () => ref.invalidate(dashboardProvider),
+              ),
             ],
           ),
         ),

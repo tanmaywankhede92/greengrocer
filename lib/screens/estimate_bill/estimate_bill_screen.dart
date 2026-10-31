@@ -50,6 +50,7 @@ class _EstimateBillScreenState extends ConsumerState<EstimateBillScreen> {
   bool _isSearching = false;
   Map<String, double> _defaultRates = {};
   final Debouncer _searchDebouncer = Debouncer(delay: const Duration(milliseconds: 300));
+  OverlayEntry? _dropdownOverlay;
 
   String _estimateTitle = 'DELIVERY SLIP';
   bool _isPrinting = false;
@@ -65,6 +66,7 @@ class _EstimateBillScreenState extends ConsumerState<EstimateBillScreen> {
 
   @override
   void dispose() {
+    _removeDropdown();
     _searchDebouncer.cancel();
     _qtyCtrl.dispose();
     _rateCtrl.dispose();
@@ -73,6 +75,59 @@ class _EstimateBillScreenState extends ConsumerState<EstimateBillScreen> {
     _searchCtrl.dispose();
     _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  void _showDropdown() {
+    _removeDropdown();
+    final RenderBox? renderBox =
+        _searchFieldKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.attached) return;
+    final size = renderBox.size;
+
+    _dropdownOverlay = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _removeDropdown,
+              behavior: HitTestBehavior.translucent,
+            ),
+          ),
+          CompositedTransformFollower(
+            link: _searchLayerLink,
+            targetAnchor: Alignment.bottomLeft,
+            followerAnchor: Alignment.topLeft,
+            offset: const Offset(0, 4),
+            showWhenUnlinked: false,
+            child: SizedBox(
+              width: size.width,
+              child: Material(
+                elevation: 8,
+                borderRadius: BorderRadius.circular(10),
+                child: ProductSearchDropdown(
+                  results: _searchResults,
+                  defaultRates: _defaultRates,
+                  onSelected: (p) {
+                    _selectProduct(p);
+                    _removeDropdown();
+                  },
+                  onAddProduct: () {
+                    _removeDropdown();
+                  },
+                  searchQuery: _searchCtrl.text.trim(),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    Overlay.of(context).insert(_dropdownOverlay!);
+  }
+
+  void _removeDropdown() {
+    _dropdownOverlay?.remove();
+    _dropdownOverlay = null;
   }
 
   Future<void> _loadDefaultRates() async {
@@ -88,22 +143,24 @@ class _EstimateBillScreenState extends ConsumerState<EstimateBillScreen> {
   }
 
   void _onSearchChanged(String query) {
-    final trimmed = query.trim().toLowerCase();
-    if (trimmed.isEmpty) {
+    final q = query.trim();
+    if (q.isEmpty) {
       _searchDebouncer.cancel();
       setState(() {
         _searchResults = [];
         _isSearching = false;
       });
+      _removeDropdown();
       return;
     }
 
+    final qLower = q.toLowerCase();
     final cachedList = ref.read(productListProvider).valueOrNull ?? [];
     if (cachedList.isNotEmpty) {
       final immediateMatches = cachedList.where((p) {
         if (!p.isActive) return false;
-        final nameMatch = p.name.toLowerCase().contains(trimmed);
-        final hindiMatch = p.nameHindi.toLowerCase().contains(trimmed);
+        final nameMatch = p.name.toLowerCase().contains(qLower);
+        final hindiMatch = p.nameHindi.isNotEmpty && p.nameHindi.toLowerCase().contains(qLower);
         return nameMatch || hindiMatch;
       }).take(10).toList();
 
@@ -111,18 +168,28 @@ class _EstimateBillScreenState extends ConsumerState<EstimateBillScreen> {
         _searchResults = immediateMatches;
         _isSearching = false;
       });
+      if (_searchResults.isNotEmpty || q.isNotEmpty) {
+        _showDropdown();
+      } else {
+        _removeDropdown();
+      }
       return;
     }
 
     setState(() => _isSearching = true);
     _searchDebouncer.run(() async {
       try {
-        final results = await ref.read(productServiceProvider).getAll(search: query);
+        final results = await ref.read(productServiceProvider).getAll(search: q);
         if (mounted) {
           setState(() {
             _searchResults = results.where((p) => p.isActive).toList();
             _isSearching = false;
           });
+          if (_searchResults.isNotEmpty || q.isNotEmpty) {
+            _showDropdown();
+          } else {
+            _removeDropdown();
+          }
         }
       } catch (_) {
         if (mounted) setState(() => _isSearching = false);
@@ -131,6 +198,7 @@ class _EstimateBillScreenState extends ConsumerState<EstimateBillScreen> {
   }
 
   void _selectProduct(Product product) {
+    _removeDropdown();
     final defaultRate = _defaultRates[product.id] ?? 0;
     setState(() {
       _editingProduct = product;
@@ -143,22 +211,26 @@ class _EstimateBillScreenState extends ConsumerState<EstimateBillScreen> {
         defaultRate: defaultRate,
         appliedRate: defaultRate,
       );
-      _qtyCtrl.text = '1';
-      _rateCtrl.text = defaultRate > 0 ? defaultRate.toStringAsFixed(2) : '';
       _searchResults = [];
       _searchCtrl.clear();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _qtyFocusNode.requestFocus();
+      _qtyCtrl.text = '1';
+      _rateCtrl.text = defaultRate > 0 ? AppUtils.formatRate(defaultRate) : '';
       _qtyCtrl.selection = TextSelection(baseOffset: 0, extentOffset: _qtyCtrl.text.length);
     });
   }
 
   void _confirmEdit() {
+    _removeDropdown();
     if (_editingItem == null) return;
-    final qty = double.tryParse(_qtyCtrl.text) ?? 0;
-    final rate = double.tryParse(_rateCtrl.text) ?? 0;
-    if (qty <= 0) return;
+    final qty = double.tryParse(_qtyCtrl.text.trim()) ?? 0;
+    final rate = double.tryParse(_rateCtrl.text.trim()) ?? 0;
+    if (qty <= 0) {
+      _qtyFocusNode.requestFocus();
+      return;
+    }
 
     final updated = LineItem(
       productId: _editingItem!.productId,
@@ -186,6 +258,7 @@ class _EstimateBillScreenState extends ConsumerState<EstimateBillScreen> {
   }
 
   void _cancelEdit() {
+    _removeDropdown();
     setState(() {
       _editingProduct = null;
       _editingItem = null;
